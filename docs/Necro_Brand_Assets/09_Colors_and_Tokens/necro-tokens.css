@@ -1,0 +1,22 @@
+/* Necro brand tokens */
+:root {
+  --necro-font-display: 'Cinzel', Georgia, serif;           /* logo, page titles, big moments */
+  --necro-font-body: 'Plus Jakarta Sans', system-ui, sans-serif; /* everything else */
+
+  --necro-midnight: #0D0A14;   /* app background */
+  --necro-crypt:    #17121F;   /* cards, panels */
+  --necro-grave:    #2A2236;   /* borders, tombstones, inputs */
+  --necro-mist:     #8F86A3;   /* secondary text, icons */
+  --necro-fog:      #CFC8DC;   /* body text on dark */
+  --necro-bone:     #F1ECE2;   /* headings, primary text on dark */
+  --necro-ecto:     #7CF29A;   /* accent, primary buttons (ink text), "risen" state */
+  --necro-ecto-dim: #3E8F58;   /* hover/pressed accent, focus ring */
+  --necro-candle:   #F5A524;   /* highlights, warnings, "new" badge */
+  --necro-blood:    #E5484D;   /* errors, destructive */
+
+  --necro-radius-sm: 6px;
+  --necro-radius-md: 10px;
+  --necro-radius-lg: 16px;
+  --necro-glow: 0 0 24px rgba(124, 242, 154, 0.35);
+  --necro-ease: cubic-bezier(.2, .8, .2, 1);
+}

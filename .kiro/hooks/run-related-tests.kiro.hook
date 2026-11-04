@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "name": "Run related tests",
+  "description": "When a test file is saved, run that test file with Vitest and report failures.",
+  "version": "1",
+  "when": { "type": "fileEdited", "patterns": ["**/*.test.ts", "**/*.test.tsx"] },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A test file was just saved. Run `bun run test -- <that file>` (Bun only, never npm). If tests fail, summarise each failure with the assertion and the likely cause. Do not edit code unless I ask."
+  }
+}

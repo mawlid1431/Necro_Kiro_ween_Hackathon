@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "name": "Sync data model to README",
+  "description": "When convex/schema.ts changes, regenerate the Data model section of README.md.",
+  "version": "1",
+  "when": { "type": "fileEdited", "patterns": ["convex/schema.ts"] },
+  "then": {
+    "type": "askAgent",
+    "prompt": "convex/schema.ts changed. Update only the section between `<!-- data-model:start -->` and `<!-- data-model:end -->` in README.md: one table row per Convex table with its key fields and indexes. Keep wording short. Do not touch any other part of the README."
+  }
+}

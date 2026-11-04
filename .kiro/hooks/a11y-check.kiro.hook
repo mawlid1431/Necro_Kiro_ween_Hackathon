@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "name": "Accessibility check",
+  "description": "When a component is saved, review it for labels, contrast tokens and keyboard focus.",
+  "version": "1",
+  "when": { "type": "fileEdited", "patterns": ["components/**/*.tsx"] },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the saved component for accessibility using .kiro/steering/brand.md: every interactive element has an accessible name; icon-only buttons have aria-label; colours come from brand tokens (no raw hex) and text pairs meet WCAG AA on midnight; focus is visible (ecto-dim ring) and everything is reachable by keyboard; motion respects prefers-reduced-motion. Report issues as a short list with file:line. Do not edit."
+  }
+}

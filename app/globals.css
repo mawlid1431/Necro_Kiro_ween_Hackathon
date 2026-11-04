@@ -1,0 +1,186 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Necro brand tokens: the only place colour, type and shape values live.
+   Source: docs/Necro_Brand_Guide.md */
+@theme {
+  --color-midnight: #0d0a14;
+  --color-crypt: #17121f;
+  --color-grave: #2a2236;
+  --color-mist: #8f86a3;
+  --color-fog: #cfc8dc;
+  --color-bone: #f1ece2;
+  --color-ecto: #7cf29a;
+  --color-ecto-dim: #3e8f58;
+  --color-candle: #f5a524;
+  --color-blood: #e5484d;
+  --color-violet-haze: rgb(124 90 180 / 0.12);
+
+  /* Light theme (owner decision, Nov 3 2026): semantic roles components use.
+     Brand colours above stay the source; the -ink shades are darker versions
+     so text passes WCAG AA (4.5:1) on white. */
+  --color-page: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f4ee;
+  --color-line: #e6e1ec;
+  --color-ink: #0d0a14;
+  --color-copy: #2a2236;
+  --color-subtle: #5e5670;
+  --color-ecto-ink: #2f7346;
+  --color-highlight: #f5a524;
+  --color-danger: #c8343a;
+
+  --text-hero: 4rem;
+  --text-hero--line-height: 4.5rem;
+  --text-hero--letter-spacing: 0.04em;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 2.75rem;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 2rem;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.625rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.625rem;
+  --text-reader: 1.125rem;
+  --text-reader--line-height: 1.875rem;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.25rem;
+  --text-overline: 0.75rem;
+  --text-overline--line-height: 1rem;
+  --text-overline--letter-spacing: 0.12em;
+  --text-button: 0.9375rem;
+  --text-button--line-height: 1.25rem;
+
+  /* Extra breakpoints for 21" to 32" monitors (1920 to 2560) and 4K (3840). */
+  --breakpoint-3xl: 120rem;
+  --breakpoint-4xl: 160rem;
+
+  --radius-tomb: 999px 999px 12px 12px;
+  --shadow-glow: 0 0 24px rgb(124 242 154 / 0.35);
+  --ease-rise: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-fog-drift: fog-drift 45s ease-in-out infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes fog-drift {
+    from {
+      transform: translate3d(-4%, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(4%, -2%, 0) scale(1.08);
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+}
+
+/* shadcn semantic variables, mapped onto the brand palette (dark-only theme). */
+@theme inline {
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-display: var(--font-cinzel), Georgia, serif;
+  --font-heading: var(--font-display);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+}
+
+:root {
+  color-scheme: light;
+  --background: var(--color-page);
+  --foreground: var(--color-copy);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-copy);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-copy);
+  --primary: var(--color-ecto);
+  --primary-foreground: var(--color-ink);
+  --secondary: transparent;
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-surface-muted);
+  --muted-foreground: var(--color-subtle);
+  --accent: var(--color-surface-muted);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-ecto-dim);
+  --radius: 10px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Every size token is in rem, so scaling the root keeps the whole UI
+     legible on large high-resolution displays (QHD 27-32" and 4K). */
+  @media (min-width: 160rem) {
+    html {
+      font-size: 125%;
+    }
+  }
+  @media (min-width: 220rem) {
+    html {
+      font-size: 150%;
+    }
+  }
+  body {
+    @apply bg-background text-body text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-ink;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ecto-dim;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

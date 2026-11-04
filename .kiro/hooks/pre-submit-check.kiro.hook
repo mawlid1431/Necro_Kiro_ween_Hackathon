@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "name": "Pre-submit check",
+  "description": "Manual: lint, typecheck, all tests, .kiro not gitignored, LICENSE present.",
+  "version": "1",
+  "when": { "type": "userTriggered" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the pre-submit check and report PASS/FAIL per item: 1) `bun run lint` 2) `bun run typecheck` 3) `bun run test` 4) `git check-ignore -v .kiro .kiro/steering/product.md` must print nothing 5) LICENSE exists at the root and is MIT 6) `git ls-files | grep -E '\.env($|\.local)'` must print nothing 7) `.env.example` exists. Fix nothing automatically; list what needs fixing."
+  }
+}
