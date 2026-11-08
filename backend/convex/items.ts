@@ -54,10 +54,30 @@ export const list = query({
     sort: v.optional(itemSort),
     paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, { graveId, filter, sort = "newest", paginationOpts }) => {
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    if (graveId) await requireOwned(ctx, user._id, graveId);
-    const uid = user._id;
+    return await listFor(ctx, user._id, args);
+  },
+});
+
+/** Paginated item cards for one user. Shared by the UI query and the MCP list_items tool. */
+export async function listFor(
+  ctx: QueryCtx,
+  uid: Id<"users">,
+  {
+    graveId,
+    filter,
+    sort = "newest",
+    paginationOpts,
+  }: {
+    graveId?: Id<"graves">;
+    filter: "all" | "unread" | "starred";
+    sort?: "newest" | "relevance";
+    paginationOpts: { numItems: number; cursor: string | null };
+  },
+) {
+  {
+    if (graveId) await requireOwned(ctx, uid, graveId);
 
     let q;
     if (sort === "relevance") {
@@ -86,8 +106,8 @@ export const list = query({
     const page = await q.paginate(paginationOpts);
     const titles = await graveTitles(ctx, page.page);
     return { ...page, page: page.page.map((i) => itemCard(i, titles.get(i.graveId))) };
-  },
-});
+  }
+}
 
 /** Full item for the reading pane, with its Séance and drafts. */
 export const get = query({
@@ -124,19 +144,29 @@ export const search = query({
   handler: async (ctx, { query: text, graveId }) => {
     const user = await getCurrentUser(ctx);
     if (!user) return [];
-    const term = text.trim().slice(0, 200);
-    if (!term) return [];
-    if (graveId) await requireOwned(ctx, user._id, graveId);
-    const rows = await ctx.db
-      .query("items")
-      .withSearchIndex("search_text", (q) => {
-        const s = q.search("title", term).eq("userId", user._id);
-        return graveId ? s.eq("graveId", graveId) : s;
-      })
-      .take(30);
-    const titles = await graveTitles(ctx, rows);
-    return rows.map((i) => itemCard(i, titles.get(i.graveId)));
+    return await searchFor(ctx, user._id, text, 30, graveId);
   },
+});
+
+/** Full-text title search scoped to one user. Shared by the UI, MCP and Ask the Crypt. */
+export async function searchFor(ctx: QueryCtx, userId: Id<"users">, text: string, limit: number, graveId?: Id<"graves">) {
+  const term = text.trim().slice(0, 200);
+  if (!term) return [];
+  if (graveId) await requireOwned(ctx, userId, graveId);
+  const rows = await ctx.db
+    .query("items")
+    .withSearchIndex("search_text", (q) => {
+      const s = q.search("title", term).eq("userId", userId);
+      return graveId ? s.eq("graveId", graveId) : s;
+    })
+    .take(Math.min(Math.max(limit, 1), 50));
+  const titles = await graveTitles(ctx, rows);
+  return rows.map((i) => itemCard(i, titles.get(i.graveId)));
+}
+
+export const searchInternal = internalQuery({
+  args: { userId: v.id("users"), query: v.string(), limit: v.number() },
+  handler: (ctx, { userId, query: text, limit }) => searchFor(ctx, userId, text, limit),
 });
 
 export const setRead = mutation({

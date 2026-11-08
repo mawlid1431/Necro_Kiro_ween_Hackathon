@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { fail, utcDay } from "./lib/auth";
 import { DAILY_AI_LIMITS, VOICE_SECONDS_PER_DAY } from "../lib/limits";
 
-const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"));
+const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"));
 
 /**
  * Atomically checks today's count and inserts a pending row, so two fast clicks
@@ -19,7 +19,7 @@ export const reserve = internalMutation({
       .query("aiUsage")
       .withIndex("by_user_day_task", (q) => q.eq("userId", userId).eq("day", day).eq("task", task))
       .take(limit);
-    if (used.length >= limit) fail("LIMIT", `You have used all ${limit} of today's ${task === "seance" ? "Séances" : task === "resurrect" ? "Resurrects" : "Doctor notes"}. They reset at midnight UTC.`);
+    if (used.length >= limit) fail("LIMIT", `You have used all ${limit} of today's ${task === "seance" ? "Séances" : task === "resurrect" ? "Resurrects" : task === "ask" ? "questions" : "Doctor notes"}. They reset at midnight UTC.`);
     return await ctx.db.insert("aiUsage", { userId, task, model: "pending", inputTokens: 0, outputTokens: 0, day });
   },
 });
@@ -41,7 +41,7 @@ export const release = internalMutation({
 
 export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
   const day = utcDay();
-  const count = async (task: "seance" | "resurrect" | "doctor") =>
+  const count = async (task: "seance" | "resurrect" | "doctor" | "ask") =>
     (
       await ctx.db
         .query("aiUsage")
@@ -57,6 +57,7 @@ export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
     seance: { used: await count("seance"), limit: DAILY_AI_LIMITS.seance },
     resurrect: { used: await count("resurrect"), limit: DAILY_AI_LIMITS.resurrect },
     doctor: { used: await count("doctor"), limit: DAILY_AI_LIMITS.doctor },
+    ask: { used: await count("ask"), limit: DAILY_AI_LIMITS.ask },
     voiceMinutes: { used: Math.ceil(voiceSeconds / 60), limit: VOICE_SECONDS_PER_DAY / 60 },
   };
 }

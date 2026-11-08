@@ -1,3 +1,4 @@
+"use node";
 // Glue between the pure AI router and Convex: breaker state and budgets live in the
 // database, and structured output gets one repair attempt before the next rung.
 // Import only from "use node" actions (it pulls in the AI SDK).

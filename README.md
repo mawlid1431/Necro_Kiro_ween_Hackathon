@@ -24,6 +24,8 @@ docs/       Product docs, brand guide, Kiro log
 
 The frontend imports the generated Convex API as `@backend/convex/_generated/api`.
 
+**MCP (Talk to the Dead):** `POST /api/mcp` with a personal API key exposes 11 tools over your graveyard. Setup and tool list: [`docs/MCP.md`](docs/MCP.md).
+
 ## Setup
 
 Requires [Bun](https://bun.sh) 1.3+.

@@ -9,6 +9,7 @@ export const DAILY_AI_LIMITS = {
   seance: 100,
   resurrect: 50,
   doctor: 30,
+  ask: 20,
 } as const;
 
 export type LimitedAiTask = keyof typeof DAILY_AI_LIMITS;

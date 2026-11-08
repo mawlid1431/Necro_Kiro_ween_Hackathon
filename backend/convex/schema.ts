@@ -9,7 +9,7 @@ import { v } from "convex/values";
 
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
-export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("voice"));
+export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"));
 export const draftStatus = v.union(v.literal("draft"), v.literal("copied"), v.literal("shared"));
 
 export default defineSchema({
