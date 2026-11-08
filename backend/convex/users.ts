@@ -43,6 +43,7 @@ export const me = query({
       name: user.name,
       email: user.email,
       interests: user.interests,
+      summaryLanguage: user.summaryLanguage ?? "English",
       onboarded: user.onboardedAt !== undefined,
       usage: await usageToday(ctx, user._id),
     };

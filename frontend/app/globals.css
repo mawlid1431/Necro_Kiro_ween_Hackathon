@@ -175,6 +175,47 @@
   }
 }
 
+/* Article HTML in the Crypt (already sanitised at ingest). Reader size from the type scale. */
+@layer components {
+  .article-body {
+    @apply text-reader text-copy;
+    overflow-wrap: anywhere;
+  }
+  .article-body > * + * {
+    @apply mt-4;
+  }
+  .article-body :is(h1, h2, h3, h4) {
+    @apply mt-8 font-display text-h3 font-bold text-ink;
+  }
+  .article-body a {
+    @apply font-medium text-ecto-ink underline underline-offset-4;
+  }
+  .article-body img {
+    @apply my-6 h-auto max-w-full rounded-lg;
+  }
+  .article-body :is(ul, ol) {
+    @apply pl-6;
+  }
+  .article-body ul {
+    @apply list-disc;
+  }
+  .article-body ol {
+    @apply list-decimal;
+  }
+  .article-body blockquote {
+    @apply border-l-2 border-ecto-dim pl-4 text-subtle italic;
+  }
+  .article-body pre {
+    @apply overflow-x-auto rounded-lg bg-surface-muted p-4 text-meta;
+  }
+  .article-body code {
+    @apply rounded bg-surface-muted px-1 text-[0.9em];
+  }
+  .article-body table {
+    @apply block overflow-x-auto text-meta;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

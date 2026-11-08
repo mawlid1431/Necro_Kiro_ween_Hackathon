@@ -49,8 +49,12 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
-# claude
-/.claude/
+# claude (local agent settings, at any depth). Note: .kiro/ is NOT ignored:
+# the hackathon requires the /.kiro directory in the public repo.
+.claude/
+.claude
+CLAUDE.md
+CLAUDE.local.md
 
 # convex local state
 .convex/
