@@ -164,9 +164,12 @@ export async function searchFor(ctx: QueryCtx, userId: Id<"users">, text: string
   return rows.map((i) => itemCard(i, titles.get(i.graveId)));
 }
 
+export type ItemCard = ReturnType<typeof itemCard>;
+
 export const searchInternal = internalQuery({
   args: { userId: v.id("users"), query: v.string(), limit: v.number() },
-  handler: (ctx, { userId, query: text, limit }) => searchFor(ctx, userId, text, limit),
+  // Explicit return type breaks a type-inference cycle through the generated api.
+  handler: (ctx, { userId, query: text, limit }): Promise<ItemCard[]> => searchFor(ctx, userId, text, limit),
 });
 
 export const setRead = mutation({

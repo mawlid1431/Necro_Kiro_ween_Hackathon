@@ -7,6 +7,7 @@ import { ConvexError, v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import type { ItemCard } from "./items";
 import { ladderObject } from "./lib/ladder";
 import { AllRungsFailed } from "../lib/ai/router";
 import { ASK_SYSTEM, AskSchema, askPrompt, keepCitations } from "../lib/ai/prompts";
@@ -24,7 +25,7 @@ export async function askFor(ctx: ActionCtx, userId: Id<"users">, question: stri
   const q = question.trim();
   if (q.length < 2 || q.length > 500) throw new ConvexError({ code: "INVALID_INPUT", message: "Ask a question of 2 to 500 characters." });
 
-  const found = await ctx.runQuery(internal.items.searchInternal, { userId, query: q, limit: 8 });
+  const found: ItemCard[] = await ctx.runQuery(internal.items.searchInternal, { userId, query: q, limit: 8 });
   const items = found.map((i) => ({ id: i._id as string, title: i.title, feed: i.graveTitle, link: i.link, publishedAt: i.publishedAt }));
   if (!found.length) {
     return { answer: "Nothing in your graveyard matches that yet.", citations: [], confident: false, ghost: true, model: "ghost:search", items };

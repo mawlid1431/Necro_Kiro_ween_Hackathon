@@ -26,6 +26,8 @@ import type * as mcp from "../mcp.js";
 import type * as providerHealth from "../providerHealth.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as seances from "../seances.js";
+import type * as seed from "../seed.js";
+import type * as seedNode from "../seedNode.js";
 import type * as usage from "../usage.js";
 import type * as users from "../users.js";
 import type * as voice from "../voice.js";
@@ -55,6 +57,8 @@ declare const fullApi: ApiFromModules<{
   providerHealth: typeof providerHealth;
   rateLimits: typeof rateLimits;
   seances: typeof seances;
+  seed: typeof seed;
+  seedNode: typeof seedNode;
   usage: typeof usage;
   users: typeof users;
   voice: typeof voice;

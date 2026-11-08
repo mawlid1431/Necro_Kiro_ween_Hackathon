@@ -29,6 +29,7 @@ export default defineSchema({
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_clerk", ["clerkId"])
+    .index("by_email", ["email"])
     .index("by_publicSlug", ["publicSlug"]),
 
   graves: defineTable({
