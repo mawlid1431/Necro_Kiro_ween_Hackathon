@@ -3,7 +3,7 @@ import { internalMutation, internalQuery, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { platform } from "./schema";
 import { fail, requireOwned, requireUser } from "./lib/auth";
-import { cleanHashtags, PLATFORM_LIMITS } from "../lib/prompts";
+import { cleanHashtags, PLATFORM_LIMITS } from "../lib/ai/prompts";
 
 export type DraftView = {
   _id: Id<"drafts">;
@@ -11,6 +11,8 @@ export type DraftView = {
   text: string;
   hashtags: string[];
   status: "draft" | "copied" | "shared";
+  model: string;
+  ghost: boolean; // "template draft" in the UI
 };
 
 export const update = mutation({
@@ -46,8 +48,10 @@ export const context = internalQuery({
     const voice = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).first();
     const seance = await ctx.db.query("seances").withIndex("by_item", (q) => q.eq("itemId", itemId)).first();
     const source = grave ? (grave.customTitle ?? grave.title) : "the source";
+    const user = await ctx.db.get(userId);
     return {
-      item: { title: item.title, link: item.link ?? grave?.siteUrl ?? "", contentHtml: item.contentHtml, excerpt: item.excerpt },
+      item: { title: item.title, link: item.link ?? grave?.siteUrl ?? "", contentHtml: item.fullHtml ?? item.contentHtml, excerpt: item.excerpt },
+      interests: user?.interests ?? [],
       source,
       voice: voice
         ? { tone: voice.tone, audience: voice.audience, wordsToUse: voice.wordsToUse, wordsToAvoid: voice.wordsToAvoid, samplePosts: voice.samplePosts }
@@ -57,12 +61,12 @@ export const context = internalQuery({
   },
 });
 
-/** Re-raising replaces the item's drafts. Finalises the usage row. */
+/** Re-raising replaces the item's drafts. Finalises the usage row (none for Ghost drafts). */
 export const replaceForItem = internalMutation({
   args: {
     userId: v.id("users"),
     itemId: v.id("items"),
-    usageId: v.id("aiUsage"),
+    usageId: v.optional(v.id("aiUsage")),
     model: v.string(),
     inputTokens: v.number(),
     outputTokens: v.number(),
@@ -70,14 +74,16 @@ export const replaceForItem = internalMutation({
   },
   handler: async (ctx, a): Promise<DraftView[]> => {
     await requireOwned(ctx, a.userId, a.itemId);
-    await ctx.db.patch(a.usageId, { model: a.model, inputTokens: a.inputTokens, outputTokens: a.outputTokens });
+    if (a.usageId && (await ctx.db.get(a.usageId))) {
+      await ctx.db.patch(a.usageId, { model: a.model, inputTokens: a.inputTokens, outputTokens: a.outputTokens });
+    }
     for (const old of await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", a.itemId)).collect()) {
       if (old.userId === a.userId) await ctx.db.delete(old._id);
     }
     const out: DraftView[] = [];
     for (const d of a.drafts) {
       const _id = await ctx.db.insert("drafts", { userId: a.userId, itemId: a.itemId, ...d, status: "draft", model: a.model });
-      out.push({ _id, ...d, status: "draft" });
+      out.push({ _id, ...d, status: "draft", model: a.model, ghost: a.model.startsWith("ghost:") });
     }
     return out;
   },

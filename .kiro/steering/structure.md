@@ -17,10 +17,12 @@ necro/
 │  └─ .env.example   NEXT_PUBLIC_* + Clerk + LiveKit + server secrets for the API routes
 ├─ backend/          Convex (the only backend; UI, MCP and voice all call it)
 │  ├─ convex/        schema · users · graves · items · feedsNode ("use node") · aiNode ("use node")
-│  │                 seances · drafts · voice · doctor · doctorNode · apiKeys · aiUsage · usage · rateLimits · crons
+│  │                 seances · drafts · voice · doctor · doctorNode · apiKeys · aiUsage · usage · rateLimits
+│  │                 providerHealth (breakers, budgets) · admin (health) · crons
 │  │  └─ lib/auth.ts the user-isolation helper every function uses
-│  ├─ lib/           ai.ts · prompts.ts · limits.ts · errors.ts · schedule.ts · sanitize.ts
-│  │                 feeds/{parse,normalize,discover,opml,url}.ts · security/ssrf.ts
+│  ├─ lib/           ai/{providers,router,breaker,budgets,prompts,ghost,kindred,mock}.ts
+│  │                 limits.ts · errors.ts · schedule.ts · sanitize.ts
+│  │                 feeds/{parse,jsonfeed,any,normalize,discover,opml,url}.ts · security/ssrf.ts
 │  ├─ tests/         unit/ · pbt/ · convex/
 │  ├─ scripts/       push-env.ts (bun run env:push)
 │  └─ .env.example   AI keys + models + server secrets (pushed to Convex env)

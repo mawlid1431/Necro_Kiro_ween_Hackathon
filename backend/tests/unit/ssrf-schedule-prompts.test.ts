@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { checkUrl, isBlockedIp, SafeFetchError } from "../../lib/security/ssrf";
 import { afterFailure, afterSuccess, jitter } from "../../lib/schedule";
-import { cleanHashtags, fitTo, seancePrompt } from "../../lib/prompts";
+import { cleanHashtags, fitTo, seancePrompt } from "../../lib/ai/prompts";
 import { clientCodeFor, diagnose } from "../../lib/errors";
 
 describe("SSRF guard", () => {

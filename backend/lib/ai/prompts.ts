@@ -31,13 +31,15 @@ export const SEANCE_SYSTEM =
   `You summarise articles for a busy reader. Be accurate and neutral. Never invent facts. ${UNTRUSTED} ` +
   "Score 0-100 for how relevant the article is to the reader's interests: 80+ only for a direct match, below 30 when unrelated.";
 
-export function seancePrompt(p: { interests: string[]; title: string; text: string }) {
+export function seancePrompt(p: { interests: string[]; title: string; text: string; language?: string }) {
+  const lang = p.language?.trim().slice(0, 30).replace(/[^\p{L} -]/gu, "");
   return [
     `Reader interests: ${p.interests.join(", ") || "none given"}`,
     `<article title="${p.title.replace(/"/g, "'")}">`,
     p.text.slice(0, 6000),
     `</article>`,
     "Return exactly 3 short bullet summaries, a relevance score and a one-line reason for the score.",
+    ...(lang && lang.toLowerCase() !== "english" ? [`Write the bullets and the reason in ${lang}.`] : []),
   ].join("\n");
 }
 

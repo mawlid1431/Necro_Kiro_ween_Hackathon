@@ -1,16 +1,15 @@
 "use node";
 // Feed Doctor actions: retry now, look for a moved feed, and explain an error in plain words.
 import { ConvexError, v } from "convex/values";
-import { generateText, Output } from "ai";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { ladderObject } from "./lib/ladder";
 import { safeFetch } from "../lib/security/ssrf";
 import { discoverFeeds } from "../lib/feeds/discover";
-import { parseFeed } from "../lib/feeds/parse";
+import { parseAnyFeed } from "../lib/feeds/any";
 import { normaliseFeedUrl } from "../lib/feeds/url";
 import { diagnose } from "../lib/errors";
-import { withFallback } from "../lib/ai";
-import { DOCTOR_SYSTEM, DoctorSchema, doctorPrompt } from "../lib/prompts";
+import { DOCTOR_SYSTEM, DoctorSchema, doctorPrompt } from "../lib/ai/prompts";
 
 /** Runs fetchOne now and returns the new status. */
 export const retry = action({
@@ -42,7 +41,7 @@ export const tryFix = action({
         for (const f of found.slice(0, 3)) {
           if (normaliseFeedUrl(f.feedUrl) === g.feedUrl) continue;
           const res = await safeFetch(f.feedUrl);
-          const feed = parseFeed(res.body, { feedUrl: res.url, fetchedAt: Date.now() });
+          const feed = parseAnyFeed(res.body, { feedUrl: res.url, fetchedAt: Date.now() });
           return { candidateUrl: res.url, title: feed.title, itemCount: feed.items.length };
         }
       } catch {
@@ -62,30 +61,25 @@ export const explain = action({
     if (!g.lastErrorCode) return { note: diagnose(undefined) };
     if (g.doctorNote && g.doctorNoteFor === g.lastErrorCode) return { note: g.doctorNote };
 
-    const usageId = await ctx.runMutation(internal.aiUsage.reserve, { userId, task: "doctor" });
+    let usageId;
     try {
-      const { result, spec } = await withFallback("doctor", ({ model }) =>
-        generateText({
-          model,
-          system: DOCTOR_SYSTEM,
-          prompt: doctorPrompt({ code: g.lastErrorCode!, detail: g.lastErrorDetail ?? "", feedUrl: g.feedUrl }),
-          output: Output.object({ schema: DoctorSchema }),
-          maxOutputTokens: 120,
-          maxRetries: 1,
-          abortSignal: AbortSignal.timeout(15_000),
-        }),
-      );
-      await ctx.runMutation(internal.aiUsage.finalize, {
-        usageId,
-        model: spec,
-        inputTokens: result.usage.inputTokens ?? 0,
-        outputTokens: result.usage.outputTokens ?? 0,
+      usageId = await ctx.runMutation(internal.aiUsage.reserve, { userId, task: "doctor" });
+    } catch {
+      return { note: diagnose(g.lastErrorCode) }; // over today's limit: the static diagnosis answers
+    }
+    try {
+      const { out, spec } = await ladderObject(ctx, "doctor", {
+        system: DOCTOR_SYSTEM,
+        prompt: doctorPrompt({ code: g.lastErrorCode, detail: g.lastErrorDetail ?? "", feedUrl: g.feedUrl }),
+        schema: DoctorSchema,
+        maxOutputTokens: 120,
       });
-      await ctx.runMutation(internal.doctor.saveNote, { graveId, note: result.output.note, forCode: g.lastErrorCode });
-      return { note: result.output.note };
+      await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
+      await ctx.runMutation(internal.doctor.saveNote, { graveId, note: out.output.note, forCode: g.lastErrorCode });
+      return { note: out.output.note };
     } catch {
       await ctx.runMutation(internal.aiUsage.release, { usageId });
-      return { note: diagnose(g.lastErrorCode) }; // the static diagnosis is always a safe answer
+      return { note: diagnose(g.lastErrorCode) }; // rung 4: the static diagnosis table
     }
   },
 });

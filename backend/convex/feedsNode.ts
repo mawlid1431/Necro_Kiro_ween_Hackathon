@@ -6,8 +6,9 @@ import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { checkUrl, safeFetch, SafeFetchError } from "../lib/security/ssrf";
-import { discoverFeeds, looksLikeFeed } from "../lib/feeds/discover";
-import { FeedParseError, parseFeed, type ParsedFeed } from "../lib/feeds/parse";
+import { discoverFeeds } from "../lib/feeds/discover";
+import { FeedParseError, type ParsedFeed } from "../lib/feeds/parse";
+import { isFeedBody, parseAnyFeed } from "../lib/feeds/any";
 import { parseOpml } from "../lib/feeds/opml";
 import { faviconFor, normaliseFeedUrl, withScheme } from "../lib/feeds/url";
 import { clientCodeFor } from "../lib/errors";
@@ -62,7 +63,7 @@ export async function summonFor(ctx: ActionCtx, userId: Id<"users">, url: string
   try {
     let res = await safeFetch(input);
     let alternatives: string[] = [];
-    if (!looksLikeFeed(res.body)) {
+    if (!isFeedBody(res.body)) {
       const found = await discoverFeeds(res.url, (u) => safeFetch(u));
       if (!found.length) throw new ConvexError({ code: "NOT_A_FEED", message: "No feed found on that page." });
       alternatives = found.slice(1, 5).map((f) => f.feedUrl);
@@ -74,7 +75,7 @@ export async function summonFor(ctx: ActionCtx, userId: Id<"users">, url: string
     if (existing) return { status: "duplicate", graveId: existing._id };
 
     const fetchedAt = Date.now();
-    const feed = parseFeed(res.body, { feedUrl: res.url, fetchedAt });
+    const feed = parseAnyFeed(res.body, { feedUrl: res.url, fetchedAt });
     const graveId = await ctx.runMutation(internal.graves.create, {
       userId,
       feedUrl,
@@ -159,7 +160,7 @@ export const fetchOne = internalAction({
         return { status: status ?? "gone", inserted: 0 };
       }
       const fetchedAt = Date.now();
-      const feed = parseFeed(res.body, { feedUrl: res.url, fetchedAt });
+      const feed = parseAnyFeed(res.body, { feedUrl: res.url, fetchedAt });
       const inserted = await ingestAll(ctx, grave.userId, graveId, feed, fetchedAt, !grave.lastFetchedAt);
       const status = await ctx.runMutation(internal.graves.recordSuccess, {
         graveId,

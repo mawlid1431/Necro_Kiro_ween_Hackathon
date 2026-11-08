@@ -13,6 +13,7 @@
     "env:push": "bun scripts/push-env.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.114",
     "@ai-sdk/groq": "^4.0.76",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "ai": "^7.0.162",

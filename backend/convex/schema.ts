@@ -21,9 +21,15 @@ export default defineSchema({
     interests: v.array(v.string()),
     onboardedAt: v.optional(v.number()),
     createdAt: v.number(),
+    timezone: v.optional(v.string()), // IANA, e.g. "Asia/Kuala_Lumpur"
+    briefingHour: v.optional(v.number()), // 0-23, default 7
+    summaryLanguage: v.optional(v.string()), // default "English"
+    publicSlug: v.optional(v.string()), // random; set only when publishing is on
+    isDemo: v.optional(v.boolean()), // demo account: AI reads from demoCache
   })
     .index("by_token", ["tokenIdentifier"])
-    .index("by_clerk", ["clerkId"]),
+    .index("by_clerk", ["clerkId"])
+    .index("by_publicSlug", ["publicSlug"]),
 
   graves: defineTable({
     userId: v.id("users"),
@@ -46,6 +52,10 @@ export default defineSchema({
     doctorNote: v.optional(v.string()), // cached AI explanation of lastErrorCode
     doctorNoteFor: v.optional(v.string()), // the error code the note was written for
     unreadCount: v.number(),
+    hubUrl: v.optional(v.string()), // WebSub hub declared by the feed
+    selfUrl: v.optional(v.string()), // WebSub topic (rel="self")
+    websubSecret: v.optional(v.string()), // per-subscription HMAC secret
+    websubLeaseUntil: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_user_feedUrl", ["userId", "feedUrl"])
@@ -67,6 +77,10 @@ export default defineSchema({
     isStarred: v.boolean(),
     score: v.optional(v.number()), // copied from the Séance for sorting
     risenAt: v.number(), // when Necro first saw it
+    fullHtml: v.optional(v.string()), // Exhume result, sanitised, max 200 KB
+    exhumedAt: v.optional(v.number()),
+    kindredId: v.optional(v.string()), // same story reported by several feeds
+    embedding: v.optional(v.array(v.float64())),
   })
     .index("by_grave_guid", ["graveId", "guid"])
     .index("by_grave_published", ["graveId", "publishedAt"])
@@ -77,7 +91,10 @@ export default defineSchema({
     .index("by_user_starred", ["userId", "isStarred", "publishedAt"])
     .index("by_user_score", ["userId", "score"])
     .index("by_user_risen", ["userId", "risenAt"])
-    .searchIndex("search_text", { searchField: "title", filterFields: ["userId", "graveId"] }),
+    .index("by_kindred", ["kindredId"])
+    .searchIndex("search_text", { searchField: "title", filterFields: ["userId", "graveId"] })
+    // 768 = Gemini embedding with a reduced output size; change with AI_EMBED_MODEL if needed.
+    .vectorIndex("by_embedding", { vectorField: "embedding", dimensions: 768, filterFields: ["userId"] }),
 
   seances: defineTable({
     userId: v.id("users"),
@@ -85,7 +102,7 @@ export default defineSchema({
     summary: v.array(v.string()),
     score: v.number(),
     reason: v.string(),
-    model: v.string(),
+    model: v.string(), // "ghost:extractive" when no model answered
   })
     .index("by_item", ["itemId"])
     .index("by_user", ["userId"]),
@@ -144,4 +161,27 @@ export default defineSchema({
     seconds: v.number(),
     day: v.string(), // UTC date
   }).index("by_user_day", ["userId", "day"]),
+
+  briefings: defineTable({
+    userId: v.id("users"),
+    day: v.string(), // the user's local date
+    headline: v.string(),
+    body: v.string(),
+    picks: v.array(v.id("items")),
+    model: v.string(),
+  }).index("by_user_day", ["userId", "day"]),
+
+  // Circuit breaker per AI provider (not per user).
+  providerHealth: defineTable({
+    provider: v.string(),
+    state: v.union(v.literal("closed"), v.literal("open"), v.literal("half_open")),
+    failures: v.number(),
+    windowStart: v.number(),
+    openedUntil: v.number(),
+    cooldownMs: v.number(),
+    lastStatus: v.optional(v.number()),
+  }).index("by_provider", ["provider"]),
+
+  // Pre-computed AI answers for the demo account (instant, identical video takes).
+  demoCache: defineTable({ key: v.string(), value: v.string() }).index("by_key", ["key"]),
 });

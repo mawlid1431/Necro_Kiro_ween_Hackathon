@@ -100,9 +100,21 @@ export const get = query({
     const drafts = await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", itemId)).take(3);
     return {
       ...itemCard(item, grave ? (grave.customTitle ?? grave.title) : undefined),
-      contentHtml: item.contentHtml,
-      seance: seance ? { summary: seance.summary, score: seance.score, reason: seance.reason, model: seance.model } : null,
-      drafts: drafts.map((d) => ({ _id: d._id, platform: d.platform, text: d.text, hashtags: d.hashtags, status: d.status })),
+      contentHtml: item.fullHtml ?? item.contentHtml, // Exhumed full text when available
+      exhumed: item.fullHtml !== undefined,
+      kindredId: item.kindredId,
+      // ghost = answered by Ghost mode: label "summary without AI" / "template draft" with a try-again button
+      seance: seance
+        ? { summary: seance.summary, score: seance.score, reason: seance.reason, model: seance.model, ghost: seance.model.startsWith("ghost:") }
+        : null,
+      drafts: drafts.map((d) => ({
+        _id: d._id,
+        platform: d.platform,
+        text: d.text,
+        hashtags: d.hashtags,
+        status: d.status,
+        ghost: d.model.startsWith("ghost:"),
+      })),
     };
   },
 });

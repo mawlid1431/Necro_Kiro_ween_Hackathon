@@ -1,11 +1,11 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: ["backend/convex/aiNode.ts", "backend/convex/doctorNode.ts", "backend/lib/ai.ts", "backend/lib/prompts.ts"]
+fileMatchPattern: ["backend/convex/aiNode.ts", "backend/convex/doctorNode.ts", "backend/convex/lib/ladder.ts", "backend/lib/ai/**"]
 ---
 
 # AI prompts and schemas
 
-Models are chosen per task by env (`AI_SEANCE_MODEL` etc., written as `provider:model-id`) in `backend/lib/ai.ts`; prompts and schemas live in `backend/lib/prompts.ts`. Use the AI SDK's structured-output API with these Zod schemas so output is always valid. Check the installed `ai` package docs for the current function name before coding.
+Models are chosen per task by a chain env var (`AI_CHAIN_SEANCE` etc., `provider:model-id` rungs) and resolved in `backend/lib/ai/providers.ts`; prompts and schemas live in `backend/lib/ai/prompts.ts`; every call goes through `ladderObject` (`backend/convex/lib/ladder.ts`) and falls back to Ghost mode. Use the AI SDK's structured-output API with these Zod schemas so output is always valid. Check the installed `ai` package docs for the current function name before coding.
 
 Limits: per-user daily caps (100 Séances, 50 Resurrects) stored in Convex; one cached Séance per item; truncate article text to ~6000 characters.
 

@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { decodeHTML } from "entities";
 import { cleanText, normalizeItem, toHttpUrl, type NormalizedItem, type RawItem } from "./normalize";
 
-export type FeedFormat = "rss090" | "rss091" | "rss092" | "rss2" | "rss1" | "atom";
+export type FeedFormat = "rss090" | "rss091" | "rss092" | "rss2" | "rss1" | "atom" | "jsonfeed";
 
 export interface ParsedFeed {
   format: FeedFormat;

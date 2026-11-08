@@ -69,6 +69,37 @@ export const setInterests = mutation({
   },
 });
 
+/** Settings: summary language (multilingual Séance), timezone and Morning Séance hour. */
+export const setPreferences = mutation({
+  args: {
+    summaryLanguage: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    briefingHour: v.optional(v.number()),
+  },
+  handler: async (ctx, a) => {
+    const user = await requireUser(ctx);
+    const patch: { summaryLanguage?: string; timezone?: string; briefingHour?: number } = {};
+    if (a.summaryLanguage !== undefined) {
+      const lang = a.summaryLanguage.trim();
+      if (!/^[\p{L} -]{2,30}$/u.test(lang)) fail("INVALID_INPUT", "Pick a language name, like English or Malay.");
+      patch.summaryLanguage = lang;
+    }
+    if (a.timezone !== undefined) {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: a.timezone });
+      } catch {
+        fail("INVALID_INPUT", "That timezone is not recognised.");
+      }
+      patch.timezone = a.timezone;
+    }
+    if (a.briefingHour !== undefined) {
+      if (!Number.isInteger(a.briefingHour) || a.briefingHour < 0 || a.briefingHour > 23) fail("INVALID_INPUT", "Pick an hour from 0 to 23.");
+      patch.briefingHour = a.briefingHour;
+    }
+    await ctx.db.patch(user._id, patch);
+  },
+});
+
 export const completeOnboarding = mutation({
   args: {},
   handler: async (ctx) => {

@@ -1,5 +1,6 @@
 import { decodeHTML } from "entities";
 import type { SafeFetchResult } from "../security/ssrf";
+import { looksLikeJsonFeed } from "./jsonfeed";
 
 export type Fetcher = (url: string) => Promise<SafeFetchResult>;
 
@@ -8,7 +9,7 @@ export interface DiscoveredFeed {
   title: string | null;
 }
 
-const FEED_TYPES = /^application\/(rss|atom|rdf)\+xml$|^application\/xml$|^text\/xml$/i;
+const FEED_TYPES = /^application\/(rss|atom|rdf)\+xml$|^application\/xml$|^text\/xml$|^application\/(feed\+)?json$/i;
 const COMMON_PATHS = ["/feed", "/rss", "/rss.xml", "/atom.xml", "/feed.xml", "/index.xml", "/feed/", "/?feed=rss2", "/feeds/posts/default"];
 const MAX_PROBES = 6;
 
@@ -20,7 +21,7 @@ export function looksLikeFeed(body: string): boolean {
 
 export async function discoverFeeds(pageUrl: string, fetcher: Fetcher): Promise<DiscoveredFeed[]> {
   const page = await fetcher(pageUrl);
-  if (looksLikeFeed(page.body)) return [{ feedUrl: page.url, title: null }];
+  if (looksLikeFeed(page.body) || looksLikeJsonFeed(page.body)) return [{ feedUrl: page.url, title: null }];
 
   const found = parseAlternateLinks(page.body, page.url);
   if (found.length) return found;
@@ -31,7 +32,7 @@ export async function discoverFeeds(pageUrl: string, fetcher: Fetcher): Promise<
     const candidate = new URL(path, root.origin).toString();
     try {
       const res = await fetcher(candidate);
-      if (looksLikeFeed(res.body)) return [{ feedUrl: res.url, title: null }];
+      if (looksLikeFeed(res.body) || looksLikeJsonFeed(res.body)) return [{ feedUrl: res.url, title: null }];
     } catch {
       continue;
     }
