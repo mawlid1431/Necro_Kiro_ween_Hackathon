@@ -35,9 +35,13 @@ export function GraveyardGrid() {
       seen.current.set(g._id, g.unreadCount);
     }
     if (up.size) {
-      setRisen(up);
-      const t = setTimeout(() => setRisen(new Set()), 1500);
-      return () => clearTimeout(t);
+      // State changes happen in timer callbacks, not synchronously in the effect body.
+      const on = setTimeout(() => setRisen(up), 0);
+      const off = setTimeout(() => setRisen(new Set()), 1500);
+      return () => {
+        clearTimeout(on);
+        clearTimeout(off);
+      };
     }
   }, [graves]);
 
