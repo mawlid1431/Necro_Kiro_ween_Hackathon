@@ -10,7 +10,7 @@ Installed versions are the source of truth; check `package.json` and the bundled
 - **Clerk 7 (Core 3)**: `<SignedIn>` / `<SignedOut>` were removed. Use `<Show when="signed-in">` / `<Show when="signed-out">`. `createRouteMatcher` in `proxy.ts` is deprecated: protect routes in layouts (`auth.protect()`, see `app/(app)/layout.tsx`). `ClerkProvider` goes inside `<body>`.
 - **Cache components (Next 16)**: reading cookies/headers outside `<Suspense>` blocks prerendering. Keep Clerk's `<Show>` in client components on public pages (`components/layout/HeaderAuth.tsx`).
 - **AI SDK v7**: `generateObject` is deprecated. Use `generateText({ output: Output.object({ schema }) })`.
-- **Groq models get retired**: `llama-3.3-70b-versatile` is gone. Current default `AI_MODEL=openai/gpt-oss-120b`; list options with `bunx convex run ai:listGroqModels`, check with `bunx convex run ai:healthCheck`.
+- **Models get retired**: `llama-3.3-70b-versatile` is gone. Each AI task has its own env var written as `provider:model-id` (`AI_SEANCE_MODEL`, `AI_RESURRECT_MODEL`, `AI_DOCTOR_MODEL`, `AI_FALLBACK_MODEL`). Check them with `bunx convex run aiNode:healthCheck` (in `backend/`).
 
 | Layer | Choice |
 |---|---|
@@ -20,7 +20,7 @@ Installed versions are the source of truth; check `package.json` and the bundled
 | Animation | Motion (`motion/react`), always with reduced-motion support |
 | Backend / DB | Convex: queries, mutations, actions, crons, realtime |
 | Auth | Clerk (`@clerk/nextjs`) + `convex/react-clerk` |
-| AI | Vercel AI SDK (`ai`) with provider switch in `lib/ai.ts`: Bedrock (default), OpenAI, Groq via `AI_PROVIDER` / `AI_MODEL` |
+| AI | Vercel AI SDK (`ai`) in `backend/lib/ai.ts`: Groq and OpenRouter, primary + fallback per task via `withFallback` |
 | Feeds | fast-xml-parser + own normaliser (RSS 0.9x/1.0/2.0, Atom 1.0) |
 | HTML safety | sanitize-html |
 | Validation | Zod v4 for every external input, AI output and MCP argument |
@@ -40,8 +40,9 @@ Installed versions are the source of truth; check `package.json` and the bundled
 
 | Command | Does |
 |---|---|
-| `bun run dev` | Next dev server |
-| `bunx convex dev` | Convex dev deployment + codegen (run in a second terminal) |
-| `bun run lint` / `bun run typecheck` | ESLint / `tsc --noEmit` |
-| `bun run test` | Vitest (unit, PBT, convex-test) |
-| `bun run check` | lint + typecheck + test |
+| `frontend/: bun run dev` | Next dev server |
+| `backend/: bun run dev` | `convex dev`: dev deployment + codegen (second terminal) |
+| `frontend/: bun run check` | ESLint + `tsc --noEmit` |
+| `backend/: bun run test` | Vitest (unit, PBT, convex-test) |
+| `backend/: bun run check` | typecheck + test |
+| `backend/: bun run env:push` | Push `backend/.env.local` secrets to Convex env |

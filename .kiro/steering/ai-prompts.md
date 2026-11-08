@@ -1,11 +1,11 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: ["convex/seance.ts", "convex/resurrect.ts", "lib/ai.ts", "lib/ai/**"]
+fileMatchPattern: ["backend/convex/aiNode.ts", "backend/convex/doctorNode.ts", "backend/lib/ai.ts", "backend/lib/prompts.ts"]
 ---
 
 # AI prompts and schemas
 
-Provider is chosen by env (`AI_PROVIDER` = bedrock | openai | groq, `AI_MODEL` = model id) in `lib/ai.ts`. Use the AI SDK's structured-output API with these Zod schemas so output is always valid. Check the installed `ai` package docs for the current function name before coding.
+Models are chosen per task by env (`AI_SEANCE_MODEL` etc., written as `provider:model-id`) in `backend/lib/ai.ts`; prompts and schemas live in `backend/lib/prompts.ts`. Use the AI SDK's structured-output API with these Zod schemas so output is always valid. Check the installed `ai` package docs for the current function name before coding.
 
 Limits: per-user daily caps (100 Séances, 50 Resurrects) stored in Convex; one cached Séance per item; truncate article text to ~6000 characters.
 

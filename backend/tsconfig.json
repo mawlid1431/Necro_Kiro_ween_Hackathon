@@ -1,0 +1,19 @@
+{
+  // Typechecks backend/lib and backend/tests. Convex functions use convex/tsconfig.json.
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ES2023", "dom"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "vite/client"],
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": ["lib/**/*", "tests/**/*", "scripts/**/*", "vitest.config.mts"],
+  "exclude": ["node_modules", "convex"]
+}

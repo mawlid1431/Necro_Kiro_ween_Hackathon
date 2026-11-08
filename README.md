@@ -8,47 +8,58 @@ Full product and system design: [`docs/Necro_Project_Documentation.md`](docs/Nec
 
 ## Stack
 
-Bun · Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 · shadcn/ui · Motion · Convex · Clerk · Vercel AI SDK (Groq, OpenAI or Bedrock) · Zod · Vitest + convex-test
+Bun · Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 · shadcn/ui · Motion · Convex · Clerk · Vercel AI SDK (Groq + OpenRouter with fallback) · Zod · Vitest + fast-check + convex-test
+
+## Project layout
+
+Two apps, each with its own `package.json`, `bun.lock` and `node_modules`. Bun only.
+
+```
+frontend/   Next.js app (UI, Clerk, /api routes). Deploys to Vercel.
+backend/    Convex: schema, queries, mutations, actions, crons
+            + lib/ (feed engine, SSRF-safe fetcher, AI layer, prompts) + tests/
+docs/       Product docs, brand guide, Kiro log
+.kiro/      Kiro steering, hooks and agents
+```
+
+The frontend imports the generated Convex API as `@backend/convex/_generated/api`.
 
 ## Setup
 
 Requires [Bun](https://bun.sh) 1.3+.
 
 ```bash
-bun install
-cp .env.example .env.local
+cd backend  && bun install && cp .env.example .env.local
+cd ../frontend && bun install && cp .env.example .env.local
 ```
 
-1. **Convex:** run `bunx convex dev` once. It links or creates a project and writes `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL` into `.env.local`.
-2. **Clerk:** create an application, copy the publishable and secret keys into `.env.local`, set `CLERK_JWT_ISSUER_DOMAIN` to its Frontend API URL, and turn on the **Convex** integration in the Clerk dashboard.
-3. **Convex environment variables** (dashboard or CLI):
+1. **Convex:** in `backend/`, run `bunx convex dev` once. It links the project and writes `CONVEX_DEPLOYMENT`.
+2. **Clerk:** copy the publishable and secret keys into `frontend/.env.local`, set `CLERK_JWT_ISSUER_DOMAIN` (both files) to its Frontend API URL, and turn on the **Convex** integration in the Clerk dashboard.
+3. **Backend secrets:** fill in `backend/.env.local` (AI keys, models, server secrets), then push them to Convex:
 
    ```bash
-   bunx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-app>.clerk.accounts.dev
-   bunx convex env set AI_PROVIDER groq
-   bunx convex env set AI_MODEL openai/gpt-oss-120b
-   bunx convex env set GROQ_API_KEY <your-key>
+   cd backend && bun run env:push
    ```
 
-4. Check the AI provider works: `bunx convex run ai:healthCheck`.
+4. Check the AI models work: `bunx convex run aiNode:healthCheck`.
 
 ## Run
 
 ```bash
-bunx convex dev   # terminal 1: Convex backend + codegen
-bun run dev       # terminal 2: http://localhost:3000
+cd backend  && bun run dev   # terminal 1: Convex backend + codegen
+cd frontend && bun run dev   # terminal 2: http://localhost:3000
 ```
 
 ## Scripts
 
-| Command | Does |
-|---|---|
-| `bun run dev` | Next.js dev server |
-| `bun run build` | Production build |
-| `bun run lint` | ESLint |
-| `bun run typecheck` | `tsc --noEmit` |
-| `bun run test` | Vitest (unit, property-based, convex-test) |
-| `bun run check` | lint + typecheck + test |
+| Folder | Command | Does |
+|---|---|---|
+| frontend | `bun run dev` / `build` | Next.js dev server / production build |
+| frontend | `bun run check` | ESLint + `tsc --noEmit` |
+| backend | `bun run dev` | `convex dev` (deploys functions to the dev deployment, regenerates types) |
+| backend | `bun run test` | Vitest: unit, property-based (fast-check), convex-test |
+| backend | `bun run check` | typecheck + tests |
+| backend | `bun run env:push` | Push `backend/.env.local` secrets to Convex (`-- --prod` for production) |
 
 ## Architecture & Diagrams
 

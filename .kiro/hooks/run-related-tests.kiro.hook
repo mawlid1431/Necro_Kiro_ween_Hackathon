@@ -6,6 +6,6 @@
   "when": { "type": "fileEdited", "patterns": ["**/*.test.ts", "**/*.test.tsx"] },
   "then": {
     "type": "askAgent",
-    "prompt": "A test file was just saved. Run `bun run test -- <that file>` (Bun only, never npm). If tests fail, summarise each failure with the assertion and the likely cause. Do not edit code unless I ask."
+    "prompt": "A test file was just saved. In `backend/`, run `bun run test -- <that file>` (Bun only, never npm). If tests fail, summarise each failure with the assertion and the likely cause. Do not edit code unless I ask."
   }
 }

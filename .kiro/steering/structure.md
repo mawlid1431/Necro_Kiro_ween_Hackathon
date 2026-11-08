@@ -4,33 +4,37 @@ inclusion: always
 
 # Project structure
 
+Two apps, each with its own `package.json`, `bun.lock` and `node_modules` (Bun only). Run commands inside the folder.
+
 ```
 necro/
 ├─ .kiro/            specs/<feature>/{requirements,design,tasks}.md · steering/ · hooks/ · agents/
-├─ app/
-│  ├─ page.tsx       landing (/)
-│  ├─ graveyard/ · crypt/ · doctor/ · settings/
-│  ├─ sign-in/[[...sign-in]]/ · sign-up/[[...sign-up]]/
-│  └─ api/mcp/route.ts
-├─ components/
-│  ├─ brand/         Logo, FogBackground
-│  ├─ layout/        AppHeader, PageTitle
-│  ├─ graveyard/ · crypt/ · resurrect/
-│  ├─ providers/     ConvexClientProvider
-│  └─ ui/            shadcn primitives + shared building blocks (Button, Card, Tombstone)
-├─ convex/           schema.ts · users.ts · graves.ts · items.ts · seance.ts · resurrect.ts · crons.ts · fetcher.ts
-│  └─ lib/auth.ts    the user-isolation helper every function uses
-├─ lib/              ai.ts · feeds/{parse,discover,opml,normalize}.ts · security/ssrf.ts · sanitize.ts · utils.ts · motion.ts · copy.ts
-├─ public/           brand assets copied from docs/Necro_Brand_Assets
-├─ tests/            unit/ · pbt/ · e2e/ · fixtures/feeds/
+├─ frontend/         Next.js app (Vercel)
+│  ├─ app/           page.tsx (landing) · (app)/graveyard … · sign-in · sign-up · api/mcp · api/livekit/token
+│  ├─ components/    brand/ · layout/ · graveyard/ · providers/ · ui/
+│  ├─ lib/           utils.ts · motion.ts · copy.ts · clerk-appearance.ts
+│  ├─ public/        brand assets
+│  └─ .env.example   NEXT_PUBLIC_* + Clerk + LiveKit + server secrets for the API routes
+├─ backend/          Convex (the only backend; UI, MCP and voice all call it)
+│  ├─ convex/        schema · users · graves · items · feedsNode ("use node") · aiNode ("use node")
+│  │                 seances · drafts · voice · doctor · doctorNode · apiKeys · aiUsage · usage · rateLimits · crons
+│  │  └─ lib/auth.ts the user-isolation helper every function uses
+│  ├─ lib/           ai.ts · prompts.ts · limits.ts · errors.ts · schedule.ts · sanitize.ts
+│  │                 feeds/{parse,normalize,discover,opml,url}.ts · security/ssrf.ts
+│  ├─ tests/         unit/ · pbt/ · convex/
+│  ├─ scripts/       push-env.ts (bun run env:push)
+│  └─ .env.example   AI keys + models + server secrets (pushed to Convex env)
 ├─ docs/             project docs, brand guide, KIRO_LOG.md
-└─ LICENSE · README.md · .env.example
+└─ LICENSE · README.md
 ```
+
+The frontend imports the generated API as `@backend/convex/_generated/api`.
 
 ## Conventions
 
 - Files: `kebab-case.ts` for modules, `PascalCase.tsx` for React components.
-- One home per concern: colours/fonts in `app/globals.css` + `app/fonts.ts`, motion presets in `lib/motion.ts`, UI copy and themed labels in `lib/copy.ts`.
+- One home per concern: colours/fonts in `frontend/app/globals.css` + `frontend/app/fonts.ts`, motion presets in `frontend/lib/motion.ts`, UI copy and themed labels in `frontend/lib/copy.ts`.
+- A `"use node"` Convex file may export only actions; keep its queries and mutations in a sibling file.
 - Search before creating a component; extend with variants instead of copying.
 - Server Components by default; add `"use client"` only where state, effects or Motion are needed.
 - Every Convex table carries `userId` and an index starting with `userId`.
