@@ -72,6 +72,9 @@ export function seancePrompt(p: { interests: string[]; title: string; text: stri
 
 export const RESURRECT_SYSTEM =
   `You write social posts that share an article, in the user's own voice. ${UNTRUSTED} ` +
+  "The user did NOT write the article and did not do its work: describe what the author or source did " +
+  "(\"Simon Willison ran…\", \"BBC reports…\"), never first-person claims like \"I built\", \"I tested\" or \"I replicated\". " +
+  "First person is only for the user's reaction (\"I found this useful because…\"). " +
   "Rules: no invented facts or numbers; credit the source by name; one clear call to action; at most two emoji; " +
   "LinkedIn up to 1300 characters, X up to 280 including the link, Instagram caption up to 2200; 3 to 6 relevant hashtags.";
 

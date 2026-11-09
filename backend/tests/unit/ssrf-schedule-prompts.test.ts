@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { checkUrl, isBlockedIp, SafeFetchError } from "../../lib/security/ssrf";
 import { afterFailure, afterSuccess, jitter } from "../../lib/schedule";
-import { cleanHashtags, fitTo, seancePrompt } from "../../lib/ai/prompts";
+import { cleanHashtags, fitTo, RESURRECT_SYSTEM, seancePrompt } from "../../lib/ai/prompts";
 import { clientCodeFor, diagnose } from "../../lib/errors";
 
 describe("SSRF guard", () => {
@@ -77,6 +77,11 @@ describe("prompts", () => {
     expect(out.length).toBeLessThanOrEqual(280);
     expect(out.endsWith(link)).toBe(true);
     expect(fitTo(`short ${link}`, 280, link)).toBe(`short ${link}`); // link not duplicated
+  });
+
+  it("tells Resurrect not to claim the author's work as the user's", () => {
+    expect(RESURRECT_SYSTEM).toMatch(/did NOT write the article/);
+    expect(RESURRECT_SYSTEM).toMatch(/I replicated/);
   });
 
   it("cleans hashtags", () => {
