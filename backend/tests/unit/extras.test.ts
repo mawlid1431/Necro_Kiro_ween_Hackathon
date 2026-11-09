@@ -50,6 +50,14 @@ test("ghost Séance: 3 bullets, bounded score, matches interests", () => {
   expect(s.model).toBe("ghost:extractive");
 });
 
+test("ghost Séance keeps decimals inside sentences", () => {
+  const text =
+    "Qwen 3.8 27B running on my laptop can read model weights as well. It took 52 minutes on a 2.5 GHz machine to finish the run. The results match the paper closely enough to be useful.";
+  const s = ghostSeance({ title: "Qwen 3.8 reads weights", text, interests: [] });
+  expect(s.summary.some((b) => b.startsWith("Qwen 3.8 27B"))).toBe(true);
+  expect(s.summary.every((b) => !/^\d/.test(b))).toBe(true); // no fragment that starts mid-number
+});
+
 test("ghost Séance never throws and always returns 3 bullets", () => {
   fc.assert(fc.property(fc.string({ maxLength: 400 }), fc.string({ maxLength: 2000 }), fc.array(fc.string({ maxLength: 20 }), { maxLength: 8 }), (title, text, interests) => {
     const s = ghostSeance({ title, text, interests });

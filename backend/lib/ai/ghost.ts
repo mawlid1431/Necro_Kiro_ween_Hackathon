@@ -10,7 +10,10 @@ export function words(s: string): string[] {
 }
 
 function sentences(text: string): string[] {
-  return (text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) ?? [])
+  // Split only where end punctuation is followed by whitespace, so "Qwen 3.8" or "e.g.x" stay whole.
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 40 && s.length <= 320);
 }

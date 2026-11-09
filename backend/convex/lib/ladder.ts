@@ -28,6 +28,8 @@ export interface StructuredResult<T> {
   outputTokens: number;
 }
 
+const REASONING_HEADROOM = 1024;
+
 /**
  * One rung: structured output validated by Zod. If the model's JSON does not match,
  * send one short repair turn on the same rung with the Zod issues, then give up (next rung).
@@ -40,7 +42,11 @@ async function structuredCall<S extends z.ZodType>(
     model: rung.model,
     system: p.system,
     output: Output.object({ schema: p.schema }),
-    maxOutputTokens: p.maxOutputTokens,
+    // Reasoning models (e.g. gpt-oss on Groq) spend hidden reasoning tokens before the JSON.
+    // Without headroom the cap is used up first, the answer is empty and Groq returns
+    // 400 json_validate_failed. `p.maxOutputTokens` is the size of the answer itself.
+    maxOutputTokens: p.maxOutputTokens + REASONING_HEADROOM,
+    providerOptions: { groq: { reasoningEffort: "low" } }, // other providers ignore it
     maxRetries: 0, // the ladder retries, not the SDK
   };
   try {
