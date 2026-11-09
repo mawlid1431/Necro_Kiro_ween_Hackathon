@@ -163,6 +163,20 @@ export const kindred = {
   marker: "Also in another feed",
 } as const;
 
+export const opinion = {
+  label: "Second Opinion",
+  plain: "Compare sources",
+  open: "Second opinion",
+  working: "Comparing sources…",
+  agree: "They agree",
+  differ: "They differ",
+  onlyOne: "Only one source says",
+  nothing: "No clear points to compare. Read the sources directly.",
+  ghostHint: "Every AI provider was busy, so here are the sources side by side with their key sentences.",
+  retry: "Try again with AI",
+  caveat: "AI comparison of the feed text. Check the originals before you quote it.",
+} as const;
+
 export const omens = {
   intro: "Watch a topic: a competitor, a vulnerability, a research area. Necro tells you when a new post is really about it, not just when a word appears.",
   topic: "Topic to watch",

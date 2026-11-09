@@ -11,6 +11,7 @@ export const DAILY_AI_LIMITS = {
   doctor: 30,
   ask: 20,
   omen: 200, // AI confirmations of Omen matches; beyond this, keyword matches only
+  opinion: 30, // Second Opinions (compare sources)
 } as const;
 
 export type LimitedAiTask = keyof typeof DAILY_AI_LIMITS;

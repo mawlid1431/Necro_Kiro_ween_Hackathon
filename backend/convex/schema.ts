@@ -9,7 +9,7 @@ import { v } from "convex/values";
 
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
-export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"));
+export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"));
 export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
 export const collectionTopic = v.union(
   v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
@@ -140,6 +140,18 @@ export default defineSchema({
     .index("by_omen", ["omenId", "createdAt"])
     .index("by_omen_item", ["omenId", "itemId"])
     .index("by_item", ["itemId"]),
+
+  // Second Opinion: one comparison per Kindred group per user. Sources are labelled S1..S4.
+  opinions: defineTable({
+    userId: v.id("users"),
+    kindredId: v.string(),
+    itemIds: v.array(v.id("items")), // the sources compared, sorted: a changed group gets a fresh comparison
+    sources: v.array(v.object({ label: v.string(), itemId: v.id("items"), feed: v.string(), title: v.string(), key: v.array(v.string()) })),
+    agree: v.array(v.object({ point: v.string(), sources: v.array(v.string()) })),
+    differ: v.array(v.object({ point: v.string(), views: v.array(v.object({ source: v.string(), says: v.string() })) })),
+    onlyOne: v.array(v.object({ claim: v.string(), source: v.string() })),
+    model: v.string(), // "ghost:side-by-side" when no AI answered
+  }).index("by_user_kindred", ["userId", "kindredId"]),
 
   seances: defineTable({
     userId: v.id("users"),

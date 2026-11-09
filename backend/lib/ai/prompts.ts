@@ -162,3 +162,32 @@ export function omenPrompt(p: { topic: string; title: string; text: string }) {
     "Is this article about the watched topic?",
   ].join("\n");
 }
+
+// ---------- Second Opinion (compare sources) ----------
+
+const point = z.string().min(5).max(220);
+const label = z.string().max(4); // "S1".."S4"
+
+export const OpinionSchema = z.object({
+  agree: z.array(z.object({ point, sources: z.array(label).max(4) })).max(5),
+  differ: z.array(z.object({ point, views: z.array(z.object({ source: label, says: point })).max(4) })).max(4),
+  onlyOne: z.array(z.object({ claim: point, source: label })).max(5),
+});
+export type OpinionOutput = z.infer<typeof OpinionSchema>;
+
+export const OPINION_SYSTEM =
+  `You compare how several sources cover one story, for a reader who wants a fair picture. ${UNTRUSTED} ` +
+  "Cite sources only by their labels (S1, S2, ...). Never invent facts or sources. " +
+  "agree: points two or more sources share. differ: points where sources give different facts, numbers or framing, " +
+  "with what each says. onlyOne: notable claims made by a single source.";
+
+export function opinionPrompt(sources: { label: string; feed: string; title: string; text: string }[]) {
+  return [
+    ...sources.flatMap((s) => [
+      `<article source="${s.label}" feed="${s.feed.replace(/"/g, "'")}" title="${s.title.replace(/"/g, "'")}">`,
+      s.text.slice(0, 2000),
+      `</article>`,
+    ]),
+    "Compare these sources. Keep every point short and concrete.",
+  ].join("\n");
+}

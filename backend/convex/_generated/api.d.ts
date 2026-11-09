@@ -29,6 +29,8 @@ import type * as lib_ladder from "../lib/ladder.js";
 import type * as mcp from "../mcp.js";
 import type * as omens from "../omens.js";
 import type * as omensNode from "../omensNode.js";
+import type * as opinionNode from "../opinionNode.js";
+import type * as opinions from "../opinions.js";
 import type * as providerHealth from "../providerHealth.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as seances from "../seances.js";
@@ -66,6 +68,8 @@ declare const fullApi: ApiFromModules<{
   mcp: typeof mcp;
   omens: typeof omens;
   omensNode: typeof omensNode;
+  opinionNode: typeof opinionNode;
+  opinions: typeof opinions;
   providerHealth: typeof providerHealth;
   rateLimits: typeof rateLimits;
   seances: typeof seances;

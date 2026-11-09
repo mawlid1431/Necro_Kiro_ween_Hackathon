@@ -181,6 +181,7 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("kindredIndex").withIndex("by_user_published", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("omenMatches").withIndex("by_user_created", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("opinions").withIndex("by_user_kindred", (q) => q.eq("userId", userId)).take(BATCH),
     ].flat();
     for (const row of small) await ctx.db.delete(row._id);
     if (small.length) {

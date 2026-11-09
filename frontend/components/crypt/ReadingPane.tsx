@@ -10,6 +10,7 @@ import { crypt as copy, kindred as kcopy, resurrect as rcopy, voice as vcopy } f
 import { canSpeak, htmlToSpeech, langFor, speak, stopSpeaking, type SpeakPart } from "@/lib/voice";
 import { timeAgo } from "./ItemList";
 import { SeanceCard } from "./SeanceCard";
+import { SecondOpinion } from "./SecondOpinion";
 import { ResurrectDialog } from "./ResurrectDialog";
 import { useVoice } from "./voice-context";
 
@@ -108,6 +109,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
               </li>
             ))}
           </ul>
+          <SecondOpinion itemId={itemId} onOpen={onOpen} />
         </aside>
       ) : null}
 

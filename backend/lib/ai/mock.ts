@@ -19,6 +19,13 @@ const OUTPUTS: Record<string, unknown> = {
     hashtags: ["#rss", "#reading", "#web"],
   },
   doctor: { note: "The feed moved. Try fix to find its new address." },
+  omen: { match: true, reason: "The article is about the watched topic." },
+  // S9 is outside any real group: the citation filter must drop it.
+  opinion: {
+    agree: [{ point: "Both report the same launch date.", sources: ["S1", "S2", "S9"] }],
+    differ: [{ point: "The price is reported differently.", views: [{ source: "S1", says: "It costs ten dollars." }, { source: "S2", says: "It costs twelve dollars." }] }],
+    onlyOne: [{ claim: "A second model ships next month.", source: "S2" }, { claim: "An invented claim.", source: "S9" }],
+  },
 };
 
 export function mockModel(id: string): MockLanguageModelV4 {
