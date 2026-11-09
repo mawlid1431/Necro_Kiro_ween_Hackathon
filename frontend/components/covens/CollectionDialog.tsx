@@ -5,6 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Download, Flag, Link2, Rss, Sparkles } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Notice } from "@/components/ui/field";
 import { covens as copy, TOPICS } from "@/lib/copy";
@@ -20,6 +21,7 @@ export function CollectionDialog({ slug, onClose, onEdit }: { slug: string; onCl
   const unfollow = useMutation(api.covens.unfollow);
   const report = useMutation(api.covens.report);
   const remove = useMutation(api.covens.remove);
+  const { confirm, ask } = useConfirm();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: "ok" | "error" | "info"; text: string } | null>(null);
 
@@ -99,8 +101,11 @@ export function CollectionDialog({ slug, onClose, onEdit }: { slug: string; onCl
                 <Button variant="secondary" onClick={() => onEdit(slug)}>{copy.edit}</Button>
                 <Button
                   variant="destructive"
-                  onClick={() => {
-                    if (window.confirm(copy.deleteConfirm(c.title))) void remove({ collectionId: c._id }).then(onClose);
+                  onClick={async () => {
+                    if (await confirm({ title: copy.deleteTitle, body: copy.deleteConfirm(c.title), confirmLabel: copy.delete, tone: "danger" })) {
+                      await remove({ collectionId: c._id });
+                      onClose();
+                    }
                   }}
                 >
                   {copy.delete}
@@ -129,9 +134,9 @@ export function CollectionDialog({ slug, onClose, onEdit }: { slug: string; onCl
               <Button
                 variant="ghost"
                 className="ml-auto text-subtle"
-                onClick={() => {
-                  const reason = window.prompt(copy.reportPrompt);
-                  if (reason !== null) void run(async () => (await report({ collectionId: c._id, reason: reason || "No reason given" }), copy.reported));
+                onClick={async () => {
+                  const reason = await ask({ title: copy.reportTitle, label: copy.reportPrompt, placeholder: copy.reportPlaceholder, confirmLabel: copy.reportSend, tone: "danger" });
+                  if (reason !== null) await run(async () => (await report({ collectionId: c._id, reason: reason || "No reason given" }), copy.reported));
                 }}
               >
                 <Flag aria-hidden strokeWidth={1.75} /> {copy.report}

@@ -6,6 +6,7 @@ import { Stethoscope } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Card, Notice } from "@/components/ui/field";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { doctorCopy as copy } from "@/lib/copy";
@@ -27,6 +28,7 @@ export function DoctorList() {
   const explain = useAction(api.doctorNode.explain);
   const applyFix = useMutation(api.doctor.applyFix);
   const bury = useMutation(api.graves.layToRest);
+  const { confirm } = useConfirm();
   const [busy, setBusy] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, Row>>({});
   // Kept apart from notes so a later Retry or Explain message does not hide "Use this feed".
@@ -131,7 +133,9 @@ export function DoctorList() {
                     {copy.explain}
                   </Button>
                 ) : null}
-                <Button size="sm" variant="destructive" className="ml-auto" disabled={!!busy} onClick={() => void bury({ graveId: g._id })}>
+                <Button size="sm" variant="destructive" className="ml-auto" disabled={!!busy} onClick={async () => {
+                    if (await confirm({ title: copy.buryTitle, body: copy.buryBody(g.title), confirmLabel: copy.bury, tone: "danger" })) await bury({ graveId: g._id });
+                  }}>
                   {copy.bury}
                 </Button>
               </div>

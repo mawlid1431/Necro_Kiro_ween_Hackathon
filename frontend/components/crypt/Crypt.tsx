@@ -9,8 +9,9 @@ import type { Id } from "@backend/convex/_generated/dataModel";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Input } from "@/components/ui/field";
-import { crypt as copy, labels } from "@/lib/copy";
+import { crypt as copy, doctorCopy, labels } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ItemList, type ItemCard } from "./ItemList";
 import { ReadingPane } from "./ReadingPane";
@@ -34,12 +35,14 @@ export function Crypt() {
   const graves = useQuery(api.graves.list, {});
   const markAll = useMutation(api.items.markAllRead);
   const layToRest = useMutation(api.graves.layToRest);
+  const { confirm } = useConfirm();
   const selectedGrave = graves?.find((g) => g._id === graveId);
 
   // Unsubscribe from the selected feed. Deletes its posts, Séances and drafts, so ask first.
   async function bury() {
     if (!selectedGrave) return;
-    if (!window.confirm(`Bury “${selectedGrave.title}”? Its posts, Séances and drafts will be deleted.`)) return;
+    const ok = await confirm({ title: doctorCopy.buryTitle, body: doctorCopy.buryBody(selectedGrave.title), confirmLabel: doctorCopy.bury, tone: "danger" });
+    if (!ok) return;
     await layToRest({ graveId: selectedGrave._id });
     go({ grave: null, item: null });
   }

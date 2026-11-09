@@ -7,6 +7,7 @@ import { BookOpen, Copy, Trash2 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Card, Label, Notice, Textarea } from "@/components/ui/field";
 import { grimoire as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
@@ -87,6 +88,7 @@ function Editor({ grimoireId, onDeleted }: { grimoireId: Id<"grimoires">; onDele
 function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">; markdown: string; ghost: boolean }; onDeleted: () => void }) {
   const update = useMutation(api.grimoires.update);
   const remove = useMutation(api.grimoires.remove);
+  const { confirm } = useConfirm();
   const [text, setText] = useState(grimoire.markdown);
   const [note, setNote] = useState<string | null>(null);
   const dirty = text !== grimoire.markdown;
@@ -134,8 +136,11 @@ function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">;
           variant="destructive"
           size="sm"
           className="ml-auto"
-          onClick={() => {
-            if (window.confirm(copy.deleteConfirm)) void remove({ grimoireId: grimoire._id }).then(onDeleted);
+          onClick={async () => {
+            if (await confirm({ title: copy.deleteConfirm, body: copy.deleteBody, confirmLabel: copy.delete, tone: "danger" })) {
+              await remove({ grimoireId: grimoire._id });
+              onDeleted();
+            }
           }}
         >
           <Trash2 aria-hidden strokeWidth={1.75} /> {copy.delete}

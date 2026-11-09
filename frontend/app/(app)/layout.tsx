@@ -3,6 +3,7 @@ import { FogBackground } from "@/components/brand/FogBackground";
 import { AppNav } from "@/components/layout/AppNav";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { UserGate } from "@/components/providers/UserGate";
+import { ConfirmProvider } from "@/components/ui/confirm";
 
 /**
  * Signed-in area. Sign-in is enforced on the client by UserGate (signed-out visitors are sent
@@ -17,12 +18,14 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <FogBackground />
       <SiteHeader />
       <Suspense>
+        <ConfirmProvider>
         <UserGate>
           <div className="flex flex-1 flex-col pb-16 md:pb-0">{children}</div>
         </UserGate>
         <nav aria-label="Sections">
           <AppNav mobile />
         </nav>
+        </ConfirmProvider>
       </Suspense>
     </>
   );

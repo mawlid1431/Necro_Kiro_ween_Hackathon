@@ -8,6 +8,7 @@ import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
 import { omens as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
@@ -133,6 +134,7 @@ type OmenView = NonNullable<ReturnType<typeof useQuery<typeof api.omens.list>>>[
 function OmenRow({ omen, active, onFilter }: { omen: OmenView; active: boolean; onFilter: () => void }) {
   const update = useMutation(api.omens.update);
   const remove = useMutation(api.omens.remove);
+  const { confirm } = useConfirm();
   return (
     <li className={cn("flex items-center gap-2 rounded-xl border bg-surface px-4 py-3", active ? "border-ecto-dim" : "border-line", omen.muted && "opacity-60")}>
       <button onClick={onFilter} aria-pressed={active} className="min-w-0 flex-1 text-left">
@@ -158,8 +160,10 @@ function OmenRow({ omen, active, onFilter }: { omen: OmenView; active: boolean; 
         size="icon-sm"
         aria-label={copy.remove}
         title={copy.remove}
-        onClick={() => {
-          if (window.confirm(copy.removeConfirm(omen.topic))) void remove({ omenId: omen._id });
+        onClick={async () => {
+          if (await confirm({ title: copy.removeTitle, body: copy.removeConfirm(omen.topic), confirmLabel: copy.remove, tone: "danger" })) {
+            await remove({ omenId: omen._id });
+          }
         }}
       >
         <Trash2 aria-hidden strokeWidth={1.75} />

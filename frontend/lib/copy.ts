@@ -59,13 +59,17 @@ export const covens = {
   copied: "Link copied",
   opml: "OPML",
   report: "Report",
-  reportPrompt: "Why are you reporting this collection?",
+  reportTitle: "Report this collection",
+  reportPrompt: "Why are you reporting it?",
+  reportPlaceholder: "Spam, misleading, harmful…",
+  reportSend: "Send report",
   reported: "Thanks. We'll take a look.",
   yours: "Your covens",
   publish: "Publish a collection",
   edit: "Edit",
   delete: "Delete",
-  deleteConfirm: (t: string) => `Delete “${t}”? Followers keep the feeds they already summoned.`,
+  deleteTitle: "Delete this collection?",
+  deleteConfirm: (t: string) => `“${t}” leaves Discover. Followers keep the feeds they already summoned.`,
   hiddenNote: "Hidden from Discover after reports. Only you can see it.",
   followingTitle: "Collections you follow",
   addNew: (n: number) => `Add ${n} new`,
@@ -95,6 +99,8 @@ export const covens = {
 
 export type LabelKey = keyof typeof labels;
 
+export const dialogs = { ok: "OK", cancel: "Cancel" } as const;
+
 export const landing = {
   overline: "Kiroween 2026 · Resurrection category",
   title: "RSS is back from the dead",
@@ -120,6 +126,7 @@ export const graveyard = {
   emptyTitle: "The graveyard is quiet",
   emptyBody: "Summon your first feed to bring it to life.",
   emptyDiscover: "Or start from a collection other readers trust",
+  findFeeds: "Find feeds",
   risenToday: (n: number) => (n === 1 ? "1 post rose today" : `${n} posts rose today`),
   noInterests: "Tell Necro what you care about so each Séance can score relevance for you.",
 } as const;
@@ -190,6 +197,7 @@ export const grimoire = {
   saved: "Saved",
   delete: "Delete",
   deleteConfirm: "Delete this Grimoire?",
+  deleteBody: "This draft is removed from your history. It cannot be undone.",
   history: "Past Grimoires",
   none: "No Grimoires yet. Compose your first one above.",
   items: (n: number) => (n === 1 ? "1 item" : `${n} items`),
@@ -215,7 +223,8 @@ export const omens = {
   muted: "Muted",
   strictTag: "Strict",
   remove: "Delete",
-  removeConfirm: (t: string) => `Stop watching “${t}”? Its matches are deleted too.`,
+  removeTitle: "Stop watching this topic?",
+  removeConfirm: (t: string) => `“${t}” and its matches will be deleted.`,
   via: { ai: "AI confirmed", keyword: "Keyword match" },
   read: "Read",
   allTopics: "All topics",
@@ -318,6 +327,8 @@ export const doctorCopy = {
   noFix: "No new address found. The site may have removed its feed.",
   found: (title: string, n: number) => `Found “${title}” with ${n} posts.`,
   bury: "Bury feed",
+  buryTitle: "Bury this feed?",
+  buryBody: (t: string) => `“${t}” and its posts, Séances and drafts will be deleted.`,
 } as const;
 
 export const nav = {
