@@ -14,6 +14,8 @@ import { crypt as copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ItemList, type ItemCard } from "./ItemList";
 import { ReadingPane } from "./ReadingPane";
+import { VoiceCommandButton } from "./VoiceCommandButton";
+import { VoiceProvider } from "./voice-context";
 
 type Filter = "all" | "unread" | "starred";
 
@@ -49,10 +51,32 @@ export function Crypt() {
   const items: ItemCard[] | undefined = term.trim().length >= 2 ? results : page.results;
   const loading = items === undefined || (page.status === "LoadingFirstPage" && term.trim().length < 2);
 
+  // Voice "next" / "previous": move through the list that is on screen.
+  const navigate = (delta: 1 | -1) => {
+    if (!items?.length) return;
+    const i = itemId ? items.findIndex((x) => x._id === itemId) : -1;
+    const next = items[Math.min(Math.max(i + delta, 0), items.length - 1)];
+    if (next) go({ item: next._id });
+  };
+
   return (
+    <VoiceProvider>
     <Container className="flex flex-1 flex-col gap-6 py-6 sm:py-10">
-      <div className={cn(itemId && "hidden lg:block")}>
-        <PageTitle label="crypt" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className={cn(itemId && "hidden lg:block")}>
+          <PageTitle label="crypt" />
+        </div>
+        <VoiceCommandButton
+          onNavigate={navigate}
+          onFilter={(f) => {
+            setFilter(f);
+            setTerm("");
+          }}
+          onSearch={(q) => {
+            setTerm(q);
+            go({ item: null });
+          }}
+        />
       </div>
 
       <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
@@ -141,5 +165,6 @@ export function Crypt() {
         </section>
       </div>
     </Container>
+    </VoiceProvider>
   );
 }

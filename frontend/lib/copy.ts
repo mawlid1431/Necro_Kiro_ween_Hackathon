@@ -137,6 +137,18 @@ export const settings = {
   export: "Export OPML",
 } as const;
 
+export const voice = {
+  listen: "Listen",
+  stop: "Stop",
+  talk: "Talk",
+  listening: "Listening…",
+  heard: (t: string) => `Heard: “${t}”`,
+  unknown: (t: string) => `Didn't catch a command in “${t}”.`,
+  help: "Try: “read this”, “summarise”, “star it”, “next”, “show unread”, “search security”, “stop”.",
+  noArticle: "Open an article first.",
+  blocked: "Microphone access was blocked. Allow it in the address bar to talk to Necro.",
+} as const;
+
 export const doctorCopy = {
   empty: "Every feed is alive. Nothing to heal.",
   retry: "Retry now",
