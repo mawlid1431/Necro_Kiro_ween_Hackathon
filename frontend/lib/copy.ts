@@ -23,7 +23,7 @@ export const labels = {
 export type LabelKey = keyof typeof labels;
 
 export const landing = {
-  overline: "Kiroween 2026 · a Faafi project",
+  overline: "Kiroween 2026 · Resurrection category",
   title: "RSS is back from the dead",
   lead: "Almost every blog, newsroom and channel still publishes a feed. Necro gives them a good place to rise again.",
   cta: "Enter the graveyard",

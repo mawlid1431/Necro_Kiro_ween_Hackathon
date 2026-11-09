@@ -13,6 +13,12 @@ import { errorMessage } from "@/lib/errors";
 
 type Row = { tone: "ok" | "error" | "info"; text: string; candidate?: string };
 
+const HEALTH = {
+  broken: { label: "Broken", tone: "text-danger" },
+  failing: { label: "Failing", tone: "text-highlight" },
+  dormant: { label: "Sleeping", tone: "text-subtle" },
+} as const;
+
 /** Feed Doctor: broken and sleeping feeds, each with a diagnosis and fixes. */
 export function DoctorList() {
   const rows = useQuery(api.doctor.list);
@@ -56,9 +62,7 @@ export function DoctorList() {
             <Card>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-h3 font-semibold">{g.title}</h2>
-                <span className={g.status === "broken" ? "text-meta font-semibold text-danger" : "text-meta font-semibold text-subtle"}>
-                  {g.status === "broken" ? "Broken" : "Sleeping"}
-                </span>
+                <span className={`text-meta font-semibold ${HEALTH[g.health].tone}`}>{HEALTH[g.health].label}</span>
               </div>
               <p className="mt-1 truncate text-meta text-subtle">{g.feedUrl}</p>
               <p className="mt-3 text-copy">{g.doctorNote ?? g.diagnosis}</p>

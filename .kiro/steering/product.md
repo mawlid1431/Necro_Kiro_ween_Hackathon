@@ -4,7 +4,7 @@ inclusion: always
 
 # Product: Necro
 
-**RSS, resurrected with AI.** Built for Kiroween 2026 (category: Resurrection) by Mowlid Haibe. Necro is the first module of Faafi ("spread" in Somali): the input side, turning what you read into content you share.
+**RSS, resurrected with AI.** Built for Kiroween 2026 (category: Resurrection) by Mowlid Haibe. Necro brings RSS back for people who read to create: it follows the sites you choose, tells you what each post says and whether it matters to you, and turns the best of it into posts you share in your own voice.
 
 Full source of truth: `docs/Necro_Project_Documentation.md`.
 
