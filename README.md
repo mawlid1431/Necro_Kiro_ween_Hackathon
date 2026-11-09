@@ -331,7 +331,7 @@ Tools: `list_graves` · `get_grave` · `list_items` · `get_item` · `search_ite
 
 ```mermaid
 flowchart LR
-  L["doctor.list<br/>broken + sleeping graves<br/>with a plain-language diagnosis"] --> A1["Retry now<br/>doctorNode.retry"]
+  L["doctor.list<br/>broken, failing and sleeping feeds<br/>with a plain-language diagnosis"] --> A1["Retry now<br/>doctorNode.retry"]
   L --> A2["Try fix<br/>doctorNode.tryFix:<br/>discovery on the site"]
   A2 -->|"candidate found"| A3["Use this feed<br/>doctor.applyFix → fetch now"]
   L --> A4["Explain<br/>doctorNode.explain:<br/>AI note, cached per error"]
@@ -546,7 +546,7 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | `drafts.update` | mutation | `{ draftId, text, hashtags }` | `null` (length checked per platform) |
 | `drafts.setStatus` | mutation | `{ draftId, status: copied\|shared }` | `null` |
 | `voice.get` / `save` | query / mutation | profile fields | profile or `null` |
-| `doctor.list` | query | none | `[{ _id, title, feedUrl, status, lastErrorCode, diagnosis, doctorNote, lastFetchedAt, failureCount }]` |
+| `doctor.list` | query | none | `[{ _id, health: broken\|failing\|dormant, title, feedUrl, status, lastErrorCode, diagnosis, doctorNote, lastFetchedAt, failureCount }]`, worst first |
 | `doctor.applyFix` | mutation | `{ graveId, candidateUrl }` | `null` (fetches now) |
 | `doctorNode.retry` | action | `{ graveId }` | `{ status, inserted, diagnosis? }` |
 | `doctorNode.tryFix` | action | `{ graveId }` | `{ candidateUrl, title, itemCount } \| null` |
