@@ -274,6 +274,15 @@ export const resurrect = {
   again: "Raise again",
 } as const;
 
+export const settingsNav = [
+  { id: "profile", label: "Profile" },
+  { id: "voice", label: "Your voice" },
+  { id: "privacy", label: "Privacy" },
+  { id: "keys", label: "MCP keys" },
+  { id: "usage", label: "Usage and export" },
+  { id: "data", label: "Your data" },
+] as const;
+
 export const settings = {
   title: "Settings",
   plain: "Interests, voice and API keys",

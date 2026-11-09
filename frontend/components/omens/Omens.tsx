@@ -30,57 +30,65 @@ export function Omens() {
   return (
     <div className="flex flex-col gap-8">
       <p className="max-w-2xl text-copy">{copy.intro}</p>
-      <AddOmen />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-10">
+        <div className="flex flex-col gap-8 lg:sticky lg:top-24 lg:self-start">
+          <AddOmen />
 
-      <section aria-labelledby="omens-h" className="flex flex-col gap-3">
-        <h2 id="omens-h" className="font-display text-h3 font-bold">{copy.yours}</h2>
-        {list === undefined ? <div className="h-16 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
-        {list && !list.length ? <Notice>{copy.none}</Notice> : null}
-        {list && list.length ? (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {list.map((o) => (
-              <OmenRow key={o._id} omen={o} active={filter === o._id} onFilter={() => setFilter(filter === o._id ? undefined : o._id)} />
-            ))}
-          </ul>
-        ) : null}
-        <NotifyToggle />
-      </section>
-
-      <section aria-labelledby="matches-h" className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <h2 id="matches-h" className="font-display text-h3 font-bold">{copy.matches}</h2>
-          {filter ? (
-            <Button variant="ghost" size="sm" onClick={() => setFilter(undefined)}>
-              {copy.allTopics}
-            </Button>
-          ) : null}
+          <section aria-labelledby="omens-h" className="flex flex-col gap-3">
+            <h2 id="omens-h" className="font-display text-h3 font-bold">
+              {copy.yours}
+            </h2>
+            {list === undefined ? <div className="h-16 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
+            {list && !list.length ? <Notice>{copy.none}</Notice> : null}
+            {list && list.length ? (
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                {list.map((o) => (
+                  <OmenRow key={o._id} omen={o} active={filter === o._id} onFilter={() => setFilter(filter === o._id ? undefined : o._id)} />
+                ))}
+              </ul>
+            ) : null}
+            <NotifyToggle />
+          </section>
         </div>
-        {matches === undefined ? <div className="h-32 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
-        {matches && !matches.length ? <Notice>{copy.noMatches}</Notice> : null}
-        {matches && matches.length ? (
-          <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
-            {matches.map((m) => (
-              <li key={m._id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-overline font-bold tracking-[0.12em] text-ecto-ink uppercase">
-                    {m.topic}
-                    <span className="ml-2 font-semibold tracking-normal text-subtle normal-case">· {copy.via[m.via]}</span>
-                  </p>
-                  <p className={cn("mt-0.5 font-semibold", m.seen ? "text-copy" : "text-ink")}>{m.title}</p>
-                  <p className="text-meta text-subtle">
-                    {m.graveTitle} · {timeAgo(m.publishedAt)} · {m.reason}
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="secondary" className="self-start sm:self-center">
-                  <Link href={`/crypt?item=${m.itemId}`}>
-                    <Eye aria-hidden strokeWidth={1.75} /> {copy.read}
-                  </Link>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+
+        <section aria-labelledby="matches-h" className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <h2 id="matches-h" className="font-display text-h3 font-bold">
+              {copy.matches}
+            </h2>
+            {filter ? (
+              <Button variant="ghost" size="sm" onClick={() => setFilter(undefined)}>
+                {copy.allTopics}
+              </Button>
+            ) : null}
+          </div>
+          {matches === undefined ? <div className="h-32 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
+          {matches && !matches.length ? <Notice>{copy.noMatches}</Notice> : null}
+          {matches && matches.length ? (
+            <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
+              {matches.map((m) => (
+                <li key={m._id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-overline font-bold tracking-[0.12em] text-ecto-ink uppercase">
+                      {m.topic}
+                      <span className="ml-2 font-semibold tracking-normal text-subtle normal-case">· {copy.via[m.via]}</span>
+                    </p>
+                    <p className={cn("mt-0.5 font-semibold", m.seen ? "text-copy" : "text-ink")}>{m.title}</p>
+                    <p className="text-meta text-subtle">
+                      {m.graveTitle} · {timeAgo(m.publishedAt)} · {m.reason}
+                    </p>
+                  </div>
+                  <Button asChild size="sm" variant="secondary" className="self-start sm:self-center">
+                    <Link href={`/crypt?item=${m.itemId}`}>
+                      <Eye aria-hidden strokeWidth={1.75} /> {copy.read}
+                    </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }
@@ -113,7 +121,15 @@ function AddOmen() {
         <div>
           <Label htmlFor="omen-topic">{copy.topic}</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input id="omen-topic" required minLength={3} maxLength={60} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={copy.topicPlaceholder} />
+            <Input
+              id="omen-topic"
+              required
+              minLength={3}
+              maxLength={60}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder={copy.topicPlaceholder}
+            />
             <Button type="submit" disabled={busy || topic.trim().length < 3} className="shrink-0">
               {busy ? copy.adding : copy.add}
             </Button>
@@ -136,7 +152,9 @@ function OmenRow({ omen, active, onFilter }: { omen: OmenView; active: boolean; 
   const remove = useMutation(api.omens.remove);
   const { confirm } = useConfirm();
   return (
-    <li className={cn("flex items-center gap-2 rounded-xl border bg-surface px-4 py-3", active ? "border-ecto-dim" : "border-line", omen.muted && "opacity-60")}>
+    <li
+      className={cn("flex items-center gap-2 rounded-xl border bg-surface px-4 py-3", active ? "border-ecto-dim" : "border-line", omen.muted && "opacity-60")}
+    >
       <button onClick={onFilter} aria-pressed={active} className="min-w-0 flex-1 text-left">
         <p className="truncate font-semibold text-ink">{omen.topic}</p>
         <p className="text-meta text-subtle">

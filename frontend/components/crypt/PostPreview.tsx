@@ -27,12 +27,15 @@ function Avatar({ a, size = "size-10" }: { a: Author; size?: string }) {
 }
 
 /** Text with hashtags highlighted, cut to `lines` with a "…more" toggle like the real feeds. */
-function PostText({ text, tags, lines, tagClass }: { text: string; tags: string[]; lines: number; tagClass: string }) {
+function PostText({ text, tags, lines, tagClass, lead }: { text: string; tags: string[]; lines: number; tagClass: string; lead?: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > lines * 70;
   return (
     <div className="text-[0.875rem] leading-5 whitespace-pre-line text-[#1d1d1f]">
-      <p className={cn(!open && long && (lines === 3 ? "line-clamp-3" : "line-clamp-5"))}>{text}</p>
+      <p className={cn(!open && long && (lines === 3 ? "line-clamp-3" : "line-clamp-5"))}>
+        {lead ? <span className="mr-1.5 font-semibold">{lead}</span> : null}
+        {text}
+      </p>
       {long ? (
         <button type="button" onClick={() => setOpen(!open)} className="text-[0.8125rem] font-semibold text-[#666] hover:underline">
           {open ? copy.less : copy.more}
@@ -149,7 +152,7 @@ export function PostPreview({ platform, text, tags, author, article }: { platfor
         <Bookmark aria-hidden className="ml-auto size-5" />
       </div>
       <div className="px-3 pt-1.5 pb-3">
-        <PostText text={`${author.handle}  ${text}`} tags={tags} lines={3} tagClass="text-[#00376b]" />
+        <PostText lead={author.handle} text={text} tags={tags} lines={3} tagClass="text-[#00376b]" />
       </div>
     </div>
   );

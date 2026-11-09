@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: labels.grimoire.themed };
 export default function GrimoirePage() {
   return (
     <main className="flex-1 py-8 sm:py-12">
-      <Container className="flex max-w-4xl flex-col gap-8">
+      <Container className="flex flex-col gap-8">
         <PageTitle label="grimoire" />
         <Grimoire />
       </Container>

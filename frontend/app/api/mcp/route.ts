@@ -9,6 +9,7 @@ import { buildServer } from "./tools";
 // The key is hashed here and resolved to a user by a secret-guarded Convex mutation that
 // also enforces 60 requests a minute, before any MCP work happens.
 
+
 // Runs on the Node.js runtime (the default; `runtime` cannot be set with cacheComponents).
 export const maxDuration = 60;
 

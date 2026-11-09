@@ -40,7 +40,9 @@ export function Grimoire() {
       <div className="flex flex-col gap-3">
         <p className="max-w-2xl text-copy">{copy.intro}</p>
         <p className="text-meta text-subtle">
-          <Link href="/settings" className="underline-offset-4 hover:text-ink hover:underline">{copy.voiceHint}</Link>
+          <Link href="/settings" className="underline-offset-4 hover:text-ink hover:underline">
+            {copy.voiceHint}
+          </Link>
         </p>
         <Button className="self-start" disabled={busy} onClick={() => void onCompose()}>
           <BookOpen aria-hidden strokeWidth={1.75} />
@@ -49,32 +51,36 @@ export function Grimoire() {
         {error ? <Notice tone="error">{error}</Notice> : null}
       </div>
 
-      {openId ? <Editor key={openId} grimoireId={openId} onDeleted={() => setPicked(null)} /> : null}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+        <div className="min-w-0">{openId ? <Editor key={openId} grimoireId={openId} onDeleted={() => setPicked(null)} /> : null}</div>
 
-      <section aria-labelledby="history-h" className="flex flex-col gap-3">
-        <h2 id="history-h" className="font-display text-h3 font-bold">{copy.history}</h2>
-        {list === undefined ? <div className="h-16 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
-        {list && !list.length ? <Notice>{copy.none}</Notice> : null}
-        {list && list.length ? (
-          <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
-            {list.map((g) => (
-              <li key={g._id}>
-                <button
-                  onClick={() => setPicked(g._id)}
-                  aria-current={openId === g._id ? "true" : undefined}
-                  className={cn("flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-muted", openId === g._id && "bg-ecto/10")}
-                >
-                  <span className="min-w-0 flex-1 truncate font-semibold text-ink">{g.title}</span>
-                  <span className="shrink-0 text-meta text-subtle">
-                    {g.weekOf} · {copy.items(g.itemCount)}
-                    {g.ghost ? ` · ${copy.template}` : ""}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+        <section aria-labelledby="history-h" className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start">
+          <h2 id="history-h" className="font-display text-h3 font-bold">
+            {copy.history}
+          </h2>
+          {list === undefined ? <div className="h-16 animate-pulse rounded-xl bg-surface-muted/60" /> : null}
+          {list && !list.length ? <Notice>{copy.none}</Notice> : null}
+          {list && list.length ? (
+            <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
+              {list.map((g) => (
+                <li key={g._id}>
+                  <button
+                    onClick={() => setPicked(g._id)}
+                    aria-current={openId === g._id ? "true" : undefined}
+                    className={cn("flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-muted", openId === g._id && "bg-ecto/10")}
+                  >
+                    <span className="min-w-0 flex-1 truncate font-semibold text-ink">{g.title}</span>
+                    <span className="shrink-0 text-meta text-subtle lg:hidden">
+                      {g.weekOf} · {copy.items(g.itemCount)}
+                      {g.ghost ? ` · ${copy.template}` : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }
@@ -131,7 +137,11 @@ function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">;
         <Button variant="secondary" onClick={() => void copyAs("text")}>
           <Copy aria-hidden strokeWidth={1.75} /> {copy.copyText}
         </Button>
-        {note ? <span role="status" className="text-meta text-subtle">{note}</span> : null}
+        {note ? (
+          <span role="status" className="text-meta text-subtle">
+            {note}
+          </span>
+        ) : null}
         <Button
           variant="destructive"
           size="sm"
