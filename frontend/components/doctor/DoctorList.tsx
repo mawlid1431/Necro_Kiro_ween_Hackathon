@@ -38,7 +38,13 @@ export function DoctorList() {
       const row = await fn();
       setNotes((n) => ({ ...n, [id]: row }));
       if (row.candidate) setCandidates((c) => ({ ...c, [id]: row.candidate! }));
-      if (what === "fix" && !row.candidate) setCandidates(({ [id]: _drop, ...rest }) => rest);
+      if (what === "fix" && !row.candidate) {
+        setCandidates((c) => {
+          const next = { ...c };
+          delete next[id];
+          return next;
+        });
+      }
     } catch (e) {
       setNotes((n) => ({ ...n, [id]: { tone: "error", text: errorMessage(e) } }));
     } finally {
