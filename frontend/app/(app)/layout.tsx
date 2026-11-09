@@ -18,7 +18,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       <Suspense>
         <UserGate>
-          <div className="flex flex-1 flex-col pb-16 sm:pb-0">{children}</div>
+          <div className="flex flex-1 flex-col pb-16 md:pb-0">{children}</div>
         </UserGate>
         <nav aria-label="Sections">
           <AppNav mobile />

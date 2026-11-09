@@ -54,7 +54,9 @@ export interface PickedItem {
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 /** Escapes the characters that would break a Markdown link label. */
 const mdLabel = (s: string) => oneLine(s).replace(/([\\[\]])/g, "\\$1");
-const safeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u.replace(/[()\s]/g, encodeURIComponent) : "");
+// Parentheses and spaces would end a Markdown link early; encodeURIComponent leaves "(" and ")" alone.
+const URL_ESCAPES: Record<string, string> = { "(": "%28", ")": "%29", " ": "%20" };
+const safeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u.replace(/\s+/g, " ").replace(/[() ]/g, (ch) => URL_ESCAPES[ch]) : "");
 
 /** Server-side Markdown, so links always point at the real items whatever the model wrote. */
 export function renderMarkdown(d: GrimoireDraft, items: PickedItem[]): string {

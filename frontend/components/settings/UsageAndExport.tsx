@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/field";
 import { settings as copy } from "@/lib/copy";
 
-const NAMES: Record<string, string> = { seance: "Séances", resurrect: "Resurrects", doctor: "Doctor notes", ask: "Questions", omen: "Omen checks", opinion: "Second Opinions", voiceMinutes: "Voice minutes" };
+const NAMES: Record<string, string> = { seance: "Séances", resurrect: "Resurrects", doctor: "Doctor notes", ask: "Questions", omen: "Omen checks", opinion: "Second Opinions", grimoire: "Grimoire drafts", voiceMinutes: "Voice minutes" };
 
 /** Today's AI usage against the daily limits, and an OPML export of every feed. */
 export function UsageAndExport() {

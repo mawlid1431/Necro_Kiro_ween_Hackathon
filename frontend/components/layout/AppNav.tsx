@@ -13,11 +13,12 @@ const links = [
   { href: "/crypt", label: nav.crypt },
   { href: "/discover", label: nav.discover },
   { href: "/omens", label: nav.omens },
+  { href: "/grimoire", label: nav.grimoire },
   { href: "/doctor", label: nav.doctor },
   { href: "/settings", label: nav.settings },
 ] as const;
 
-/** Section links for signed-in pages: inline in the header from `sm`, a bottom bar on phones. */
+/** Section links for signed-in pages: inline in the header from `md`, a bottom bar on phones and small tablets. */
 export function AppNav({ mobile = false }: { mobile?: boolean }) {
   const path = usePathname();
   const unseen = useQuery(api.omens.unseenCount, {});
@@ -25,8 +26,9 @@ export function AppNav({ mobile = false }: { mobile?: boolean }) {
     <div
       className={cn(
         mobile
-          ? "fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-line bg-page/95 px-2 py-2 backdrop-blur-md sm:hidden"
-          : "hidden items-center gap-1 sm:flex",
+          ? // Seven links: they share the width and scroll sideways on the narrowest phones.
+            "fixed inset-x-0 bottom-0 z-40 flex justify-between gap-0.5 overflow-x-auto border-t border-line bg-page/95 px-2 py-2 backdrop-blur-md [scrollbar-width:none] md:hidden"
+          : "hidden items-center gap-0.5 md:flex",
       )}
     >
       {mobile ? null : <OmenNotifier />}
@@ -40,7 +42,7 @@ export function AppNav({ mobile = false }: { mobile?: boolean }) {
             className={cn(
               // Six links share a phone's bottom bar, so they are tighter there.
               "rounded-md py-1.5 font-semibold whitespace-nowrap transition-colors",
-              mobile ? "px-1.5 text-[0.75rem]" : "px-3 text-meta",
+              mobile ? "px-1.5 text-[0.75rem]" : "px-2 text-meta lg:px-3",
               active ? "bg-surface-muted text-ink" : "text-subtle hover:bg-surface-muted hover:text-ink",
             )}
           >

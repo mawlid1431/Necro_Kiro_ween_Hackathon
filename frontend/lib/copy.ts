@@ -21,6 +21,7 @@ export const labels = {
   discover: { themed: "Discover", plain: "Find collections to follow" },
   covens: { themed: "Covens", plain: "Shared feed collections" },
   omens: { themed: "Omens", plain: "Topic alerts" },
+  grimoire: { themed: "Grimoire", plain: "Weekly newsletter" },
 } as const;
 
 export const TOPICS = {
@@ -177,6 +178,26 @@ export const opinion = {
   caveat: "AI comparison of the feed text. Check the originals before you quote it.",
 } as const;
 
+export const grimoire = {
+  intro: "Turn the week's best reads into a newsletter or LinkedIn roundup in your voice: starred posts first, then Omen matches and the most relevant. Edit it, then copy it anywhere.",
+  compose: "Compose this week's Grimoire",
+  composing: "Writing your Grimoire…",
+  ghostHint: "Every AI provider was busy, so this is a template from your titles and key points. Edit it freely.",
+  copyMarkdown: "Copy Markdown",
+  copyText: "Copy text",
+  copied: "Copied",
+  save: "Save edits",
+  saved: "Saved",
+  delete: "Delete",
+  deleteConfirm: "Delete this Grimoire?",
+  history: "Past Grimoires",
+  none: "No Grimoires yet. Compose your first one above.",
+  items: (n: number) => (n === 1 ? "1 item" : `${n} items`),
+  template: "Template",
+  editLabel: "Draft (Markdown)",
+  voiceHint: "Set your voice in Settings so it sounds like you.",
+} as const;
+
 export const omens = {
   intro: "Watch a topic: a competitor, a vulnerability, a research area. Necro tells you when a new post is really about it, not just when a word appears.",
   topic: "Topic to watch",
@@ -286,6 +307,7 @@ export const nav = {
   crypt: "Crypt",
   discover: "Discover",
   omens: "Omens",
+  grimoire: "Grimoire",
   doctor: "Doctor",
   settings: "Settings",
 } as const;
