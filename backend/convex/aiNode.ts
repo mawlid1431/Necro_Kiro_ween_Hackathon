@@ -156,7 +156,7 @@ export const healthCheck = internalAction({
   args: {},
   handler: async (ctx) => {
     const out: Record<string, unknown> = {};
-    for (const task of ["seance", "resurrect", "doctor", "briefing", "ask"] as AiTask[]) {
+    for (const task of ["seance", "resurrect", "doctor", "briefing", "ask", "omen", "opinion", "grimoire"] as AiTask[]) {
       const chain = chainFor(task);
       if (!chain.length) {
         out[task] = { ok: false, error: `AI_CHAIN_${task.toUpperCase()} is not set` };

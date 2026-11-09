@@ -640,6 +640,7 @@ Frontend: `cd frontend && bun run check` (ESLint + TypeScript) and `bun run buil
 | frontend | `bun run dev` | Next.js dev server on :3000 |
 | frontend | `bun run build` / `start` | Production build / serve it |
 | frontend | `bun run check` | ESLint + `tsc --noEmit` |
+| frontend | `bun run smoke` | Live read-only check: landing, signed-in routes, public OPML, MCP 401s (`SMOKE_URL=...` to target another host) |
 | backend | `bun run dev` | `convex dev`: watch, typecheck, deploy to dev |
 | backend | `bun run deploy:dev` | Deploy once (`convex dev --once`) |
 | backend | `bun run deploy` | Deploy to production |
