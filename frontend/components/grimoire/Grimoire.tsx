@@ -12,6 +12,7 @@ import { Card, Label, Notice, Textarea } from "@/components/ui/field";
 import { grimoire as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import { NewsletterPreview } from "./NewsletterPreview";
 
 /** Grimoire: compose the week's newsletter, edit it, copy it; past drafts below. */
 export function Grimoire() {
@@ -52,7 +53,17 @@ export function Grimoire() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-        <div className="min-w-0">{openId ? <Editor key={openId} grimoireId={openId} onDeleted={() => setPicked(null)} /> : null}</div>
+        <div className="min-w-0">
+          {openId ? (
+            <Editor key={openId} grimoireId={openId} onDeleted={() => setPicked(null)} />
+          ) : list !== undefined ? (
+            <div className="flex min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line px-6 text-center">
+              <BookOpen aria-hidden className="size-8 text-ecto-ink" strokeWidth={1.5} />
+              <p className="font-semibold text-ink">{copy.emptyTitle}</p>
+              <p className="max-w-md text-meta text-subtle">{copy.emptyBody}</p>
+            </div>
+          ) : null}
+        </div>
 
         <section aria-labelledby="history-h" className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start">
           <h2 id="history-h" className="font-display text-h3 font-bold">
@@ -67,10 +78,10 @@ export function Grimoire() {
                   <button
                     onClick={() => setPicked(g._id)}
                     aria-current={openId === g._id ? "true" : undefined}
-                    className={cn("flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-muted", openId === g._id && "bg-ecto/10")}
+                    className={cn("flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-surface-muted", openId === g._id && "bg-ecto/10")}
                   >
-                    <span className="min-w-0 flex-1 truncate font-semibold text-ink">{g.title}</span>
-                    <span className="shrink-0 text-meta text-subtle lg:hidden">
+                    <span className="line-clamp-2 font-semibold text-ink">{g.title}</span>
+                    <span className="text-meta text-subtle">
                       {g.weekOf} · {copy.items(g.itemCount)}
                       {g.ghost ? ` · ${copy.template}` : ""}
                     </span>
@@ -96,6 +107,7 @@ function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">;
   const remove = useMutation(api.grimoires.remove);
   const { confirm } = useConfirm();
   const [text, setText] = useState(grimoire.markdown);
+  const [view, setView] = useState<"preview" | "edit">("preview");
   const [note, setNote] = useState<string | null>(null);
   const dirty = text !== grimoire.markdown;
 
@@ -107,18 +119,37 @@ function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">;
   return (
     <Card>
       {grimoire.ghost ? <Notice>{copy.ghostHint}</Notice> : null}
-      <div className={grimoire.ghost ? "mt-4" : ""}>
-        <Label htmlFor="grimoire-md">{copy.editLabel}</Label>
-        <Textarea
-          id="grimoire-md"
-          value={text}
-          maxLength={20000}
-          onChange={(e) => {
-            setText(e.target.value);
-            setNote(null);
-          }}
-          className="min-h-96 font-mono text-meta leading-6"
-        />
+      <div className={cn("flex gap-1 border-b border-line", grimoire.ghost && "mt-4")} role="tablist" aria-label={copy.editLabel}>
+        {(["preview", "edit"] as const).map((v) => (
+          <button
+            key={v}
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => setView(v)}
+            className={cn("-mb-px border-b-2 px-3 py-2 text-meta font-semibold transition-colors", view === v ? "border-ecto-dim text-ink" : "border-transparent text-subtle hover:text-ink")}
+          >
+            {v === "preview" ? copy.preview : copy.edit}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4">
+        {view === "preview" ? (
+          <NewsletterPreview markdown={text} />
+        ) : (
+          <>
+            <Label htmlFor="grimoire-md">{copy.editLabel}</Label>
+            <Textarea
+              id="grimoire-md"
+              value={text}
+              maxLength={20000}
+              onChange={(e) => {
+                setText(e.target.value);
+                setNote(null);
+              }}
+              className="min-h-96 font-mono text-meta leading-6"
+            />
+          </>
+        )}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button

@@ -205,6 +205,10 @@ export const grimoire = {
   items: (n: number) => (n === 1 ? "1 item" : `${n} items`),
   template: "Template",
   editLabel: "Draft (Markdown)",
+  preview: "Preview",
+  edit: "Edit Markdown",
+  emptyTitle: "Your newsletter appears here",
+  emptyBody: "Compose this week's Grimoire and Necro writes it from your starred posts, Omen matches and the most relevant reads. You can edit it before copying.",
   voiceHint: "Set your voice in Settings so it sounds like you.",
 } as const;
 

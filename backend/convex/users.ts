@@ -3,7 +3,6 @@ import { action, internalMutation, internalQuery, mutation, query, type Mutation
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireUser } from "./lib/auth";
-import { usageToday } from "./aiUsage";
 import { removeCollection } from "./covens";
 import { deleteItemCascade } from "./items";
 
@@ -49,7 +48,8 @@ export const me = query({
       displayName: user.displayName ?? null,
       privateMode: user.privateMode ?? false,
       onboarded: user.onboardedAt !== undefined,
-      usage: await usageToday(ctx, user._id),
+      // Usage is its own query (usage.today): keeping it out of `me` makes every page open faster
+      // and stops every AI call from re-rendering everything that reads the profile.
     };
   },
 });
