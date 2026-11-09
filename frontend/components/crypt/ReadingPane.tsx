@@ -7,7 +7,8 @@ import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { crypt as copy, kindred as kcopy, resurrect as rcopy, voice as vcopy } from "@/lib/copy";
-import { canSpeak, htmlToSpeech, langFor, speak, stopSpeaking, type SpeakPart } from "@/lib/voice";
+import { canSpeak, htmlToSpeech, langFor, pauseSpeaking, resumeSpeaking, speak, stopSpeaking, type SpeakPart, type SpeakProgress } from "@/lib/voice";
+import { ListenBar } from "./ListenBar";
 import { timeAgo } from "./ItemList";
 import { SeanceCard } from "./SeanceCard";
 import { SecondOpinion } from "./SecondOpinion";
@@ -22,6 +23,8 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
   const holdSeance = useAction(api.aiNode.holdSeance);
   const [resurrectOpen, setResurrectOpen] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [progress, setProgress] = useState<SpeakProgress | null>(null);
+  const [paused, setPaused] = useState(false);
   const [speechOk, setSpeechOk] = useState(false);
   const marked = useRef(false);
   const voice = useVoice();
@@ -49,10 +52,12 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
     (onlySeance = false) => {
       if (!item) return;
       const parts: SpeakPart[] = [];
-      if (item.seance) parts.push({ text: `Séance. ${item.seance.summary.join(". ")}. ${item.seance.reason}`, lang: seanceLang });
-      if (!onlySeance) parts.push({ text: `${item.title}. ${htmlToSpeech(item.contentHtml) || item.excerpt}` });
+      if (item.seance) parts.push({ text: `Séance. ${item.seance.summary.join(". ")}. ${item.seance.reason}`, lang: seanceLang, label: "Séance" });
+      if (!onlySeance) parts.push({ text: `${item.title}. ${htmlToSpeech(item.contentHtml) || item.excerpt}`, label: "Article" });
       setSpeaking(true);
-      speak(parts, () => setSpeaking(false));
+      setPaused(false);
+      setProgress(null);
+      speak(parts, () => (setSpeaking(false), setProgress(null)), setProgress);
     },
     [item, seanceLang],
   );
@@ -60,7 +65,15 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
   const stop = useCallback(() => {
     stopSpeaking();
     setSpeaking(false);
+    setProgress(null);
+    setPaused(false);
   }, []);
+
+  const togglePause = useCallback(() => {
+    if (paused) resumeSpeaking();
+    else pauseSpeaking();
+    setPaused(!paused);
+  }, [paused]);
 
   // Register this article's actions for voice commands from the Crypt toolbar.
   useEffect(() => {
@@ -72,7 +85,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
         if (item.seance) read(true);
         else void holdSeance({ itemId }).then((s) => {
           setSpeaking(true);
-          speak([{ text: `Séance. ${s.summary.join(". ")}. ${s.reason}`, lang: seanceLang }], () => setSpeaking(false));
+          speak([{ text: `Séance. ${s.summary.join(". ")}. ${s.reason}`, lang: seanceLang, label: "Séance" }], () => (setSpeaking(false), setProgress(null)), setProgress);
         });
       },
       resurrect: () => setResurrectOpen(true),
@@ -155,6 +168,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
         </div>
       )}
 
+      {speaking ? <ListenBar title={item.title} progress={progress} paused={paused} onPause={togglePause} onStop={stop} /> : null}
       <ResurrectDialog open={resurrectOpen} onOpenChange={setResurrectOpen} itemId={itemId} drafts={item.drafts} article={{ title: item.title, link: item.link, source: item.graveTitle ?? "" }} />
     </article>
   );

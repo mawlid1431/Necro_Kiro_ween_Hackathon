@@ -94,7 +94,8 @@ export const covens = {
   pickFeeds: (n: number) => `Feeds to include (${n} selected)`,
   save: "Publish",
   saveEdit: "Save changes",
-  noFeeds: "Summon a few feeds first, then share them here.",
+  noFeeds: "A collection is made from feeds you follow, and you have none yet. Summon a feed, or use Summon all on a collection below, then come back to publish.",
+  goSummon: "Go to the Graveyard",
 } as const;
 
 export type LabelKey = keyof typeof labels;
@@ -156,6 +157,7 @@ export const crypt = {
   allFeeds: "All feeds",
   empty: "Nothing here yet.",
   pickOne: "Pick an article to read it.",
+  pickHint: "Then hold a Séance for a three-line summary, Listen to it, or Resurrect it into posts. Press Talk to do it by voice.",
   loadMore: "Load more",
   markAllRead: "Mark all read",
   openOriginal: "Open original",
@@ -333,13 +335,36 @@ export const privacy = {
 export const voice = {
   listen: "Listen",
   stop: "Stop",
+  pause: "Pause",
+  resume: "Resume",
   talk: "Talk",
   listening: "Listening…",
+  sayCommand: "Say a command",
+  examples: ["read this", "summarise", "star it", "next", "show unread", "search security"],
+  cancel: "Cancel",
+  close: "Close",
+  readingLabel: (label: string) => `Reading the ${label.toLowerCase()}`,
+  progress: (i: number, n: number) => `${i} of ${n}`,
+  paused: "Paused",
+  done: {
+    read: "Reading the article aloud",
+    stop: "Stopped",
+    seance: "Holding a Séance and reading it",
+    resurrect: "Opening Resurrect",
+    star: "Starred",
+    unstar: "Star removed",
+    unread: "Marked unread",
+    next: "Next article",
+    previous: "Previous article",
+    filter: (v: string) => `Showing ${v}`,
+    search: (q: string) => `Searching “${q}”`,
+  },
   heard: (t: string) => `Heard: “${t}”`,
   unknown: (t: string) => `Didn't catch a command in “${t}”.`,
   help: "Try: “read this”, “summarise”, “star it”, “next”, “show unread”, “search security”, “stop”.",
   noArticle: "Open an article first.",
   blocked: "Microphone access was blocked. Allow it in the address bar to talk to Necro.",
+  noSpeech: "I didn't hear anything.",
 } as const;
 
 export const doctorCopy = {

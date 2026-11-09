@@ -73,7 +73,7 @@ function FeedMark({ title, iconUrl }: { title: string; iconUrl?: string }) {
         </span>
       </span>
       {iconUrl && ok !== false ? (
-        <span className={cn("absolute -right-1 -bottom-1 grid size-7 place-items-center overflow-hidden rounded-full border-2 border-surface bg-white shadow-sm transition-opacity", ok ? "opacity-100" : "opacity-0")}>
+        <span className={cn("absolute -right-1.5 -bottom-1.5 grid size-8 place-items-center overflow-hidden rounded-full border-2 border-surface bg-white shadow-sm transition-opacity", ok ? "opacity-100" : "opacity-0")}>
           {/* eslint-disable-next-line @next/next/no-img-element -- remote feed icons from arbitrary hosts */}
           <img
             src={iconUrl}
@@ -86,7 +86,7 @@ function FeedMark({ title, iconUrl }: { title: string; iconUrl?: string }) {
             }}
             onLoad={(e) => setOk(e.currentTarget.naturalWidth > 0)}
             onError={() => setOk(false)}
-            className="size-5 object-contain"
+            className="size-6 object-contain"
           />
         </span>
       ) : null}

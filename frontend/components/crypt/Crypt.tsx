@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, BookOpen, Search } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { Container } from "@/components/layout/Container";
@@ -176,8 +176,10 @@ export function Crypt() {
               <ReadingPane key={itemId} itemId={itemId} onOpen={(id) => go({ item: id })} />
             </>
           ) : (
-            <div className="grid h-full min-h-64 place-items-center rounded-xl border border-dashed border-line text-meta text-subtle">
-              {copy.pickOne}
+            <div className="hidden min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line px-6 text-center lg:sticky lg:top-24 lg:flex">
+              <BookOpen aria-hidden className="size-8 text-ecto-ink" strokeWidth={1.5} />
+              <p className="font-semibold text-ink">{copy.pickOne}</p>
+              <p className="max-w-sm text-meta text-subtle">{copy.pickHint}</p>
             </div>
           )}
         </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
@@ -95,7 +96,14 @@ export function PublishDialog({ existing, onClose, onDone }: { existing?: Existi
         <fieldset>
           <legend className="mb-1.5 text-meta font-semibold text-ink">{copy.pickFeeds(selected.size)}</legend>
           {graves === undefined ? <div className="h-24 animate-pulse rounded-lg bg-surface-muted/60" /> : null}
-          {graves && !graves.length ? <Notice>{copy.noFeeds}</Notice> : null}
+          {graves && !graves.length ? (
+            <div className="flex flex-col gap-3 rounded-lg bg-surface-muted p-4">
+              <p className="text-copy">{copy.noFeeds}</p>
+              <Button asChild variant="secondary" size="sm" className="self-start">
+                <Link href="/graveyard">{copy.goSummon}</Link>
+              </Button>
+            </div>
+          ) : null}
           {graves && graves.length ? (
             <ul className="flex max-h-56 flex-col divide-y divide-line overflow-y-auto rounded-lg border border-line">
               {graves.map((g) => (

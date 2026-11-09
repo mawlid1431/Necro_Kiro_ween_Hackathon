@@ -65,6 +65,8 @@
 
   --animate-fog-drift: fog-drift 45s ease-in-out infinite alternate;
   --animate-float: float 6s ease-in-out infinite;
+  --animate-eq: eq 900ms ease-in-out infinite;
+  --animate-ring: ring 1.6s ease-out infinite;
 
   @keyframes fog-drift {
     from {
@@ -72,6 +74,26 @@
     }
     to {
       transform: translate3d(4%, -2%, 0) scale(1.08);
+    }
+  }
+  /* Voice: equaliser bars (Listen) and mic rings (Talk). */
+  @keyframes eq {
+    0%,
+    100% {
+      height: 25%;
+    }
+    50% {
+      height: 100%;
+    }
+  }
+  @keyframes ring {
+    from {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    to {
+      transform: scale(1.9);
+      opacity: 0;
     }
   }
   @keyframes float {

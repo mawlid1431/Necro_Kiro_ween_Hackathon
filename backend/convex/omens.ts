@@ -41,7 +41,15 @@ export const create = mutation({
     const mine = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", user._id)).take(MAX_OMENS_PER_USER);
     if (mine.length >= MAX_OMENS_PER_USER) fail("LIMIT", `You can watch up to ${MAX_OMENS_PER_USER} topics.`);
     if (mine.some((o) => o.topic.toLowerCase() === clean.toLowerCase())) fail("DUPLICATE", "You already watch this topic.");
-    return await ctx.db.insert("omens", { userId: user._id, topic: clean, keywords: omenKeywords(clean), strict: strict ?? false, muted: false, matchCount: 0 });
+    const omenId = await ctx.db.insert("omens", { userId: user._id, topic: clean, keywords: omenKeywords(clean), strict: strict ?? false, muted: false, matchCount: 0 });
+    // Check the last 7 days right away, so a new topic shows what already matches instead of waiting for new posts.
+    const recent = await ctx.db
+      .query("items")
+      .withIndex("by_user_published", (q) => q.eq("userId", user._id).gte("publishedAt", Date.now() - FRESH))
+      .order("desc")
+      .take(50);
+    if (recent.length) await ctx.scheduler.runAfter(0, internal.omensNode.check, { userId: user._id, itemIds: recent.map((r) => r._id) });
+    return omenId;
   },
 });
 

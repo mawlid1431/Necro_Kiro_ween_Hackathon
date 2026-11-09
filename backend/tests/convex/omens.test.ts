@@ -34,6 +34,15 @@ async function setup() {
 }
 
 describe("omens", () => {
+  it("a new topic checks the last 7 days right away (keyword match without AI)", async () => {
+    const { t, alice, ingest } = await setup();
+    await ingest([post("p1", "Restrictive design and empathy"), post("p2", "Gardening in winter")]);
+    await alice.mutation(api.omens.create, { topic: "design" });
+    await t.finishAllScheduledFunctions(() => {});
+    const m = await alice.query(api.omens.matches, {});
+    expect(m.map((x) => x.title)).toEqual(["Restrictive design and empathy"]);
+  });
+
   it("validates topics, rejects duplicates and caps at 20", async () => {
     const { alice } = await setup();
     await expect(alice.mutation(api.omens.create, { topic: "ab" })).rejects.toThrow(/3 to 60/);

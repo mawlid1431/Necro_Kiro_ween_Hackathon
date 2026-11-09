@@ -109,10 +109,12 @@ describe("with the mock AI provider", () => {
 
   it("records an AI-confirmed Omen match", async () => {
     const { t, alice, aliceId } = await setup();
-    await alice.mutation(api.omens.create, { topic: "reasoning model" });
+    await alice.mutation(api.omens.create, { topic: "reasoning model" }); // checks recent posts right away
+    await t.finishAllScheduledFunctions(() => {});
     const itemIds = (await t.run((ctx) => ctx.db.query("items").collect())).map((i) => i._id);
-    expect(await t.action(internal.omensNode.check, { userId: aliceId, itemIds })).toEqual({ checked: 2, matched: 2 });
+    expect(await t.action(internal.omensNode.check, { userId: aliceId, itemIds })).toEqual({ checked: 0, matched: 0 }); // nothing left: each match is recorded once
     const m = await alice.query(api.omens.matches, {});
+    expect(m).toHaveLength(2);
     expect(m.every((x) => x.via === "ai" && x.reason === "The article is about the watched topic.")).toBe(true);
   });
 });

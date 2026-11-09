@@ -37,18 +37,28 @@ export function chunk(text: string, max = 220): string[] {
 export interface SpeakPart {
   text: string;
   lang?: string;
+  /** What this part is, shown in the player ("Séance", "Article"). */
+  label?: string;
 }
 
-/** Speaks the parts in order and calls onEnd when the last one finishes (or fails). */
-export function speak(parts: SpeakPart[], onEnd?: () => void): void {
+export interface SpeakProgress {
+  index: number; // 0-based sentence chunk being spoken
+  total: number;
+  text: string;
+  label?: string;
+}
+
+/** Speaks the parts in order, reports each chunk as it starts, and calls onEnd when the last one finishes (or fails). */
+export function speak(parts: SpeakPart[], onEnd?: () => void, onProgress?: (p: SpeakProgress) => void): void {
   if (!canSpeak()) return;
   const synth = window.speechSynthesis;
   synth.cancel();
-  const queue = parts.flatMap((p) => chunk(p.text).map((t) => ({ text: t, lang: p.lang })));
+  const queue = parts.flatMap((p) => chunk(p.text).map((t) => ({ text: t, lang: p.lang, label: p.label })));
   queue.forEach((q, i) => {
     const u = new SpeechSynthesisUtterance(q.text);
     if (q.lang) u.lang = q.lang;
     u.rate = 1;
+    u.onstart = () => onProgress?.({ index: i, total: queue.length, text: q.text, label: q.label });
     if (i === queue.length - 1) {
       u.onend = () => onEnd?.();
       u.onerror = () => onEnd?.();
@@ -60,6 +70,14 @@ export function speak(parts: SpeakPart[], onEnd?: () => void): void {
 
 export function stopSpeaking(): void {
   if (canSpeak()) window.speechSynthesis.cancel();
+}
+
+export function pauseSpeaking(): void {
+  if (canSpeak()) window.speechSynthesis.pause();
+}
+
+export function resumeSpeaking(): void {
+  if (canSpeak()) window.speechSynthesis.resume();
 }
 
 /** Plain text from sanitised article HTML, for reading aloud. */
@@ -82,7 +100,7 @@ export interface Recognizer {
   start(): void;
   stop(): void;
   abort(): void;
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean } & ArrayLike<{ transcript: string }>> }) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
 }
