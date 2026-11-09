@@ -23,6 +23,7 @@ import type * as feedsNode from "../feedsNode.js";
 import type * as graves from "../graves.js";
 import type * as http from "../http.js";
 import type * as items from "../items.js";
+import type * as kindred from "../kindred.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_ladder from "../lib/ladder.js";
 import type * as mcp from "../mcp.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   graves: typeof graves;
   http: typeof http;
   items: typeof items;
+  kindred: typeof kindred;
   "lib/auth": typeof lib_auth;
   "lib/ladder": typeof lib_ladder;
   mcp: typeof mcp;

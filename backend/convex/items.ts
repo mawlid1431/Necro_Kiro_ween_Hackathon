@@ -4,6 +4,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx, typ
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUser, requireOwned, requireUser } from "./lib/auth";
+import { indexItem, scheduleCluster, unindexItem } from "./kindred";
 
 const DAY = 86_400_000;
 const MAX_CONTENT = 200 * 1024;
@@ -26,6 +27,7 @@ export function itemCard(i: Doc<"items">, graveTitle?: string) {
     isStarred: i.isStarred,
     score: i.score,
     risenAt: i.risenAt,
+    kindred: !!i.kindredId, // part of a Kindred group (same story in another feed)
   };
 }
 
@@ -118,11 +120,13 @@ export const get = query({
     const grave = await ctx.db.get(item.graveId);
     const seance = await ctx.db.query("seances").withIndex("by_item", (q) => q.eq("itemId", itemId)).first();
     const drafts = await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", itemId)).take(3);
+    const kindred = await kindredFor(ctx, item);
     return {
       ...itemCard(item, grave ? (grave.customTitle ?? grave.title) : undefined),
       contentHtml: item.fullHtml ?? item.contentHtml, // Exhumed full text when available
       exhumed: item.fullHtml !== undefined,
       kindredId: item.kindredId,
+      kindred, // the same story in the user's other feeds
       // ghost = answered by Ghost mode: label "summary without AI" / "template draft" with a try-again button
       seance: seance
         ? { summary: seance.summary, score: seance.score, reason: seance.reason, model: seance.model, ghost: seance.model.startsWith("ghost:") }
@@ -138,6 +142,15 @@ export const get = query({
     };
   },
 });
+
+/** Other items in the same Kindred group: same user, other feeds only. */
+async function kindredFor(ctx: QueryCtx, item: Doc<"items">) {
+  if (!item.kindredId) return [];
+  const rows = await ctx.db.query("items").withIndex("by_kindred", (q) => q.eq("kindredId", item.kindredId)).take(20);
+  const others = rows.filter((r) => r.userId === item.userId && r._id !== item._id && r.graveId !== item.graveId);
+  const titles = await graveTitles(ctx, others);
+  return others.map((r) => ({ _id: r._id, title: r.title, graveTitle: titles.get(r.graveId) ?? "", publishedAt: r.publishedAt }));
+}
 
 export const search = query({
   args: { query: v.string(), graveId: v.optional(v.id("graves")) },
@@ -292,11 +305,12 @@ export const ingest = internalMutation({
       if (dup) continue;
       // A new feed must not flood the unread count with its back catalogue.
       const isRead = firstFetch && fetchedAt - it.publishedAt > 14 * DAY;
-      await ctx.db.insert("items", {
+      const title = it.title.slice(0, 500);
+      const itemId = await ctx.db.insert("items", {
         userId,
         graveId,
         guid: it.guid.slice(0, 2000),
-        title: it.title.slice(0, 500),
+        title,
         link: it.link ?? undefined,
         author: it.author?.slice(0, 200) ?? undefined,
         publishedAt: it.publishedAt,
@@ -306,6 +320,7 @@ export const ingest = internalMutation({
         isStarred: false,
         risenAt: now,
       });
+      await indexItem(ctx, { _id: itemId, userId, graveId, title, publishedAt: it.publishedAt });
       inserted++;
       if (!isRead) unread++;
       newest = Math.max(newest, Math.min(it.publishedAt, now));
@@ -313,6 +328,7 @@ export const ingest = internalMutation({
     if (inserted) {
       // lastNewItemAt tracks when the feed last published (drives the polling interval).
       await ctx.db.patch(graveId, { unreadCount: grave.unreadCount + unread, lastNewItemAt: newest });
+      await scheduleCluster(ctx, userId);
     }
     return { inserted };
   },
@@ -345,6 +361,7 @@ export const prune = internalMutation({
         for (const d of await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", item._id)).collect()) {
           await ctx.db.delete(d._id);
         }
+        await unindexItem(ctx, item._id);
         await ctx.db.delete(item._id);
       }
     }

@@ -4,7 +4,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Star } from "lucide-react";
 import type { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
-import { crypt as copy } from "@/lib/copy";
+import { crypt as copy, kindred as kindredCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 export type ItemCard = FunctionReturnType<typeof api.items.search>[number];
@@ -69,6 +69,11 @@ export function ItemList({
               <span className="truncate">{i.graveTitle}</span>
               <span aria-hidden>·</span>
               <span className="shrink-0">{timeAgo(i.publishedAt)}</span>
+              {i.kindred ? (
+                <span title={kindredCopy.marker} aria-label={kindredCopy.marker} className="shrink-0 font-bold text-ecto-ink">
+                  ≈
+                </span>
+              ) : null}
               <span className="ml-auto">
                 <ScoreBadge score={i.score} />
               </span>

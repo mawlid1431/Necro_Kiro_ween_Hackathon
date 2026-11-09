@@ -155,6 +155,13 @@ export const crypt = {
   markUnread: "Mark unread",
 } as const;
 
+export const kindred = {
+  label: "Kindred",
+  plain: "Same story, several feeds",
+  alsoIn: (n: number) => (n === 1 ? "Also reported by 1 other feed" : `Also reported by ${n} other feeds`),
+  marker: "Also in another feed",
+} as const;
+
 export const seance = {
   hold: "Hold a Séance",
   holding: "Summoning the spirits…",

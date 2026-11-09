@@ -103,6 +103,19 @@ export default defineSchema({
     // 768 = Gemini embedding with a reduced output size; change with AI_EMBED_MODEL if needed.
     .vectorIndex("by_embedding", { vectorField: "embedding", dimensions: 768, filterFields: ["userId"] }),
 
+  // Light per-item rows (titles only) so Kindred clustering never reads article HTML.
+  // Only the last 48 h matter; rows are trimmed after a week and deleted with their item.
+  kindredIndex: defineTable({
+    userId: v.id("users"),
+    itemId: v.id("items"),
+    graveId: v.id("graves"),
+    title: v.string(),
+    publishedAt: v.number(),
+    kindredId: v.optional(v.string()),
+  })
+    .index("by_user_published", ["userId", "publishedAt"])
+    .index("by_item", ["itemId"]),
+
   seances: defineTable({
     userId: v.id("users"),
     itemId: v.id("items"),

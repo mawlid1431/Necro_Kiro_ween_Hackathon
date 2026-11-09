@@ -6,14 +6,14 @@ import { ExternalLink, Sparkles, Square, Star, Volume2 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { crypt as copy, resurrect as rcopy, voice as vcopy } from "@/lib/copy";
+import { crypt as copy, kindred as kcopy, resurrect as rcopy, voice as vcopy } from "@/lib/copy";
 import { canSpeak, htmlToSpeech, langFor, speak, stopSpeaking, type SpeakPart } from "@/lib/voice";
 import { timeAgo } from "./ItemList";
 import { SeanceCard } from "./SeanceCard";
 import { ResurrectDialog } from "./ResurrectDialog";
 import { useVoice } from "./voice-context";
 
-export function ReadingPane({ itemId }: { itemId: Id<"items"> }) {
+export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: (id: Id<"items">) => void }) {
   const item = useQuery(api.items.get, { itemId });
   const me = useQuery(api.users.me);
   const setRead = useMutation(api.items.setRead);
@@ -92,6 +92,24 @@ export function ReadingPane({ itemId }: { itemId: Id<"items"> }) {
         {item.author ? ` · ${item.author}` : ""}
       </p>
       <h2 className="mt-2 font-display text-h2 font-bold sm:text-[1.75rem] sm:leading-9">{item.title}</h2>
+
+      {item.kindred.length ? (
+        <aside aria-label={kcopy.plain} className="mt-3 rounded-lg border border-line bg-surface-muted/60 px-4 py-3">
+          <p className="text-meta font-semibold text-ink">
+            <span className="mr-1.5 text-overline font-bold tracking-[0.12em] text-ecto-ink uppercase">{kcopy.label}</span>
+            {kcopy.alsoIn(item.kindred.length)}
+          </p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {item.kindred.map((k) => (
+              <li key={k._id}>
+                <button onClick={() => onOpen?.(k._id)} className="text-left text-meta text-copy underline-offset-4 hover:text-ink hover:underline">
+                  <span className="font-semibold">{k.graveTitle}</span> · {k.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={() => void setStarred({ itemId, value: !item.isStarred })} aria-pressed={item.isStarred}>

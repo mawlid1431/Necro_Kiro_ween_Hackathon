@@ -170,7 +170,7 @@ export function Crypt() {
               <Button variant="ghost" size="sm" className="mb-3 lg:hidden" onClick={() => go({ item: null })}>
                 <ArrowLeft aria-hidden strokeWidth={1.75} /> Back
               </Button>
-              <ReadingPane key={itemId} itemId={itemId} />
+              <ReadingPane key={itemId} itemId={itemId} onOpen={(id) => go({ item: id })} />
             </>
           ) : (
             <div className="grid h-full min-h-64 place-items-center rounded-xl border border-dashed border-line text-meta text-subtle">
