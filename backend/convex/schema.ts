@@ -10,7 +10,12 @@ import { v } from "convex/values";
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
 export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"));
-export const draftStatus = v.union(v.literal("draft"), v.literal("copied"), v.literal("shared"));
+export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
+export const collectionTopic = v.union(
+  v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
+  v.literal("business"), v.literal("news"), v.literal("creators"), v.literal("other"),
+);
+export const draftStatus =v.union(v.literal("draft"), v.literal("copied"), v.literal("shared"));
 
 export default defineSchema({
   users: defineTable({
@@ -26,6 +31,7 @@ export default defineSchema({
     summaryLanguage: v.optional(v.string()), // default "English"
     publicSlug: v.optional(v.string()), // random; set only when publishing is on
     isDemo: v.optional(v.boolean()), // demo account: AI reads from demoCache
+    displayName: v.optional(v.string()), // public name on shared collections (never the email)
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_clerk", ["clerkId"])
@@ -185,4 +191,37 @@ export default defineSchema({
 
   // Pre-computed AI answers for the demo account (instant, identical video takes).
   demoCache: defineTable({ key: v.string(), value: v.string() }).index("by_key", ["key"]),
+
+  // ---------- Covens: shared feed collections (spec: .kiro/specs/covens) ----------
+  // A collection stores a SNAPSHOT of feed URLs, never grave ids, so followers never touch the
+  // curator's private rows. Public-by-design fields only: no read state, stars, drafts or email.
+  collections: defineTable({
+    userId: v.id("users"),
+    slug: v.string(), // 10 random chars, used in links
+    title: v.string(),
+    description: v.string(),
+    topic: collectionTopic,
+    visibility: v.union(v.literal("public"), v.literal("unlisted")),
+    feeds: v.array(v.object({ feedUrl: v.string(), title: v.string(), siteUrl: v.optional(v.string()) })),
+    starredFeed: v.boolean(), // curator opted in to an RSS feed of their starred posts
+    followerCount: v.number(),
+    subscribeCount: v.number(),
+    reportCount: v.number(),
+    hidden: v.boolean(), // hidden from Discover after 3 reports
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_slug", ["slug"])
+    .index("by_public_followers", ["visibility", "hidden", "followerCount"])
+    .index("by_public_topic", ["visibility", "hidden", "topic", "followerCount"])
+    .searchIndex("search_title", { searchField: "title", filterFields: ["visibility", "hidden", "topic"] }),
+
+  collectionFollows: defineTable({ userId: v.id("users"), collectionId: v.id("collections") })
+    .index("by_user", ["userId"])
+    .index("by_collection", ["collectionId"])
+    .index("by_user_collection", ["userId", "collectionId"]),
+
+  collectionReports: defineTable({ userId: v.id("users"), collectionId: v.id("collections"), reason: v.string() })
+    .index("by_user", ["userId"])
+    .index("by_user_collection", ["userId", "collectionId"]),
 });

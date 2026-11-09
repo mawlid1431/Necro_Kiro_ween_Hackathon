@@ -18,6 +18,77 @@ export const labels = {
   bury: { themed: "Bury feed", plain: "Remove feed" },
   risen: { themed: "Risen", plain: "New" },
   settings: { themed: "Settings", plain: "Interests, voice and MCP keys" },
+  discover: { themed: "Discover", plain: "Find collections to follow" },
+  covens: { themed: "Covens", plain: "Shared feed collections" },
+} as const;
+
+export const TOPICS = {
+  ai: "AI",
+  security: "Security",
+  dev: "Web & dev",
+  design: "Design",
+  science: "Science",
+  business: "Business",
+  news: "News",
+  creators: "Creators",
+  other: "Other",
+} as const;
+export type Topic = keyof typeof TOPICS;
+
+export const covens = {
+  intro: "Start from feeds other readers trust. One click adds a whole collection to your graveyard.",
+  search: "Search collections",
+  all: "All topics",
+  trending: "Trending",
+  newest: "Newest",
+  empty: "No collections here yet. Publish the first one.",
+  feeds: (n: number) => (n === 1 ? "1 feed" : `${n} feeds`),
+  followers: (n: number) => (n === 1 ? "1 follower" : `${n} followers`),
+  by: (name: string) => `by ${name}`,
+  summonAll: "Summon all",
+  summoning: "Summoning…",
+  summoned: (c: number, d: number) =>
+    c ? `${c} feed${c === 1 ? "" : "s"} summoned${d ? `, ${d} already followed` : ""}. They rise in a moment.` : "You already follow every feed here.",
+  follow: "Follow",
+  following: "Following",
+  unfollow: "Unfollow",
+  have: "In your graveyard",
+  copyLink: "Copy link",
+  copied: "Link copied",
+  opml: "OPML",
+  report: "Report",
+  reportPrompt: "Why are you reporting this collection?",
+  reported: "Thanks. We'll take a look.",
+  yours: "Your covens",
+  publish: "Publish a collection",
+  edit: "Edit",
+  delete: "Delete",
+  deleteConfirm: (t: string) => `Delete “${t}”? Followers keep the feeds they already summoned.`,
+  hiddenNote: "Hidden from Discover after reports. Only you can see it.",
+  followingTitle: "Collections you follow",
+  addNew: (n: number) => `Add ${n} new`,
+  upToDate: "Up to date",
+  trendingFeeds: "Most shared feeds",
+  summonOne: "Summon",
+  summonedOne: "Summoned",
+  notFound: "This collection was removed or the link is wrong.",
+  status: { public: "Public", unlisted: "Unlisted", hidden: "Hidden" },
+  displayName: "Curator name",
+  displayNameHint: "Shown on collections you publish. Leave empty to appear as “A Necro reader”. Never your email.",
+  publishTitle: "Publish a collection",
+  editTitle: "Edit collection",
+  publishBody: "Share some of your feeds. Only the feeds, title and description are public, never what you read.",
+  title: "Title",
+  description: "Description (optional)",
+  topic: "Topic",
+  visibility: "Who can see it",
+  public: "Public · listed in Discover",
+  unlisted: "Unlisted · only people with the link",
+  starred: "Also publish an RSS feed of my starred posts",
+  pickFeeds: (n: number) => `Feeds to include (${n} selected)`,
+  save: "Publish",
+  saveEdit: "Save changes",
+  noFeeds: "Summon a few feeds first, then share them here.",
 } as const;
 
 export type LabelKey = keyof typeof labels;
@@ -46,6 +117,7 @@ export const landing = {
 export const graveyard = {
   emptyTitle: "The graveyard is quiet",
   emptyBody: "Summon your first feed to bring it to life.",
+  emptyDiscover: "Or start from a collection other readers trust",
   risenToday: (n: number) => (n === 1 ? "1 post rose today" : `${n} posts rose today`),
   noInterests: "Tell Necro what you care about so each Séance can score relevance for you.",
 } as const;
@@ -163,6 +235,7 @@ export const doctorCopy = {
 export const nav = {
   graveyard: "Graveyard",
   crypt: "Crypt",
+  discover: "Discover",
   doctor: "Doctor",
   settings: "Settings",
 } as const;

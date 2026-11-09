@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/graveyard", label: nav.graveyard },
   { href: "/crypt", label: nav.crypt },
+  { href: "/discover", label: nav.discover },
   { href: "/doctor", label: nav.doctor },
   { href: "/settings", label: nav.settings },
 ] as const;

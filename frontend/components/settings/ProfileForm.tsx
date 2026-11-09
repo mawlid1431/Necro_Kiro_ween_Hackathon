@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
-import { settings as copy } from "@/lib/copy";
+import { covens, settings as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 
 const LANGUAGES = ["English", "Malay", "Arabic", "Somali", "French", "Spanish", "German", "Indonesian", "Chinese", "Hindi"];
@@ -17,15 +17,17 @@ export function ProfileForm() {
     <Card aria-labelledby="profile-h">
       <h2 id="profile-h" className="font-display text-h3 font-bold">{copy.interests}</h2>
       {/* Mount the form once the profile has loaded, so its fields start from saved values. */}
-      {me ? <Form initialInterests={me.interests.join(", ")} initialLanguage={me.summaryLanguage} /> : <div className="mt-4 h-40 animate-pulse rounded-lg bg-surface-muted/60" />}
+      {me ? <Form initialInterests={me.interests.join(", ")} initialLanguage={me.summaryLanguage} initialName={me.displayName ?? ""} /> : <div className="mt-4 h-40 animate-pulse rounded-lg bg-surface-muted/60" />}
     </Card>
   );
 }
 
-function Form({ initialInterests, initialLanguage }: { initialInterests: string; initialLanguage: string }) {
+function Form({ initialInterests, initialLanguage, initialName }: { initialInterests: string; initialLanguage: string; initialName: string }) {
   const setInterests = useMutation(api.users.setInterests);
   const setPreferences = useMutation(api.users.setPreferences);
   const completeOnboarding = useMutation(api.users.completeOnboarding);
+  const setDisplayName = useMutation(api.users.setDisplayName);
+  const [name, setName] = useState(initialName);
   const [interests, setText] = useState(initialInterests);
   const [language, setLanguage] = useState(LANGUAGES.includes(initialLanguage) ? initialLanguage : "English");
   const [status, setStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -39,6 +41,7 @@ function Form({ initialInterests, initialLanguage }: { initialInterests: string;
       const list = interests.split(",").map((s) => s.trim()).filter(Boolean);
       await setInterests({ interests: list });
       await setPreferences({ summaryLanguage: language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      if (name.trim() !== initialName) await setDisplayName({ displayName: name });
       await completeOnboarding({});
       setStatus({ tone: "ok", text: copy.saved });
     } catch (err) {
@@ -66,6 +69,10 @@ function Form({ initialInterests, initialLanguage }: { initialInterests: string;
             <option key={l}>{l}</option>
           ))}
         </select>
+      </div>
+      <div>
+        <Label htmlFor="display-name" hint={covens.displayNameHint}>{covens.displayName}</Label>
+        <Input id="display-name" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} className="sm:w-64" />
       </div>
       {status ? <Notice tone={status.tone}>{status.text}</Notice> : null}
       <Button type="submit" disabled={busy} className="self-start">{copy.save}</Button>

@@ -15,3 +15,9 @@ export const DAILY_AI_LIMITS = {
 export type LimitedAiTask = keyof typeof DAILY_AI_LIMITS;
 
 export const VOICE_SECONDS_PER_DAY = 30 * 60;
+
+// Covens (shared collections)
+export const MAX_COLLECTIONS_PER_USER = 10;
+export const MAX_FEEDS_PER_COLLECTION = 50;
+export const PUBLISHES_PER_HOUR = 10;
+export const REPORTS_TO_HIDE = 3;

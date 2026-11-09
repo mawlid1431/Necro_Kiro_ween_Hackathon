@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireUser } from "./lib/auth";
 import { usageToday } from "./aiUsage";
+import { removeCollection } from "./covens";
 
 async function upsertCaller(ctx: MutationCtx): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
@@ -44,6 +45,7 @@ export const me = query({
       email: user.email,
       interests: user.interests,
       summaryLanguage: user.summaryLanguage ?? "English",
+      displayName: user.displayName ?? null,
       onboarded: user.onboardedAt !== undefined,
       usage: await usageToday(ctx, user._id),
     };
@@ -67,6 +69,18 @@ export const setInterests = mutation({
       fail("INVALID_INPUT", "Add 1 to 20 interests, each up to 40 characters.");
     }
     await ctx.db.patch(user._id, { interests: clean });
+  },
+});
+
+/** Public name shown on collections you publish. Empty resets to "A Necro reader". Never your email. */
+export const setDisplayName = mutation({
+  args: { displayName: v.string() },
+  handler: async (ctx, { displayName }) => {
+    const user = await requireUser(ctx);
+    const name = displayName.replace(/\s+/g, " ").trim();
+    if (name.length > 40) fail("INVALID_INPUT", "Display names can be up to 40 characters.");
+    if (/@/.test(name)) fail("INVALID_INPUT", "Use a name, not an email address.");
+    await ctx.db.patch(user._id, { displayName: name || undefined });
   },
 });
 
@@ -147,6 +161,14 @@ export const deleteBatch = internalMutation({
       return;
     }
 
+    // Published collections go too (with their follows), so nothing public outlives the account.
+    const collections = await ctx.db.query("collections").withIndex("by_user", (q) => q.eq("userId", userId)).take(20);
+    for (const c of collections) await removeCollection(ctx, c._id);
+    if (collections.length) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteBatch, { userId });
+      return;
+    }
+
     const small = [
       await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
@@ -154,6 +176,8 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("voiceSessions").withIndex("by_user_day", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("seances").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("drafts").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("collectionFollows").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("collectionReports").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
     ].flat();
     for (const row of small) await ctx.db.delete(row._id);
     if (small.length) {
