@@ -5,17 +5,24 @@ import { fail, getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { diagnose } from "../lib/errors";
 import { normaliseFeedUrl } from "../lib/feeds/url";
 
-/** Broken and sleeping graves, each with a plain-language diagnosis. */
+const SEVERITY = { broken: 0, failing: 1, dormant: 2 } as const;
+
+/**
+ * Feeds that need attention, worst first: broken (3+ failed checks), failing (the last check
+ * failed, not yet broken) and sleeping (no new post for 30+ days). Each has a plain-language diagnosis.
+ */
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
     if (!user) return [];
-    const rows = [
-      ...(await ctx.db.query("graves").withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "broken")).take(300)),
-      ...(await ctx.db.query("graves").withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "dormant")).take(300)),
-    ];
-    return rows.map((g) => ({
+    const all = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", user._id)).take(300);
+    const rows = all
+      .map((g) => ({ g, health: g.status === "broken" ? "broken" : g.failureCount > 0 ? "failing" : g.status === "dormant" ? "dormant" : null }))
+      .filter((r): r is { g: (typeof all)[number]; health: keyof typeof SEVERITY } => r.health !== null)
+      .sort((a, b) => SEVERITY[a.health] - SEVERITY[b.health] || b.g.failureCount - a.g.failureCount);
+    return rows.map(({ g, health }) => ({
+      health,
       _id: g._id,
       title: g.customTitle ?? g.title,
       feedUrl: g.feedUrl,
