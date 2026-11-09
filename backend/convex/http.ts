@@ -32,7 +32,7 @@ http.route({
       const body = exportOpml(
         c.feeds.map((f) => ({ title: f.title, feedUrl: f.feedUrl, siteUrl: f.siteUrl ?? null, folder: null })),
         c.curator,
-      ).replace("<title>Necro subscriptions</title>", `<title>${esc(c.title)}</title>`);
+      ).replace("<title>Necro subscriptions</title>", () => `<title>${esc(c.title)}</title>`); // a function: "$&" in a title stays literal
       return new Response(body, { headers: { "content-type": "text/x-opml; charset=utf-8", ...cacheHeaders } });
     }
 

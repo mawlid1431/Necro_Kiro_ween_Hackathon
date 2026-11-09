@@ -113,7 +113,7 @@ export const getStats = query({
   handler: async (ctx, { secret, userId }) => {
     await checkUser(ctx, secret, userId);
     const graves = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", userId)).take(300);
-    const starred = await ctx.db.query("items").withIndex("by_user_starred", (q) => q.eq("userId", userId).eq("isStarred", true)).take(500);
+    const starred = await ctx.db.query("items").withIndex("by_user_starred", (q) => q.eq("userId", userId).eq("isStarred", true)).take(101);
     const seancesToday = await ctx.db
       .query("aiUsage")
       .withIndex("by_user_day_task", (q) => q.eq("userId", userId).eq("day", utcDay()).eq("task", "seance"))
@@ -121,7 +121,7 @@ export const getStats = query({
     return {
       feeds: graves.length,
       unread: graves.reduce((n, g) => n + g.unreadCount, 0),
-      starred: starred.length === 500 ? "500+" : starred.length,
+      starred: starred.length > 100 ? "100+" : starred.length,
       seancesToday: seancesToday.length,
       brokenFeeds: graves.filter((g) => g.status === "broken").length,
       sleepingFeeds: graves.filter((g) => g.status === "dormant").length,

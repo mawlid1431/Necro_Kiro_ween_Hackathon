@@ -3,7 +3,7 @@
 // database, and structured output gets one repair attempt before the next rung.
 // Import only from "use node" actions (it pulls in the AI SDK).
 import { generateText, NoObjectGeneratedError, Output } from "ai";
-import type { z } from "zod";
+import { ZodError, type z } from "zod";
 import type { ActionCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { resolveRung, type Rung } from "../../lib/ai/providers";
@@ -55,6 +55,7 @@ async function structuredCall<S extends z.ZodType>(
     // parse() re-checks with our own Zod schema and gives the output its static type.
     return { output: p.schema.parse(r.output), inputTokens: r.usage.inputTokens ?? 0, outputTokens: r.usage.outputTokens ?? 0 };
   } catch (e) {
+    if (e instanceof ZodError) throw new Error("schema"); // bad JSON shape: the model's fault, not the provider's health
     if (!NoObjectGeneratedError.isInstance(e)) throw e;
     const issues = e.cause instanceof Error ? e.cause.message.slice(0, 600) : "it was not valid JSON";
     const r = await generateText({
@@ -65,8 +66,13 @@ async function structuredCall<S extends z.ZodType>(
         { role: "user", content: `Your last answer did not match the schema: ${issues}. Return only valid JSON.` },
       ],
       abortSignal: AbortSignal.timeout(RUNG_TIMEOUT_MS),
+    }).catch((err: unknown) => {
+      // The repair also failed to produce valid JSON: still a schema miss, so the breaker is not tripped.
+      throw NoObjectGeneratedError.isInstance(err) ? new Error("schema") : err;
     });
-    return { output: p.schema.parse(r.output), inputTokens: r.usage.inputTokens ?? 0, outputTokens: r.usage.outputTokens ?? 0 };
+    const parsed = p.schema.safeParse(r.output);
+    if (!parsed.success) throw new Error("schema");
+    return { output: parsed.data, inputTokens: r.usage.inputTokens ?? 0, outputTokens: r.usage.outputTokens ?? 0 };
   }
 }
 

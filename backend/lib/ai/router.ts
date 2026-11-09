@@ -86,12 +86,16 @@ export async function runWithLadder<T>(
       attempts.push({ spec, outcome: "privacy" }); // enforced in code, not just documented
       continue;
     }
-    if (await deps.isOpen(rung.provider)) {
-      attempts.push({ spec, outcome: "breaker_open" });
-      continue;
+    // Breaker and budget live in shared rows; if that bookkeeping fails (e.g. write contention),
+    // skip the rung rather than let the error escape Ghost mode and reach the user.
+    let gate: "ok" | "breaker_open" | "budget" | "bookkeeping";
+    try {
+      gate = (await deps.isOpen(rung.provider)) ? "breaker_open" : (await deps.reserveBudget(rung.provider)) ? "ok" : "budget";
+    } catch {
+      gate = "bookkeeping";
     }
-    if (!(await deps.reserveBudget(rung.provider))) {
-      attempts.push({ spec, outcome: "budget" });
+    if (gate !== "ok") {
+      attempts.push({ spec, outcome: gate });
       continue;
     }
     const t0 = Date.now();

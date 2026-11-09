@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireUser } from "./lib/auth";
 import { usageToday } from "./aiUsage";
 import { removeCollection } from "./covens";
+import { deleteItemCascade } from "./items";
 
 async function upsertCaller(ctx: MutationCtx): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
@@ -207,9 +208,12 @@ export const deleteBatch = internalMutation({
     }
 
     // Items are deleted by deleteGraveData; wait until none are left before removing the user.
-    const leftover = await ctx.db.query("items").withIndex("by_user_published", (q) => q.eq("userId", userId)).first();
-    if (leftover) {
-      await ctx.scheduler.runAfter(5_000, internal.users.deleteBatch, { userId });
+    // Items normally go with their grave (deleteGraveData). Delete any left behind directly,
+    // so a failed grave cleanup can never keep this loop running forever.
+    const leftover = await ctx.db.query("items").withIndex("by_user_published", (q) => q.eq("userId", userId)).take(50);
+    if (leftover.length) {
+      for (const item of leftover) await deleteItemCascade(ctx, item);
+      await ctx.scheduler.runAfter(1_000, internal.users.deleteBatch, { userId });
       return;
     }
     const user = await ctx.db.get(userId);

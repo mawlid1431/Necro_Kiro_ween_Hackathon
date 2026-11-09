@@ -176,6 +176,9 @@ export async function removeCollection(ctx: MutationCtx, collectionId: Id<"colle
   for (const f of await ctx.db.query("collectionFollows").withIndex("by_collection", (q) => q.eq("collectionId", collectionId)).take(500)) {
     await ctx.db.delete(f._id);
   }
+  for (const r of await ctx.db.query("collectionReports").withIndex("by_collection", (q) => q.eq("collectionId", collectionId)).take(500)) {
+    await ctx.db.delete(r._id);
+  }
   await ctx.db.delete(collectionId);
 }
 
@@ -199,10 +202,9 @@ export const discover = query({
         })
         .take(30);
     } else if (sort === "new") {
-      const pool = topic
-        ? await ctx.db.query("collections").withIndex("by_public_topic", (q) => q.eq("visibility", "public").eq("hidden", false).eq("topic", topic)).take(200)
-        : await ctx.db.query("collections").withIndex("by_public_followers", (q) => q.eq("visibility", "public").eq("hidden", false)).take(200);
-      rows = pool.sort((a, b) => b._creationTime - a._creationTime).slice(0, 30);
+      rows = topic
+        ? await ctx.db.query("collections").withIndex("by_public_topic_new", (q) => q.eq("visibility", "public").eq("hidden", false).eq("topic", topic)).order("desc").take(30)
+        : await ctx.db.query("collections").withIndex("by_public_new", (q) => q.eq("visibility", "public").eq("hidden", false)).order("desc").take(30);
     } else {
       rows = topic
         ? await ctx.db.query("collections").withIndex("by_public_topic", (q) => q.eq("visibility", "public").eq("hidden", false).eq("topic", topic)).order("desc").take(30)

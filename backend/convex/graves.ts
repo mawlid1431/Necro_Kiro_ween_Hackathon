@@ -131,13 +131,13 @@ export const exportData = query({
       return i && i.userId === uid ? { title: i.title, link: i.link ?? null } : null;
     };
     const voice = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", uid)).first();
-    const drafts = await ctx.db.query("drafts").withIndex("by_user", (q) => q.eq("userId", uid)).take(500);
+    const drafts = await ctx.db.query("drafts").withIndex("by_user", (q) => q.eq("userId", uid)).take(150);
     const omens = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", uid)).take(20);
-    const matches = await ctx.db.query("omenMatches").withIndex("by_user_created", (q) => q.eq("userId", uid)).order("desc").take(200);
+    const matches = await ctx.db.query("omenMatches").withIndex("by_user_created", (q) => q.eq("userId", uid)).order("desc").take(100);
     const collections = await ctx.db.query("collections").withIndex("by_user", (q) => q.eq("userId", uid)).take(20);
     const follows = await ctx.db.query("collectionFollows").withIndex("by_user", (q) => q.eq("userId", uid)).take(100);
     const grimoires = await ctx.db.query("grimoires").withIndex("by_user", (q) => q.eq("userId", uid)).order("desc").take(50);
-    const starred = await ctx.db.query("items").withIndex("by_user_starred", (q) => q.eq("userId", uid).eq("isStarred", true)).order("desc").take(500);
+    const starred = await ctx.db.query("items").withIndex("by_user_starred", (q) => q.eq("userId", uid).eq("isStarred", true)).order("desc").take(150);
 
     return {
       exportedAt: new Date().toISOString(),

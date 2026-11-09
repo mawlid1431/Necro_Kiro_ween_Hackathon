@@ -43,8 +43,8 @@ export const create = action({
 export const insert = internalMutation({
   args: { userId: v.id("users"), name: v.string(), hash: v.string(), prefix: v.string() },
   handler: async (ctx, args) => {
-    const keys = await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", args.userId)).take(100);
-    if (keys.filter((k) => !k.revokedAt).length >= MAX_API_KEYS) {
+    const active = await ctx.db.query("apiKeys").withIndex("by_user_revoked", (q) => q.eq("userId", args.userId).eq("revokedAt", undefined)).take(MAX_API_KEYS);
+    if (active.length >= MAX_API_KEYS) {
       fail("LIMIT", `You can have up to ${MAX_API_KEYS} active keys. Revoke one first.`);
     }
     await ctx.db.insert("apiKeys", args);
@@ -57,7 +57,7 @@ export const list = query({
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
     if (!user) return [];
-    const keys = await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", user._id)).take(100);
+    const keys = await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", user._id)).order("desc").take(50);
     return keys.map((k) => ({
       _id: k._id,
       _creationTime: k._creationTime,

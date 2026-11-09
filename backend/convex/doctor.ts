@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { fail, getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { diagnose } from "../lib/errors";
 import { normaliseFeedUrl } from "../lib/feeds/url";
+import { hitLimit } from "./rateLimits";
 
 const SEVERITY = { broken: 0, failing: 1, dormant: 2 } as const;
 
@@ -48,6 +49,8 @@ export const applyFix = mutation({
   handler: async (ctx, { graveId, candidateUrl }) => {
     const user = await requireUser(ctx);
     const g = await requireOwned(ctx, user._id, graveId);
+    // Same budget as Retry now: each apply schedules a real fetch.
+    if (!(await hitLimit(ctx, `retry:${graveId}`, 6, 3_600_000))) fail("LIMIT", "Too many tries for this feed. Wait a little and try again.");
     let url: URL;
     try {
       url = new URL(candidateUrl);

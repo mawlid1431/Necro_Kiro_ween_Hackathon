@@ -400,6 +400,4 @@ export const prune = internalMutation({
     else if (!page.isDone) await ctx.scheduler.runAfter(0, internal.items.prune, { cursor: page.continueCursor });
   },
 });
-  },
-});
 
