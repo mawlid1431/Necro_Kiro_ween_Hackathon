@@ -11,5 +11,7 @@ export default defineConfig({
     // convex-test runs Convex functions in the edge runtime, like production.
     environment: "edge-runtime",
     server: { deps: { inline: ["convex-test"] } },
+    // Property tests (hundreds of runs) and 100-call limit tests can pass 5 s on a busy machine.
+    testTimeout: 60_000,
   },
 });
