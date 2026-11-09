@@ -4,7 +4,7 @@
 
 **Live app:** [necro.malitos.tech](https://necro.malitos.tech) · **MCP endpoint:** `https://necro.malitos.tech/api/mcp` ([setup](docs/MCP.md))
 
-Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X and Instagram in your own voice (**Resurrect**), a doctor for broken feeds (**Feed Doctor**), and an MCP server so Claude, Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
+Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X and Instagram in your own voice (**Resurrect**), a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
 
 > **Goal of the build.** A new user can sign up, add three feeds, read an article, hold a Séance, resurrect it into drafts and connect an MCP client, in under five minutes, with no errors.
 
@@ -110,7 +110,7 @@ Each folder keeps its own `node_modules` on purpose. Vercel builds `frontend/`, 
 flowchart TB
   subgraph Clients
     B["Browser<br/>Necro UI"]
-    M["MCP clients<br/>Claude Desktop, Kiro, IDE agents"]
+    M["MCP clients<br/>Kiro, AI desktop apps, IDE agents"]
   end
 
   subgraph Vercel["Vercel: frontend/"]

@@ -80,7 +80,7 @@ For **each feature**, create a Kiro **spec** in `.kiro/specs/<feature>/` (`requi
 
 **Phase 5: MCP server** (spec: `mcp-server`)
 - `/api/mcp` Streamable HTTP server with the 8 tools in section 10, Bearer API keys (create, show once, hashed, revoke), Zod validation, rate limiting, activity log.
-- Write `docs/CONNECT_CLAUDE.md` with the exact steps we tested.
+- Write `docs/MCP.md` with the exact steps we tested.
 - Done when: I can connect from an MCP client and run the demo prompt successfully.
 
 **Phase 6: Feed Doctor + polish** (spec: `feed-doctor`)

@@ -68,7 +68,7 @@ export function ApiKeys() {
       <form onSubmit={onCreate} className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1">
           <Label htmlFor="key-name">{copy.keyName}</Label>
-          <Input id="key-name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder="Claude Desktop" />
+          <Input id="key-name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder="My AI assistant" />
         </div>
         <Button type="submit" disabled={busy}>
           <KeyRound aria-hidden strokeWidth={1.75} />

@@ -43,7 +43,7 @@ A Kiroween 2026 project by Mowlid Haibe · a Faafi project
 
 In 2013 the most popular RSS reader in the world was shut down, and RSS itself was left for dead. Yet RSS never really died: almost every blog, newsroom, podcast and YouTube channel still publishes a feed. What died was a good way to *use* it.
 
-**Necro brings RSS back to life** with today's technology: an AI that reads with you, ranks what matters, and turns what you read into posts you can share. You can even talk to your feeds from Claude through MCP.
+**Necro brings RSS back to life** with today's technology: an AI that reads with you, ranks what matters, and turns what you read into posts you can share. You can even talk to your feeds from your AI assistant through MCP.
 
 > **Trademark note.** Tell the story in writing (description, blog). In the **video, logo and images**, say "RSS" and "classic feed readers" instead of naming the old Google product, because the rules forbid third-party trademarks in the video without permission.
 
@@ -58,7 +58,7 @@ In 2013 the most popular RSS reader in the world was shut down, and RSS itself w
 | Creators and marketers | Must read a lot to post well; social feeds are noisy and algorithmic | A calm, chronological reader plus AI drafts ready to share |
 | Students and researchers | Follow many blogs, papers and news sites in tabs | One place, AI summaries, saved highlights |
 | Former RSS users | Lost their favourite reader; old exports sit unused | Import the old OPML export and everything comes back |
-| AI power users | Their assistant cannot read their sources | An MCP server so Claude can browse and draft from their feeds |
+| AI power users | Their assistant cannot read their sources | An MCP server so their AI assistant can browse and draft from their feeds |
 
 **Judging angle (Potential Impact):** a real, large audience (anyone who reads to create), an easy start (paste a link or upload one file), accessible UI (contrast-checked colours, keyboard navigation, reduced-motion mode).
 
@@ -75,7 +75,7 @@ The feature names follow the theme, and each has a plain-language subtitle in th
 | 3 | **The Crypt (reader)** | Clean, chronological reading view with read/unread, star, search | ✅ |
 | 4 | **Séance** | AI summary (3 bullets) and a relevance score for each article | ✅ |
 | 5 | **Resurrect** | Turn an article into LinkedIn, X and Instagram drafts in your voice | ✅ |
-| 6 | **Talk to the dead** | MCP server: Claude can list, read, summarise and draft from your feeds | ✅ |
+| 6 | **Talk to the dead** | MCP server: any AI assistant can list, read, summarise and draft from your feeds | ✅ |
 | 7 | **Feed Doctor** | Detects broken or moved feeds and suggests fixes | ✅ (basic) |
 | 8 | **Haunted digest** | Daily email or page: "What rose last night" | Stretch |
 | 9 | **Share** | Copy draft, or open the platform's own share/compose page with the text filled in | ✅ |
@@ -99,7 +99,7 @@ Sign in ──► Summon feeds ──► Graveyard fills ──► Feeds rise (n
                                     │
                       Edit ─► Copy or open share page
                                     │
-              (any time) Claude via MCP: "What rose today? Draft two posts."
+              (any time) AI assistant via MCP: "What rose today? Draft two posts."
 ```
 
 **Step by step**
@@ -111,7 +111,7 @@ Sign in ──► Summon feeds ──► Graveyard fills ──► Feeds rise (n
 5. **Séance** runs on new items: a 3-bullet summary and a 0 to 100 relevance score based on the user's interests.
 6. **Resurrect**: pick platforms; AI writes drafts in the user's saved voice. The user edits them.
 7. **Share**: copy text or open the platform's compose page.
-8. **Talk to the dead**: in Claude, the user connects Necro's MCP server with a personal key and asks in plain language.
+8. **Talk to the dead**: in their AI assistant, the user connects Necro's MCP server with a personal key and asks in plain language.
 
 ---
 
@@ -126,11 +126,11 @@ Sign in ──► Summon feeds ──► Graveyard fills ──► Feeds rise (n
 | Database and backend | **Convex** | Realtime (tombstones rise live), scheduled jobs (cron), actions for fetching |
 | Auth | **Clerk** | Sign-in in minutes |
 | AI SDK | **Vercel AI SDK** (`ai`) | One API for many model providers, structured output with Zod |
-| AI provider | **Amazon Bedrock** (Anthropic Claude model) by default; **OpenAI** or **Groq** as alternatives | Bedrock fits an AWS-judged hackathon; provider is swappable by env var |
+| AI provider | **Amazon Bedrock** by default; **OpenAI** or **Groq** as alternatives | Bedrock fits an AWS-judged hackathon; provider is swappable by env var |
 | Feed parsing | **fast-xml-parser** + own normaliser | Handles RSS 0.9x/1.0/2.0 and Atom |
 | HTML safety | **sanitize-html** | Clean article HTML before display |
 | Validation | **Zod** | Inputs, AI output, MCP tool arguments |
-| MCP | **@modelcontextprotocol/sdk** (Streamable HTTP) in a Next.js route | Claude and other clients connect remotely |
+| MCP | **@modelcontextprotocol/sdk** (Streamable HTTP) in a Next.js route | AI assistants and other clients connect remotely |
 | Testing | **Vitest**, **fast-check** (property-based), **Playwright** (end-to-end), **convex-test** | Matches Kiro's PBT feature |
 | Hosting | **Vercel** (app) + **Convex Cloud** (backend) | Free tiers, fast deploys |
 | Icons | **Lucide** | Clean outline icons |
@@ -159,7 +159,7 @@ Pin exact versions in `package.json`. Check each library's current docs at build
 │ MCP server, Bearer API key   │        └────────────────────────┘
 └───────────────▲──────────────┘        ┌────────────────────────┐
                 │                       │ AI provider (Bedrock / │
-        Claude / MCP clients            │ OpenAI / Groq) via AI SDK│
+        AI assistants / MCP clients      │ OpenAI / Groq) via AI SDK│
                                         └────────────────────────┘
 ```
 
@@ -240,7 +240,7 @@ import { openai } from "@ai-sdk/openai";
 import { groq } from "@ai-sdk/groq";
 
 export function getModel() {
-  const id = process.env.AI_MODEL!;           // e.g. a Claude model ID on Bedrock
+  const id = process.env.AI_MODEL!;           // e.g. a model ID on Bedrock
   switch (process.env.AI_PROVIDER) {
     case "bedrock": return bedrock(id);
     case "openai":  return openai(id);
@@ -312,7 +312,7 @@ Return JSON: { linkedin, x, instagram, hashtags[] }
 
 **Rules:** validate every argument with Zod; scope every call to the key's user; rate-limit per key; never return keys, tokens or other users' data; log tool calls for the activity view.
 
-**Connect from Claude:** add a custom connector with the URL `https://[your-domain]/api/mcp` and the key as the bearer token (exact steps depend on the client; document what you actually tested).
+**Connect from an AI assistant:** add a custom connector with the URL `https://[your-domain]/api/mcp` and the key as the bearer token (exact steps depend on the client; document what you actually tested).
 
 **Demo prompt:** *"What rose from my graveyard since yesterday? Summarise the best two and draft a LinkedIn post for the top one."*
 
@@ -450,7 +450,7 @@ Today is Nov 1. Deadline Dec 5, 6:00 AM Malaysia time.
 | 1 | Nov 1 to 8 | Join hackathon, request **4,000 Kiro credits** (by Dec 1), Discord. Repo + MIT licence + `.kiro` steering. Specs for Summon and Crypt. Feed parser + PBT. Auth + schema |
 | 2 | Nov 9 to 15 | Graveyard UI, polling cron, OPML import, Crypt reader. Attend **Devpost build session Nov 11** |
 | 3 | Nov 16 to 22 | Séance + Resurrect (AI), voice profile, share links. Hooks running. Deploy to Vercel |
-| 4 | Nov 23 to 29 | MCP server + Claude demo, Feed Doctor, security hardening, Playwright tests, spooky polish (fog, glow, sound) |
+| 4 | Nov 23 to 29 | MCP server + assistant demo, Feed Doctor, security hardening, Playwright tests, spooky polish (fog, glow, sound) |
 | 5 | Nov 30 to Dec 3 | Freeze features. Video, write-up, README, blog post, social post, Faafi website (for startup prize). **Submit Dec 3** |
 
 ---
@@ -484,7 +484,7 @@ Under 3:00. Record the real app. Royalty-free sound only.
 | 0:40 to 1:05 | New items rise, Crypt reader | "When something new is published, it rises. Read it in one calm place." |
 | 1:05 to 1:30 | Séance summary + score | "Séance summarises each article and ranks what matters to you." |
 | 1:30 to 1:55 | Resurrect drafts, copy, open LinkedIn | "Resurrect turns it into posts for LinkedIn, X and Instagram, in your voice." |
-| 1:55 to 2:25 | Claude with MCP | "And you can talk to the dead. Ask Claude what rose today and it drafts from your own feeds." |
+| 1:55 to 2:25 | AI assistant with MCP | "And you can talk to the dead. Ask your assistant what rose today and it drafts from your own feeds." |
 | 2:25 to 2:50 | Kiro: specs, hooks, PBT | "Built with Kiro: spec-driven features, hooks that test as I code, property-based tests that caught real parser bugs." |
 | 2:50 to 3:00 | Logo, URL | "Necro. RSS, resurrected." |
 
@@ -496,7 +496,7 @@ Under 3:00. Record the real app. Royalty-free sound only.
 |---|---|
 | Running out of time | MVP = features 1 to 6. Feed Doctor basic. Digest is a stretch goal |
 | AI costs | Limits, caching, truncation; use free credits; Groq as a cheap fallback |
-| Claude connector setup differs by plan | Test early (week 4); if blocked, demo with another MCP client and say so honestly |
+| Assistant connector setup differs by app | Test early (week 4); if blocked, demo with another MCP client and say so honestly |
 | Platform posting APIs | Out of scope; use copy and official share links |
 | Feeds blocking bots | Polite User-Agent, conditional requests, backoff |
 | Trademarks | No Google product name or logo in video or images |

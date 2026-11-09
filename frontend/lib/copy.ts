@@ -124,7 +124,7 @@ export const settings = {
   save: "Save",
   saved: "Saved",
   keys: "MCP keys",
-  keysHint: "Let Claude, Kiro or any MCP client talk to your graveyard. A key is shown once.",
+  keysHint: "Let Kiro or any MCP client talk to your graveyard. A key is shown once.",
   keyName: "Key name",
   createKey: "Create key",
   newKey: "Copy this key now. It will not be shown again.",

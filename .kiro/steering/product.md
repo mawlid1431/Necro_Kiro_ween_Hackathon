@@ -13,7 +13,7 @@ Full source of truth: `docs/Necro_Project_Documentation.md`.
 - Creators and marketers who read a lot to post well.
 - Students and researchers following many blogs and papers.
 - Former RSS users with old OPML exports.
-- AI power users who want Claude to read their sources (via MCP).
+- AI power users who want their AI assistant to read their sources (via MCP).
 
 ## Features (MVP = 1 to 7, 9)
 
@@ -24,7 +24,7 @@ Full source of truth: `docs/Necro_Project_Documentation.md`.
 | 3 | The Crypt | Chronological reader: read/unread, star, search |
 | 4 | Séance | AI 3-bullet summary + 0 to 100 relevance score |
 | 5 | Resurrect | LinkedIn, X and Instagram drafts in the user's voice |
-| 6 | Talk to the dead | MCP server so Claude can list, read, summarise and draft |
+| 6 | Talk to the dead | MCP server so any AI assistant can list, read, summarise and draft |
 | 7 | Feed Doctor | Detect broken or moved feeds and suggest fixes |
 | 8 | Haunted digest | Daily "what rose last night" (stretch) |
 | 9 | Share | Copy draft or open the platform's official compose page |

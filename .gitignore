@@ -49,7 +49,7 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
-# claude (local agent settings, at any depth). Note: .kiro/ is NOT ignored:
+# local editor/agent settings (never committed). Note: .kiro/ is NOT ignored:
 # the hackathon requires the /.kiro directory in the public repo.
 .claude/
 .claude

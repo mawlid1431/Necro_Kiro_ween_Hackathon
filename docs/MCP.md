@@ -1,6 +1,6 @@
 # Talk to the Dead: Necro's MCP server
 
-Any MCP client (Claude Desktop, Kiro, IDE agents) can read and work with your graveyard.
+Any MCP client (Kiro, AI desktop apps, IDE agents) can read and work with your graveyard.
 
 - **Endpoint:** `POST https://<your-app>/api/mcp` (Streamable HTTP, stateless, JSON responses)
 - **Auth:** `Authorization: Bearer necro_sk_...`, a personal key created in Necro Settings
