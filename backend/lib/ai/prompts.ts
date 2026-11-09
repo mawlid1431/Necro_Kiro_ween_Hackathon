@@ -191,3 +191,39 @@ export function opinionPrompt(sources: { label: string; feed: string; title: str
     "Compare these sources. Keep every point short and concrete.",
   ].join("\n");
 }
+
+// ---------- Grimoire (weekly newsletter) ----------
+
+export const GrimoireSchema = z.object({
+  title: z.string().min(5).max(100),
+  intro: z.string().min(10).max(600),
+  sections: z.array(z.object({ ref: z.string().max(4), body: z.string().min(10).max(500) })).max(7),
+  outro: z.string().max(400),
+});
+
+export const GRIMOIRE_SYSTEM =
+  `You write a short weekly newsletter of the best things the user read, in the user's own voice. ${UNTRUSTED} ` +
+  "The user did NOT write these articles: say what each author or source found or argued, never first-person claims " +
+  "like \"I built\" or \"I tested\". First person is only for the user's reaction. " +
+  "Write one section per item, referring to it only by its ref (I1, I2, ...). Never add items, links or facts that are not given.";
+
+export function grimoirePrompt(p: {
+  voice: VoiceProfile | null;
+  weekOf: string;
+  items: { ref: string; title: string; source: string; points: string[] }[];
+}) {
+  const v = p.voice;
+  return [
+    v
+      ? `Voice: tone=${v.tone}; audience=${v.audience}; use=${v.wordsToUse.join(", ")}; avoid=${v.wordsToAvoid.join(", ")}`
+      : "Voice: friendly, clear, professional.",
+    ...(v?.samplePosts.length ? ["Example posts by the user:", ...v.samplePosts.map((s) => `- ${s.slice(0, 400)}`)] : []),
+    `Week of ${p.weekOf}. Items:`,
+    ...p.items.flatMap((i) => [
+      `<article ref="${i.ref}" source="${i.source.replace(/"/g, "'")}" title="${i.title.replace(/"/g, "'")}">`,
+      i.points.join(" | ").slice(0, 700),
+      `</article>`,
+    ]),
+    "Write a title, a two-sentence intro, one section of 2-3 sentences per item, and a one-line outro.",
+  ].join("\n");
+}

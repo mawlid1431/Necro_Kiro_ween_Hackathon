@@ -9,7 +9,7 @@ import { v } from "convex/values";
 
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
-export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"));
+export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"));
 export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
 export const collectionTopic = v.union(
   v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
@@ -152,6 +152,17 @@ export default defineSchema({
     onlyOne: v.array(v.object({ claim: v.string(), source: v.string() })),
     model: v.string(), // "ghost:side-by-side" when no AI answered
   }).index("by_user_kindred", ["userId", "kindredId"]),
+
+  // Grimoire: weekly newsletter drafts, kept as history. Markdown is rendered on the server.
+  grimoires: defineTable({
+    userId: v.id("users"),
+    weekOf: v.string(), // UTC date the draft was composed, e.g. "2026-11-09"
+    title: v.string(),
+    markdown: v.string(),
+    itemIds: v.array(v.id("items")),
+    model: v.string(), // "ghost:template" when no AI answered
+    updatedAt: v.number(),
+  }).index("by_user", ["userId", "updatedAt"]),
 
   seances: defineTable({
     userId: v.id("users"),

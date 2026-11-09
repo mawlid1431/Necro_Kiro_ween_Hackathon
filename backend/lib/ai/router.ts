@@ -4,7 +4,7 @@
 // AllRungsFailed and the caller answers with Ghost mode, so users never see an AI error.
 import type { Rung } from "./providers";
 
-export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask" | "omen" | "opinion";
+export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask" | "omen" | "opinion" | "grimoire";
 export type Privacy = "public" | "private";
 
 export const TASK_PRIVACY: Record<AiTask, Privacy> = {
@@ -15,10 +15,11 @@ export const TASK_PRIVACY: Record<AiTask, Privacy> = {
   ask: "private", // the user's question
   omen: "private", // the user's watched topics
   opinion: "public", // article text only
+  grimoire: "private", // voice samples and reading history
 };
 
 /** A new task with no chain of its own borrows one with the same privacy, so it works without new env vars. */
-const CHAIN_FALLBACK: Partial<Record<AiTask, AiTask>> = { omen: "ask", opinion: "seance" };
+const CHAIN_FALLBACK: Partial<Record<AiTask, AiTask>> = { omen: "ask", opinion: "seance", grimoire: "resurrect" };
 
 /** Per-rung timeout so the whole ladder stays under ~30 s. */
 export const RUNG_TIMEOUT_MS = 12_000;

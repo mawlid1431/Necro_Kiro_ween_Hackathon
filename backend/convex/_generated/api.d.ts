@@ -21,6 +21,8 @@ import type * as doctorNode from "../doctorNode.js";
 import type * as drafts from "../drafts.js";
 import type * as feedsNode from "../feedsNode.js";
 import type * as graves from "../graves.js";
+import type * as grimoireNode from "../grimoireNode.js";
+import type * as grimoires from "../grimoires.js";
 import type * as http from "../http.js";
 import type * as items from "../items.js";
 import type * as kindred from "../kindred.js";
@@ -60,6 +62,8 @@ declare const fullApi: ApiFromModules<{
   drafts: typeof drafts;
   feedsNode: typeof feedsNode;
   graves: typeof graves;
+  grimoireNode: typeof grimoireNode;
+  grimoires: typeof grimoires;
   http: typeof http;
   items: typeof items;
   kindred: typeof kindred;

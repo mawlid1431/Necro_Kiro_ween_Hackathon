@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { fail, utcDay } from "./lib/auth";
 import { DAILY_AI_LIMITS, VOICE_SECONDS_PER_DAY } from "../lib/limits";
 
-const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("omen"), v.literal("opinion"));
+const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"));
 
 /**
  * Atomically checks today's count and inserts a pending row, so two fast clicks
@@ -19,7 +19,7 @@ export const reserve = internalMutation({
       .query("aiUsage")
       .withIndex("by_user_day_task", (q) => q.eq("userId", userId).eq("day", day).eq("task", task))
       .take(limit);
-    if (used.length >= limit) fail("LIMIT", `You have used all ${limit} of today's ${task === "seance" ? "Séances" : task === "resurrect" ? "Resurrects" : task === "ask" ? "questions" : task === "omen" ? "Omen checks" : task === "opinion" ? "Second Opinions" : "Doctor notes"}. They reset at midnight UTC.`);
+    if (used.length >= limit) fail("LIMIT", `You have used all ${limit} of today's ${task === "seance" ? "Séances" : task === "resurrect" ? "Resurrects" : task === "ask" ? "questions" : task === "omen" ? "Omen checks" : task === "opinion" ? "Second Opinions" : task === "grimoire" ? "Grimoire drafts" : "Doctor notes"}. They reset at midnight UTC.`);
     return await ctx.db.insert("aiUsage", { userId, task, model: "pending", inputTokens: 0, outputTokens: 0, day });
   },
 });
@@ -41,7 +41,7 @@ export const release = internalMutation({
 
 export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
   const day = utcDay();
-  const count = async (task: "seance" | "resurrect" | "doctor" | "ask" | "omen" | "opinion") =>
+  const count = async (task: "seance" | "resurrect" | "doctor" | "ask" | "omen" | "opinion" | "grimoire") =>
     (
       await ctx.db
         .query("aiUsage")
@@ -60,6 +60,7 @@ export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
     ask: { used: await count("ask"), limit: DAILY_AI_LIMITS.ask },
     omen: { used: await count("omen"), limit: DAILY_AI_LIMITS.omen },
     opinion: { used: await count("opinion"), limit: DAILY_AI_LIMITS.opinion },
+    grimoire: { used: await count("grimoire"), limit: DAILY_AI_LIMITS.grimoire },
     voiceMinutes: { used: Math.ceil(voiceSeconds / 60), limit: VOICE_SECONDS_PER_DAY / 60 },
   };
 }

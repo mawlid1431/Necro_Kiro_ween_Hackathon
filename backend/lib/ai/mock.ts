@@ -20,6 +20,16 @@ const OUTPUTS: Record<string, unknown> = {
   },
   doctor: { note: "The feed moved. Try fix to find its new address." },
   omen: { match: true, reason: "The article is about the watched topic." },
+  // I9 was never picked: the section filter must drop it.
+  grimoire: {
+    title: "The week in reasoning models",
+    intro: "A short tour of what caught my eye this week. Two stories stood out.",
+    sections: [
+      { ref: "I1", body: "Alpha reports a faster model for tool calling, with cheaper runs for developers." },
+      { ref: "I9", body: "An item that was never picked and must not appear." },
+    ],
+    outro: "See you next week.",
+  },
   // S9 is outside any real group: the citation filter must drop it.
   opinion: {
     agree: [{ point: "Both report the same launch date.", sources: ["S1", "S2", "S9"] }],
