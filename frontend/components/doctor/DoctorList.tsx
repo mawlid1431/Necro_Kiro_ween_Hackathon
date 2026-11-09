@@ -29,12 +29,16 @@ export function DoctorList() {
   const bury = useMutation(api.graves.layToRest);
   const [busy, setBusy] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, Row>>({});
+  // Kept apart from notes so a later Retry or Explain message does not hide "Use this feed".
+  const [candidates, setCandidates] = useState<Record<string, string>>({});
 
   async function act(id: Id<"graves">, what: string, fn: () => Promise<Row>) {
     setBusy(`${id}:${what}`);
     try {
       const row = await fn();
       setNotes((n) => ({ ...n, [id]: row }));
+      if (row.candidate) setCandidates((c) => ({ ...c, [id]: row.candidate! }));
+      if (what === "fix" && !row.candidate) setCandidates(({ [id]: _drop, ...rest }) => rest);
     } catch (e) {
       setNotes((n) => ({ ...n, [id]: { tone: "error", text: errorMessage(e) } }));
     } finally {
@@ -97,13 +101,13 @@ export function DoctorList() {
                 >
                   {is("fix") ? "Searching…" : copy.tryFix}
                 </Button>
-                {note?.candidate ? (
+                {candidates[g._id] ? (
                   <Button
                     size="sm"
                     disabled={!!busy}
                     onClick={() =>
                       act(g._id, "apply", async () => {
-                        await applyFix({ graveId: g._id, candidateUrl: note.candidate! });
+                        await applyFix({ graveId: g._id, candidateUrl: candidates[g._id] });
                         return { tone: "ok", text: "Fixed. Necro is fetching the new address now." };
                       })
                     }
