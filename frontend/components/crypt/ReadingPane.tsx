@@ -15,6 +15,10 @@ import { SecondOpinion } from "./SecondOpinion";
 import { ResurrectDialog } from "./ResurrectDialog";
 import { useVoice } from "./voice-context";
 
+/** "Séance. One. Two. Three. Reason." without doubled full stops when bullets already end with one. */
+const spokenSeance = (summary: string[], reason: string) =>
+  ["Séance", ...summary, reason].map((x) => x.trim().replace(/[.!?…]+$/, "")).filter(Boolean).join(". ") + ".";
+
 export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: (id: Id<"items">) => void }) {
   const item = useQuery(api.items.get, { itemId });
   const me = useQuery(api.users.me);
@@ -52,7 +56,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
     (onlySeance = false) => {
       if (!item) return;
       const parts: SpeakPart[] = [];
-      if (item.seance) parts.push({ text: `Séance. ${item.seance.summary.join(". ")}. ${item.seance.reason}`, lang: seanceLang, label: "Séance" });
+      if (item.seance) parts.push({ text: spokenSeance(item.seance.summary, item.seance.reason), lang: seanceLang, label: "Séance" });
       if (!onlySeance) parts.push({ text: `${item.title}. ${htmlToSpeech(item.contentHtml) || item.excerpt}`, label: "Article" });
       setSpeaking(true);
       setPaused(false);
@@ -85,7 +89,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
         if (item.seance) read(true);
         else void holdSeance({ itemId }).then((s) => {
           setSpeaking(true);
-          speak([{ text: `Séance. ${s.summary.join(". ")}. ${s.reason}`, lang: seanceLang, label: "Séance" }], () => (setSpeaking(false), setProgress(null)), setProgress);
+          speak([{ text: spokenSeance(s.summary, s.reason), lang: seanceLang, label: "Séance" }], () => (setSpeaking(false), setProgress(null)), setProgress);
         });
       },
       resurrect: () => setResurrectOpen(true),
