@@ -52,8 +52,12 @@ export function ApiKeys() {
   }
 
   async function copyText(label: string, text: string) {
-    await navigator.clipboard.writeText(text);
-    setCopied(label);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+    } catch {
+      setError("Your browser blocked copying. Select the text and copy it by hand.");
+    }
   }
 
   return (

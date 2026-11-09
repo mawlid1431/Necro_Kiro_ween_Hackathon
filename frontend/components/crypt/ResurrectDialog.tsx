@@ -81,7 +81,13 @@ export function ResurrectDialog({
 
   async function copyDraft(d: Draft) {
     const text = full(d, edits[d._id] ?? d.text);
-    await navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Some browsers and embedded views block clipboard access: say so instead of failing silently.
+      setError("Your browser blocked copying. Select the text in the box and copy it by hand.");
+      return;
+    }
     setFlash(`${d._id}:copied`);
     void setStatus({ draftId: d._id, status: "copied" });
   }
