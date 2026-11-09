@@ -242,13 +242,20 @@ function decodeBody(bytes: Uint8Array, contentType: string): string {
   }
 }
 
-function mapNetworkError(e: unknown): SafeFetchError {
+const DNS_CODES = new Set(["ENOTFOUND", "EAI_AGAIN", "EAI_NONAME", "ENODATA", "ESERVFAIL", "EBUSY"]);
+
+export function mapNetworkError(e: unknown): SafeFetchError {
   const err = e as { name?: string; code?: string; cause?: { code?: string; message?: string }; message?: string };
   const code = err.cause?.code ?? err.code;
+  const message = err.cause?.message ?? err.message ?? "";
   if (err.name === "TimeoutError" || code === "UND_ERR_CONNECT_TIMEOUT" || code === "UND_ERR_HEADERS_TIMEOUT") {
     return new SafeFetchError("TIMEOUT", "The site took too long to answer.");
   }
   if (code === "EBLOCKED") return new SafeFetchError("BLOCKED", "That address is private or reserved.");
-  if (code === "ENOTFOUND" || code === "EAI_AGAIN") return new SafeFetchError("DNS", "The domain could not be found.");
-  return new SafeFetchError("NETWORK", err.cause?.message ?? err.message ?? "Network error.");
+  // Any failed name lookup is a DNS problem. Convex's runtime reports a missing domain as
+  // "getaddrinfo EBUSY <host>" rather than ENOTFOUND, so match the lookup, not one code.
+  if ((code && DNS_CODES.has(code)) || /^getaddrinfo\b/.test(message)) {
+    return new SafeFetchError("DNS", "The domain could not be found.");
+  }
+  return new SafeFetchError("NETWORK", message || "Network error.");
 }

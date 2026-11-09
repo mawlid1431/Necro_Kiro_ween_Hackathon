@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { checkUrl, isBlockedIp, SafeFetchError } from "../../lib/security/ssrf";
+import { checkUrl, isBlockedIp, mapNetworkError, SafeFetchError } from "../../lib/security/ssrf";
 import { afterFailure, afterSuccess, jitter } from "../../lib/schedule";
 import { cleanHashtags, fitTo, RESURRECT_SYSTEM, seancePrompt } from "../../lib/ai/prompts";
 import { clientCodeFor, diagnose } from "../../lib/errors";
@@ -33,6 +33,15 @@ describe("SSRF guard", () => {
       expect(e).toBeInstanceOf(SafeFetchError);
       expect((e as SafeFetchError).code).toBe(code);
     }
+  });
+
+  it("classifies failed name lookups as DNS, whatever the errno", () => {
+    expect(mapNetworkError({ cause: { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND x.test" } }).code).toBe("DNS");
+    expect(mapNetworkError({ cause: { code: "EBUSY", message: "getaddrinfo EBUSY x.test" } }).code).toBe("DNS"); // Convex runtime
+    expect(mapNetworkError({ message: "getaddrinfo EAI_AGAIN x.test" }).code).toBe("DNS");
+    expect(mapNetworkError({ cause: { code: "EBLOCKED" } }).code).toBe("BLOCKED");
+    expect(mapNetworkError({ name: "TimeoutError" }).code).toBe("TIMEOUT");
+    expect(mapNetworkError({ cause: { code: "ECONNRESET", message: "socket hang up" } }).code).toBe("NETWORK");
   });
 
   it("accepts public http(s) URLs", () => {
