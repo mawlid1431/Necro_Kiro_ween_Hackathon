@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Compass } from "lucide-react";
 import { GraveyardGrid } from "@/components/graveyard/GraveyardGrid";
 import { GraveyardNotes } from "@/components/graveyard/GraveyardNotes";
+import { MineSection } from "@/components/graveyard/MineSection";
 import { SummonDialog } from "@/components/graveyard/SummonDialog";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -30,6 +31,7 @@ export default function GraveyardPage() {
         />
         <GraveyardNotes />
         <GraveyardGrid />
+        <MineSection />
       </Container>
     </main>
   );

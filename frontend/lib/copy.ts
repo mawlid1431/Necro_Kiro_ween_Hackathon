@@ -132,6 +132,34 @@ export const graveyard = {
   noInterests: "Tell Necro what you care about so each Séance can score relevance for you.",
 } as const;
 
+export const mine = {
+  title: "Mine",
+  subtitle: "Manage your feeds and the collections you published.",
+  feedsTab: (n: number) => `Your feeds (${n})`,
+  collectionsTab: (n: number) => `Your collections (${n})`,
+  noFeeds: "No feeds yet. Summon one above or start from Discover.",
+  noCollections: "You haven't published a collection yet. Share a few of your feeds so others can follow them.",
+  feedName: "Feed name",
+  folder: "Folder",
+  folderPlaceholder: "Folder (optional)",
+  save: "Save",
+  cancel: "Cancel",
+  read: "Read",
+  edit: "Edit",
+  view: "View",
+  unread: (n: number) => `${n} unread`,
+  status: { alive: "Alive", dormant: "Sleeping", broken: "Broken" },
+  public: "Public",
+  private: "Private (unlisted)",
+  hidden: "Hidden after reports",
+  makePrivate: "Make private",
+  makePublic: "Make public",
+  makePrivateHint: "Remove it from Discover. Anyone with the link can still open it.",
+  makePublicHint: "List it in Discover so other readers can find it.",
+  unpublish: "Unpublish",
+  unpublishTitle: "Unpublish this collection?",
+} as const;
+
 export const summon = {
   title: "Summon a feed",
   body: "Paste a website or a feed link. Necro finds the feed: RSS, Atom or JSON Feed.",
