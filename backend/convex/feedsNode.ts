@@ -11,6 +11,7 @@ import { FeedParseError, type ParsedFeed } from "../lib/feeds/parse";
 import { isFeedBody, parseAnyFeed } from "../lib/feeds/any";
 import { parseOpml } from "../lib/feeds/opml";
 import { faviconFor, normaliseFeedUrl, withScheme } from "../lib/feeds/url";
+import { bestIcon, looksSmall } from "../lib/feeds/icons";
 import { clientCodeFor } from "../lib/errors";
 import { MAX_GRAVES_PER_USER, SUMMONS_PER_HOUR } from "../lib/limits";
 
@@ -20,6 +21,20 @@ const OPML_MAX_BYTES = 1024 * 1024;
 type SummonResult =
   | { status: "summoned"; graveId: Id<"graves">; title: string; itemCount: number; alternatives: string[] }
   | { status: "duplicate"; graveId: Id<"graves"> };
+
+/**
+ * The feed's own icon when it is big enough, else the largest icon declared on the site's home page.
+ * One extra fetch at most, and a failure never blocks summoning.
+ */
+async function siteIcon(feedIcon: string | null, siteUrl: string | null): Promise<string | null> {
+  if (!looksSmall(feedIcon) || !siteUrl) return feedIcon;
+  try {
+    const page = await safeFetch(siteUrl);
+    return bestIcon(page.body, page.url) ?? feedIcon;
+  } catch {
+    return feedIcon;
+  }
+}
 
 /** Maps fetch and parse errors to the client error contract. Raw stack traces never reach the client. */
 function toUserError(e: unknown): ConvexError<{ code: string; message: string }> {
@@ -63,7 +78,9 @@ export async function summonFor(ctx: ActionCtx, userId: Id<"users">, url: string
   try {
     let res = await safeFetch(input);
     let alternatives: string[] = [];
+    let pageIcon: string | null = null;
     if (!isFeedBody(res.body)) {
+      pageIcon = bestIcon(res.body, res.url); // the user pasted a site: its <head> has the real icons
       const found = await discoverFeeds(res.url, (u) => safeFetch(u));
       if (!found.length) throw new ConvexError({ code: "NOT_A_FEED", message: "No feed found on that page." });
       alternatives = found.slice(1, 5).map((f) => f.feedUrl);
@@ -81,7 +98,7 @@ export async function summonFor(ctx: ActionCtx, userId: Id<"users">, url: string
       feedUrl,
       siteUrl: feed.siteUrl ?? undefined,
       title: feed.title,
-      iconUrl: feed.iconUrl ?? faviconFor(feed.siteUrl ?? res.url),
+      iconUrl: pageIcon ?? (await siteIcon(feed.iconUrl, feed.siteUrl)) ?? faviconFor(feed.siteUrl ?? res.url),
       folder: folder?.trim().slice(0, 60) || undefined,
       format: feed.format,
       etag: res.etag ?? undefined,
@@ -179,5 +196,27 @@ export const fetchOne = internalAction({
       console.log(JSON.stringify({ ev: "fetch", graveId, status: "error", code, ms: Date.now() - started }));
       return { status: status ?? "gone", inserted: 0, code };
     }
+  },
+});
+
+/**
+ * One-off: upgrade small or missing icons on existing feeds to the site's best icon.
+ * `bunx convex run feedsNode:refreshIcons '{}'` (pages through every grave, 25 at a time).
+ */
+export const refreshIcons = internalAction({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, { cursor }): Promise<{ checked: number; updated: number }> => {
+    const page = await ctx.runQuery(internal.graves.iconsPage, { cursor: cursor ?? null });
+    let updated = 0;
+    for (const g of page.graves) {
+      if (!looksSmall(g.iconUrl)) continue;
+      const icon = await siteIcon(g.iconUrl ?? null, g.siteUrl ?? null);
+      if (icon && icon !== g.iconUrl) {
+        await ctx.runMutation(internal.graves.setIcon, { graveId: g._id, iconUrl: icon });
+        updated++;
+      }
+    }
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.feedsNode.refreshIcons, { cursor: page.continueCursor });
+    return { checked: page.graves.length, updated };
   },
 });

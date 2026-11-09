@@ -1,7 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Rss } from "lucide-react";
 import { rise } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -38,14 +38,7 @@ export function Tombstone({ title, iconUrl, status, unread, risen }: TombstonePr
       animate={risen ? "risen" : "rest"}
       className="flex aspect-[4/5] flex-col items-center justify-end gap-3 rounded-tomb border border-line bg-surface px-4 pt-10 pb-5 text-center"
     >
-      <span className="grid size-10 place-items-center overflow-hidden rounded-full bg-surface-muted">
-        {iconUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- remote feed favicons from arbitrary hosts
-          <img src={iconUrl} alt="" referrerPolicy="no-referrer" className="size-6" />
-        ) : (
-          <Rss aria-hidden className="size-5 text-subtle" strokeWidth={1.75} />
-        )}
-      </span>
+      <FeedMark title={title} iconUrl={iconUrl} />
       <h3 className="line-clamp-2 text-h3 font-semibold">{title}</h3>
       <div className="flex items-center gap-2 text-meta font-medium">
         <span className={statusColor[status]}>{statusText[status]}</span>
@@ -62,5 +55,38 @@ export function Tombstone({ title, iconUrl, status, unread, risen }: TombstonePr
         )}
       </div>
     </motion.article>
+  );
+}
+
+/**
+ * The feed's mark on the stone: its icon when it loads at a usable size, else an engraved initial.
+ * Broken, empty (0-byte favicon.ico) or tiny icons fall back instead of showing a broken image.
+ */
+function FeedMark({ title, iconUrl }: { title: string; iconUrl?: string }) {
+  const [state, setState] = useState<"loading" | "ok" | "small" | "failed">(iconUrl ? "loading" : "failed");
+  const initial = (title.match(/[\p{L}\p{N}]/u)?.[0] ?? "N").toUpperCase();
+  const showIcon = iconUrl && state !== "failed";
+  return (
+    <span className="relative grid size-16 place-items-center overflow-hidden rounded-full border border-line bg-surface-muted shadow-[inset_0_2px_6px_rgb(0_0_0/0.08)]">
+      {showIcon ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote feed icons from arbitrary hosts
+        <img
+          src={iconUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          onLoad={(e) => {
+            const w = e.currentTarget.naturalWidth;
+            setState(w === 0 ? "failed" : w < 48 ? "small" : "ok");
+          }}
+          onError={() => setState("failed")}
+          className={cn("object-contain transition-opacity", state === "ok" ? "size-11 rounded-lg" : "size-7", state === "loading" ? "opacity-0" : "opacity-100")}
+        />
+      ) : (
+        <span aria-hidden className="font-display text-[1.75rem] leading-none font-bold text-copy [text-shadow:0_1px_0_rgb(255_255_255/0.8)]">
+          {initial}
+        </span>
+      )}
+    </span>
   );
 }

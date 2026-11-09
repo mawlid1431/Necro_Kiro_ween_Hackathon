@@ -171,6 +171,21 @@ export const exportData = query({
 
 // ---------- internal: used by feedsNode, doctorNode, mcp ----------
 
+export const iconsPage = internalQuery({
+  args: { cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { cursor }) => {
+    const page = await ctx.db.query("graves").paginate({ numItems: 25, cursor });
+    return { graves: page.page.map((g) => ({ _id: g._id, iconUrl: g.iconUrl, siteUrl: g.siteUrl })), isDone: page.isDone, continueCursor: page.continueCursor };
+  },
+});
+
+export const setIcon = internalMutation({
+  args: { graveId: v.id("graves"), iconUrl: v.string() },
+  handler: async (ctx, { graveId, iconUrl }) => {
+    if (await ctx.db.get(graveId)) await ctx.db.patch(graveId, { iconUrl });
+  },
+});
+
 export const countForUser = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) =>

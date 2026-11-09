@@ -155,7 +155,7 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
         </div>
       )}
 
-      <ResurrectDialog open={resurrectOpen} onOpenChange={setResurrectOpen} itemId={itemId} drafts={item.drafts} link={item.link} />
+      <ResurrectDialog open={resurrectOpen} onOpenChange={setResurrectOpen} itemId={itemId} drafts={item.drafts} article={{ title: item.title, link: item.link, source: item.graveTitle ?? "" }} />
     </article>
   );
 }
