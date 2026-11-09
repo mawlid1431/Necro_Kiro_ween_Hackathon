@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: ["app/**", "components/**"]
+fileMatchPattern: ["frontend/app/**", "frontend/components/**", "frontend/lib/copy.ts"]
 ---
 
 # Brand rules (from `docs/Necro_Brand_Guide.md`)
