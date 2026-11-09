@@ -98,6 +98,9 @@ export default defineSchema({
     .index("by_user_read", ["userId", "isRead", "publishedAt"])
     .index("by_user_starred", ["userId", "isStarred", "publishedAt"])
     .index("by_user_score", ["userId", "score"])
+    .index("by_grave_score", ["graveId", "score"])
+    .index("by_user_read_score", ["userId", "isRead", "score"])
+    .index("by_user_starred_score", ["userId", "isStarred", "score"])
     .index("by_user_risen", ["userId", "risenAt"])
     .index("by_kindred", ["kindredId"])
     .searchIndex("search_text", { searchField: "title", filterFields: ["userId", "graveId"] })
@@ -206,6 +209,7 @@ export default defineSchema({
     revokedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
+    .index("by_user_revoked", ["userId", "revokedAt"])
     .index("by_hash", ["hash"]),
 
   aiUsage: defineTable({
@@ -274,6 +278,8 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_slug", ["slug"])
+    .index("by_public_new", ["visibility", "hidden"]) // newest first via _creationTime
+    .index("by_public_topic_new", ["visibility", "hidden", "topic"])
     .index("by_public_followers", ["visibility", "hidden", "followerCount"])
     .index("by_public_topic", ["visibility", "hidden", "topic", "followerCount"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["visibility", "hidden", "topic"] }),
@@ -285,5 +291,6 @@ export default defineSchema({
 
   collectionReports: defineTable({ userId: v.id("users"), collectionId: v.id("collections"), reason: v.string() })
     .index("by_user", ["userId"])
+    .index("by_collection", ["collectionId"])
     .index("by_user_collection", ["userId", "collectionId"]),
 });

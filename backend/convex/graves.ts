@@ -8,8 +8,7 @@ import { exportOpml as buildOpml } from "../lib/feeds/opml";
 import { faviconFor, normaliseFeedUrl } from "../lib/feeds/url";
 
 import { MAX_GRAVES_PER_USER } from "../lib/limits";
-import { unindexItem } from "./kindred";
-import { unmatchItem } from "./omens";
+import { deleteItemCascade } from "./items";
 const MIN = 60_000;
 
 /** The fields the UI needs for a tombstone (no fetch internals like etag). */
@@ -393,17 +392,7 @@ export const deleteGraveData = internalMutation({
       .query("items")
       .withIndex("by_grave_published", (q) => q.eq("graveId", graveId))
       .take(100);
-    for (const item of items) {
-      for (const s of await ctx.db.query("seances").withIndex("by_item", (q) => q.eq("itemId", item._id)).collect()) {
-        await ctx.db.delete(s._id);
-      }
-      for (const d of await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", item._id)).collect()) {
-        await ctx.db.delete(d._id);
-      }
-      await unindexItem(ctx, item._id);
-      await unmatchItem(ctx, item._id);
-      await ctx.db.delete(item._id);
-    }
+    for (const item of items) await deleteItemCascade(ctx, item);
     if (items.length === 100) await ctx.scheduler.runAfter(0, internal.graves.deleteGraveData, { graveId });
   },
 });

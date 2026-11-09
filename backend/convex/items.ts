@@ -84,10 +84,18 @@ export async function listFor(
 
     let q;
     if (sort === "relevance") {
-      q = ctx.db.query("items").withIndex("by_user_score", (x) => x.eq("userId", uid)).order("desc");
-      if (graveId) q = q.filter((f) => f.eq(f.field("graveId"), graveId));
-      if (filter === "unread") q = q.filter((f) => f.eq(f.field("isRead"), false));
-      if (filter === "starred") q = q.filter((f) => f.eq(f.field("isStarred"), true));
+      // Each combination has its own index, so a small feed or a few starred posts never scan everything.
+      if (graveId) {
+        q = ctx.db.query("items").withIndex("by_grave_score", (x) => x.eq("graveId", graveId)).order("desc");
+        if (filter === "unread") q = q.filter((f) => f.eq(f.field("isRead"), false)); // bounded by one feed
+        if (filter === "starred") q = q.filter((f) => f.eq(f.field("isStarred"), true));
+      } else if (filter === "unread") {
+        q = ctx.db.query("items").withIndex("by_user_read_score", (x) => x.eq("userId", uid).eq("isRead", false)).order("desc");
+      } else if (filter === "starred") {
+        q = ctx.db.query("items").withIndex("by_user_starred_score", (x) => x.eq("userId", uid).eq("isStarred", true)).order("desc");
+      } else {
+        q = ctx.db.query("items").withIndex("by_user_score", (x) => x.eq("userId", uid)).order("desc");
+      }
     } else if (graveId) {
       q =
         filter === "unread"
@@ -300,9 +308,10 @@ export const ingest = internalMutation({
     let newest = grave.lastNewItemAt ?? 0;
     const fresh: { _id: Id<"items">; publishedAt: number }[] = [];
     for (const it of items) {
+      const guid = it.guid.slice(0, 2000); // the stored length: compare the same value or long guids repeat forever
       const dup = await ctx.db
         .query("items")
-        .withIndex("by_grave_guid", (q) => q.eq("graveId", graveId).eq("guid", it.guid))
+        .withIndex("by_grave_guid", (q) => q.eq("graveId", graveId).eq("guid", guid))
         .first();
       if (dup) continue;
       // A new feed must not flood the unread count with its back catalogue.
@@ -311,7 +320,7 @@ export const ingest = internalMutation({
       const itemId = await ctx.db.insert("items", {
         userId,
         graveId,
-        guid: it.guid.slice(0, 2000),
+        guid,
         title,
         link: it.link ?? undefined,
         author: it.author?.slice(0, 200) ?? undefined,
@@ -344,33 +353,53 @@ export const getOwnedInternal = internalQuery({
 });
 
 /**
- * Daily retention: deletes read, unstarred items older than 90 days with their Séances and drafts.
- * (The prompt's "newest 500 per grave" rule needs a per-grave count; a time cutoff keeps reads bounded.)
+ * Deletes one item and everything hanging off it: Séances, drafts, Kindred index row, Omen matches
+ * and the group's cached Second Opinion. Used by retention, grave deletion and account deletion.
+ */
+export async function deleteItemCascade(ctx: MutationCtx, item: Doc<"items">) {
+  for (const s of await ctx.db.query("seances").withIndex("by_item", (q) => q.eq("itemId", item._id)).take(10)) await ctx.db.delete(s._id);
+  for (const d of await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", item._id)).take(10)) await ctx.db.delete(d._id);
+  await unindexItem(ctx, item._id);
+  await unmatchItem(ctx, item._id);
+  if (item.kindredId) {
+    const kindredId = item.kindredId;
+    const o = await ctx.db.query("opinions").withIndex("by_user_kindred", (q) => q.eq("userId", item.userId).eq("kindredId", kindredId)).first();
+    if (o) await ctx.db.delete(o._id); // its sources changed; a fresh one is made on demand
+  }
+  await ctx.db.delete(item._id);
+}
+
+const PRUNE_GRAVES = 2;
+const PRUNE_ITEMS = 25;
+
+/**
+ * Daily retention: deletes read, unstarred items older than 90 days with everything attached.
+ * Small batches (2 feeds x 25 items) keep each run far below Convex read limits even with large
+ * articles; the read-items index skips unread ones, and a full batch re-runs the same page.
  */
 export const prune = internalMutation({
   args: { cursor: v.optional(v.string()) },
   handler: async (ctx, { cursor }) => {
     const cutoff = Date.now() - 90 * DAY;
-    const page = await ctx.db.query("graves").paginate({ numItems: 20, cursor: cursor ?? null });
+    const page = await ctx.db.query("graves").paginate({ numItems: PRUNE_GRAVES, cursor: cursor ?? null });
+    let more = false;
     for (const g of page.page) {
       const old = await ctx.db
         .query("items")
-        .withIndex("by_grave_published", (q) => q.eq("graveId", g._id).lt("publishedAt", cutoff))
-        .take(100);
+        .withIndex("by_grave_read", (q) => q.eq("graveId", g._id).eq("isRead", true).lt("publishedAt", cutoff))
+        .take(PRUNE_ITEMS);
+      let deleted = 0;
       for (const item of old) {
-        if (!item.isRead || item.isStarred) continue;
-        for (const s of await ctx.db.query("seances").withIndex("by_item", (q) => q.eq("itemId", item._id)).collect()) {
-          await ctx.db.delete(s._id);
-        }
-        for (const d of await ctx.db.query("drafts").withIndex("by_item", (q) => q.eq("itemId", item._id)).collect()) {
-          await ctx.db.delete(d._id);
-        }
-        await unindexItem(ctx, item._id);
-        await unmatchItem(ctx, item._id);
-        await ctx.db.delete(item._id);
+        if (item.isStarred) continue; // starred posts are kept forever
+        await deleteItemCascade(ctx, item);
+        deleted++;
       }
+      if (old.length === PRUNE_ITEMS && deleted > 0) more = true;
     }
-    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.items.prune, { cursor: page.continueCursor });
+    if (more) await ctx.scheduler.runAfter(0, internal.items.prune, { cursor }); // same page again
+    else if (!page.isDone) await ctx.scheduler.runAfter(0, internal.items.prune, { cursor: page.continueCursor });
+  },
+});
   },
 });
 
