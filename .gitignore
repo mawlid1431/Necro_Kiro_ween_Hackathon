@@ -58,3 +58,6 @@ CLAUDE.local.md
 
 # convex local state
 .convex/
+
+# Temporary local visual-check pages (never deployed)
+frontend/app/zz-*/
