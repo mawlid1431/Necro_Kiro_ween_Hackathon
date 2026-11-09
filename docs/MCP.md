@@ -39,6 +39,7 @@ Try: *"What rose in my graveyard since yesterday? Summarise the best two."*
 | `get_briefing` | none | The latest Morning Séance with its picked items, or null |
 | `ask_crypt` | `question` 2–500 chars | An answer from your own items with cited item ids (20 a day) |
 | `list_kindred` | `limit` 1–20 (10) | Stories reported by more than one feed |
+| `get_omens` | `limit` 1–30 (10) | Watched topics (Omens) and recent matches, each with a reason and "ai" or "keyword" |
 
 Text that came from websites carries `"source": "untrusted web content"` so the calling model treats it as data, not instructions. Errors return `isError: true` with a short code (`NOT_FOUND`, `LIMIT`, `NOT_A_FEED`, `BLOCKED`, `INVALID_INPUT`), never a stack trace.
 

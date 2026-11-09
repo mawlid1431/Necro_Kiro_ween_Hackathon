@@ -140,3 +140,25 @@ export function cleanHashtags(tags: string[]): string[] {
   }
   return out;
 }
+
+// ---------- Omens (topic alerts) ----------
+
+export const OmenSchema = z.object({
+  match: z.boolean(),
+  reason: z.string().max(160),
+});
+
+export const OMEN_SYSTEM =
+  `You decide whether an article is really about a topic the reader is watching. ${UNTRUSTED} ` +
+  "Say match=true only when the article is substantially about the topic, not when a word merely appears. " +
+  "Give a one-line reason a reader can trust.";
+
+export function omenPrompt(p: { topic: string; title: string; text: string }) {
+  return [
+    `Watched topic: ${p.topic.replace(/[<>]/g, "")}`,
+    `<article title="${p.title.replace(/"/g, "'")}">`,
+    p.text.slice(0, 1500),
+    `</article>`,
+    "Is this article about the watched topic?",
+  ].join("\n");
+}

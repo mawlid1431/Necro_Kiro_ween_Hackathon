@@ -9,7 +9,7 @@ import { v } from "convex/values";
 
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
-export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"));
+export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"));
 export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
 export const collectionTopic = v.union(
   v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
@@ -114,6 +114,31 @@ export default defineSchema({
     kindredId: v.optional(v.string()),
   })
     .index("by_user_published", ["userId", "publishedAt"])
+    .index("by_item", ["itemId"]),
+
+  omens: defineTable({
+    userId: v.id("users"),
+    topic: v.string(), // 3-60 chars, what the reader watches
+    keywords: v.array(v.string()), // pre-filter words derived from the topic
+    strict: v.boolean(), // strict: only AI-confirmed matches, never keyword-only ones
+    muted: v.boolean(),
+    matchCount: v.number(),
+    lastMatchAt: v.optional(v.number()),
+  }).index("by_user", ["userId"]),
+
+  omenMatches: defineTable({
+    userId: v.id("users"),
+    omenId: v.id("omens"),
+    itemId: v.id("items"),
+    reason: v.string(),
+    via: v.union(v.literal("ai"), v.literal("keyword")),
+    seen: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user_seen", ["userId", "seen", "createdAt"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_omen", ["omenId", "createdAt"])
+    .index("by_omen_item", ["omenId", "itemId"])
     .index("by_item", ["itemId"]),
 
   seances: defineTable({

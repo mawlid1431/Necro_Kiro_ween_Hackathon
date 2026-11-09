@@ -1,7 +1,7 @@
 // "Ghost mode": deterministic Séance used when every AI provider is down or over budget.
 // Never as good as a model, never fails, and is labelled in the UI ("summary without AI").
 
-const STOP = new Set(
+export const STOP = new Set(
   "a an the and or but if of to in on for with at by from as is are was were be been it its this that these those you your we our they their he she his her i me my not no so do does did have has had will would can could should may might about into than then there here what which who whom how why when where all any some more most such only own same very just also over after before".split(" "),
 );
 

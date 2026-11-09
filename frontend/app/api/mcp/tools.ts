@@ -164,5 +164,16 @@ export function buildServer(ctx: ToolContext): McpServer {
     ({ limit }) => run("list_kindred", ctx, () => c.query(api.mcp.listKindred, { ...g, limit })),
   );
 
+  server.registerTool(
+    "get_omens",
+    {
+      title: "Topic alerts",
+      description: "The topics the user watches (Omens) and recent articles that matched them, each with a one-line reason.",
+      inputSchema: { limit: z.number().int().min(1).max(30).default(10) },
+      annotations: readOnly,
+    },
+    ({ limit }) => run("get_omens", ctx, () => c.query(api.mcp.getOmens, { ...g, limit })),
+  );
+
   return server;
 }

@@ -10,6 +10,7 @@ export const DAILY_AI_LIMITS = {
   resurrect: 50,
   doctor: 30,
   ask: 20,
+  omen: 200, // AI confirmations of Omen matches; beyond this, keyword matches only
 } as const;
 
 export type LimitedAiTask = keyof typeof DAILY_AI_LIMITS;
@@ -21,3 +22,7 @@ export const MAX_COLLECTIONS_PER_USER = 10;
 export const MAX_FEEDS_PER_COLLECTION = 50;
 export const PUBLISHES_PER_HOUR = 10;
 export const REPORTS_TO_HIDE = 3;
+
+// Omens (topic alerts)
+export const MAX_OMENS_PER_USER = 20;
+export const OMEN_CHECKS_PER_RUN = 30;

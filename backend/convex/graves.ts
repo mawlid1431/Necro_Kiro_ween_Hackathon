@@ -9,6 +9,7 @@ import { faviconFor, normaliseFeedUrl } from "../lib/feeds/url";
 
 import { MAX_GRAVES_PER_USER } from "../lib/limits";
 import { unindexItem } from "./kindred";
+import { unmatchItem } from "./omens";
 const MIN = 60_000;
 
 /** The fields the UI needs for a tombstone (no fetch internals like etag). */
@@ -333,6 +334,7 @@ export const deleteGraveData = internalMutation({
         await ctx.db.delete(d._id);
       }
       await unindexItem(ctx, item._id);
+      await unmatchItem(ctx, item._id);
       await ctx.db.delete(item._id);
     }
     if (items.length === 100) await ctx.scheduler.runAfter(0, internal.graves.deleteGraveData, { graveId });

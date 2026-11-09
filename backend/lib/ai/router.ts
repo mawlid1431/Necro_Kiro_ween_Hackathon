@@ -4,7 +4,7 @@
 // AllRungsFailed and the caller answers with Ghost mode, so users never see an AI error.
 import type { Rung } from "./providers";
 
-export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask";
+export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask" | "omen";
 export type Privacy = "public" | "private";
 
 export const TASK_PRIVACY: Record<AiTask, Privacy> = {
@@ -13,7 +13,11 @@ export const TASK_PRIVACY: Record<AiTask, Privacy> = {
   briefing: "public",
   resurrect: "private", // voice samples
   ask: "private", // the user's question
+  omen: "private", // the user's watched topics
 };
+
+/** A new task with no chain of its own borrows one with the same privacy, so it works without new env vars. */
+const CHAIN_FALLBACK: Partial<Record<AiTask, AiTask>> = { omen: "ask" };
 
 /** Per-rung timeout so the whole ladder stays under ~30 s. */
 export const RUNG_TIMEOUT_MS = 12_000;
@@ -23,6 +27,9 @@ export const RUNG_TIMEOUT_MS = 12_000;
  * Falls back to the older AI_<TASK>_MODEL + AI_FALLBACK_MODEL variables so existing envs keep working.
  */
 export function chainFor(task: AiTask, env: Record<string, string | undefined> = process.env): string[] {
+  const own = env[`AI_CHAIN_${task.toUpperCase()}`] ?? env[`AI_${task.toUpperCase()}_MODEL`];
+  const borrowed = CHAIN_FALLBACK[task];
+  if (!own && borrowed) return chainFor(borrowed, env);
   const raw = env[`AI_CHAIN_${task.toUpperCase()}`] ?? [env[`AI_${task.toUpperCase()}_MODEL`], env.AI_FALLBACK_MODEL].filter(Boolean).join(",");
   return [...new Set(raw.split(",").map((s) => s.trim()).filter(Boolean))];
 }

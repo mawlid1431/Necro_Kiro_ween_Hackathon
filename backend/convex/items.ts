@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { indexItem, scheduleCluster, unindexItem } from "./kindred";
+import { scheduleOmenCheck, unmatchItem } from "./omens";
 
 const DAY = 86_400_000;
 const MAX_CONTENT = 200 * 1024;
@@ -297,6 +298,7 @@ export const ingest = internalMutation({
     let inserted = 0;
     let unread = 0;
     let newest = grave.lastNewItemAt ?? 0;
+    const fresh: { _id: Id<"items">; publishedAt: number }[] = [];
     for (const it of items) {
       const dup = await ctx.db
         .query("items")
@@ -321,6 +323,7 @@ export const ingest = internalMutation({
         risenAt: now,
       });
       await indexItem(ctx, { _id: itemId, userId, graveId, title, publishedAt: it.publishedAt });
+      fresh.push({ _id: itemId, publishedAt: it.publishedAt });
       inserted++;
       if (!isRead) unread++;
       newest = Math.max(newest, Math.min(it.publishedAt, now));
@@ -329,6 +332,7 @@ export const ingest = internalMutation({
       // lastNewItemAt tracks when the feed last published (drives the polling interval).
       await ctx.db.patch(graveId, { unreadCount: grave.unreadCount + unread, lastNewItemAt: newest });
       await scheduleCluster(ctx, userId);
+      await scheduleOmenCheck(ctx, userId, fresh);
     }
     return { inserted };
   },
@@ -362,6 +366,7 @@ export const prune = internalMutation({
           await ctx.db.delete(d._id);
         }
         await unindexItem(ctx, item._id);
+        await unmatchItem(ctx, item._id);
         await ctx.db.delete(item._id);
       }
     }

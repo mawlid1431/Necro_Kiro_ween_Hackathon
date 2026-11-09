@@ -10,6 +10,7 @@ import type { Id } from "./_generated/dataModel";
 import { assertSecret, fail, requireOwned, utcDay } from "./lib/auth";
 import { hitLimit } from "./rateLimits";
 import { itemFilter, listFor, searchFor } from "./items";
+import { matchesFor } from "./omens";
 import { diagnose } from "../lib/errors";
 import { htmlToPlain } from "../lib/text";
 import { MCP_CALLS_PER_MINUTE } from "../lib/limits";
@@ -140,6 +141,19 @@ export const getBriefing = query({
       if (item && item.userId === userId) picks.push({ id: item._id, title: item.title, link: item.link ?? null });
     }
     return { day: b.day, headline: b.headline, body: b.body, picks, model: b.model, source: UNTRUSTED };
+  },
+});
+
+export const getOmens = query({
+  args: { ...guard, limit: v.number() },
+  handler: async (ctx, { secret, userId, limit }) => {
+    await checkUser(ctx, secret, userId);
+    const omens = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", userId)).take(20);
+    const matches = await matchesFor(ctx, userId, Math.min(Math.max(limit, 1), 30));
+    return {
+      omens: omens.map((o) => ({ id: o._id, topic: o.topic, strict: o.strict, muted: o.muted, matchCount: o.matchCount })),
+      matches: matches.map((m) => ({ id: m.itemId, topic: m.topic, title: m.title, feed: m.graveTitle, link: m.link, reason: m.reason, via: m.via, source: UNTRUSTED })),
+    };
   },
 });
 

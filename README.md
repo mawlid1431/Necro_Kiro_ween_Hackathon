@@ -325,7 +325,7 @@ sequenceDiagram
   end
 ```
 
-Tools: `list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `add_grave` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred`. The full table and client setup are in [`docs/MCP.md`](docs/MCP.md).
+Tools: `list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `add_grave` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens`. The full table and client setup are in [`docs/MCP.md`](docs/MCP.md).
 
 ### 4.7 Feed Doctor
 

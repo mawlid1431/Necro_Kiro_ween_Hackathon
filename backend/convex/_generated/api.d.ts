@@ -27,6 +27,8 @@ import type * as kindred from "../kindred.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_ladder from "../lib/ladder.js";
 import type * as mcp from "../mcp.js";
+import type * as omens from "../omens.js";
+import type * as omensNode from "../omensNode.js";
 import type * as providerHealth from "../providerHealth.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as seances from "../seances.js";
@@ -62,6 +64,8 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/ladder": typeof lib_ladder;
   mcp: typeof mcp;
+  omens: typeof omens;
+  omensNode: typeof omensNode;
   providerHealth: typeof providerHealth;
   rateLimits: typeof rateLimits;
   seances: typeof seances;

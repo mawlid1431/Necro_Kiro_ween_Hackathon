@@ -20,6 +20,7 @@ export const labels = {
   settings: { themed: "Settings", plain: "Interests, voice and MCP keys" },
   discover: { themed: "Discover", plain: "Find collections to follow" },
   covens: { themed: "Covens", plain: "Shared feed collections" },
+  omens: { themed: "Omens", plain: "Topic alerts" },
 } as const;
 
 export const TOPICS = {
@@ -162,6 +163,33 @@ export const kindred = {
   marker: "Also in another feed",
 } as const;
 
+export const omens = {
+  intro: "Watch a topic: a competitor, a vulnerability, a research area. Necro tells you when a new post is really about it, not just when a word appears.",
+  topic: "Topic to watch",
+  topicPlaceholder: "Postgres vulnerability",
+  strict: "Strict: only alert when AI confirms it",
+  add: "Watch topic",
+  adding: "Adding…",
+  yours: "Your Omens",
+  none: "No Omens yet. Add a topic above and new posts about it show up here.",
+  matches: "Recent matches",
+  noMatches: "Nothing matched yet. New posts are checked as they rise.",
+  matchCount: (n: number) => (n === 1 ? "1 match" : `${n} matches`),
+  mute: "Mute",
+  unmute: "Unmute",
+  muted: "Muted",
+  strictTag: "Strict",
+  remove: "Delete",
+  removeConfirm: (t: string) => `Stop watching “${t}”? Its matches are deleted too.`,
+  via: { ai: "AI confirmed", keyword: "Keyword match" },
+  read: "Read",
+  allTopics: "All topics",
+  notify: "Notify me while Necro is open",
+  notifyOn: "Notifications are on",
+  notifyBlocked: "Notifications are blocked for this site. Allow them in the address bar.",
+  notification: (topic: string, title: string) => ({ title: `Omen: ${topic}`, body: title }),
+} as const;
+
 export const seance = {
   hold: "Hold a Séance",
   holding: "Summoning the spirits…",
@@ -243,6 +271,7 @@ export const nav = {
   graveyard: "Graveyard",
   crypt: "Crypt",
   discover: "Discover",
+  omens: "Omens",
   doctor: "Doctor",
   settings: "Settings",
 } as const;
