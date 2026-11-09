@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { afterFailure, afterSuccess } from "../lib/schedule";
 import { exportOpml as buildOpml } from "../lib/feeds/opml";
@@ -114,6 +114,58 @@ export const exportOpml = query({
       rows.map((g) => ({ title: g.customTitle ?? g.title, feedUrl: g.feedUrl, siteUrl: g.siteUrl ?? null, folder: g.folder ?? null })),
       user.name ?? "Necro user",
     );
+  },
+});
+
+/**
+ * "Export my data": everything the user created, as JSON (feeds as OPML inside it).
+ * Article bodies are left out (they belong to their publishers and are large); titles and links stay.
+ */
+export const exportData = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const uid = user._id;
+    const graves = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", uid)).take(MAX_GRAVES_PER_USER);
+    const titleOf = async (id: Id<"items">) => {
+      const i = await ctx.db.get(id);
+      return i && i.userId === uid ? { title: i.title, link: i.link ?? null } : null;
+    };
+    const voice = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", uid)).first();
+    const drafts = await ctx.db.query("drafts").withIndex("by_user", (q) => q.eq("userId", uid)).take(500);
+    const omens = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", uid)).take(20);
+    const matches = await ctx.db.query("omenMatches").withIndex("by_user_created", (q) => q.eq("userId", uid)).order("desc").take(200);
+    const collections = await ctx.db.query("collections").withIndex("by_user", (q) => q.eq("userId", uid)).take(20);
+    const follows = await ctx.db.query("collectionFollows").withIndex("by_user", (q) => q.eq("userId", uid)).take(100);
+    const grimoires = await ctx.db.query("grimoires").withIndex("by_user", (q) => q.eq("userId", uid)).order("desc").take(50);
+    const starred = await ctx.db.query("items").withIndex("by_user_starred", (q) => q.eq("userId", uid).eq("isStarred", true)).order("desc").take(500);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      profile: {
+        name: user.name ?? null,
+        email: user.email ?? null,
+        displayName: user.displayName ?? null,
+        interests: user.interests,
+        summaryLanguage: user.summaryLanguage ?? "English",
+        privateMode: user.privateMode ?? false,
+      },
+      voice: voice ? { tone: voice.tone, audience: voice.audience, wordsToUse: voice.wordsToUse, wordsToAvoid: voice.wordsToAvoid, samplePosts: voice.samplePosts } : null,
+      feeds: graves.map((g) => ({ title: g.customTitle ?? g.title, feedUrl: g.feedUrl, siteUrl: g.siteUrl ?? null, folder: g.folder ?? null })),
+      opml: buildOpml(
+        graves.map((g) => ({ title: g.customTitle ?? g.title, feedUrl: g.feedUrl, siteUrl: g.siteUrl ?? null, folder: g.folder ?? null })),
+        user.name ?? "Necro user",
+      ),
+      starred: starred.map((i) => ({ title: i.title, link: i.link ?? null, publishedAt: new Date(i.publishedAt).toISOString() })),
+      drafts: await Promise.all(drafts.map(async (d) => ({ platform: d.platform, text: d.text, hashtags: d.hashtags, status: d.status, article: await titleOf(d.itemId) }))),
+      omens: omens.map((o) => ({ topic: o.topic, strict: o.strict, muted: o.muted, matchCount: o.matchCount })),
+      omenMatches: await Promise.all(
+        matches.map(async (m) => ({ topic: omens.find((o) => o._id === m.omenId)?.topic ?? null, reason: m.reason, via: m.via, article: await titleOf(m.itemId) })),
+      ),
+      collections: collections.map((c) => ({ title: c.title, description: c.description, topic: c.topic, visibility: c.visibility, slug: c.slug, feeds: c.feeds })),
+      following: (await Promise.all(follows.map(async (f) => (await ctx.db.get(f.collectionId))?.slug ?? null))).filter((s): s is string => !!s),
+      grimoires: grimoires.map((g) => ({ weekOf: g.weekOf, title: g.title, markdown: g.markdown })),
+    };
   },
 });
 

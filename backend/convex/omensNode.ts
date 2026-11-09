@@ -47,7 +47,7 @@ export const check = internalAction({
           prompt: omenPrompt({ topic: p.topic, title: p.title, text: p.excerpt }),
           schema: OmenSchema,
           maxOutputTokens: 120,
-        });
+        }, { userId });
         await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
         if (out.output.match) {
           if (await ctx.runMutation(internal.omens.recordMatch, { userId, omenId: p.omenId, itemId: p.itemId, reason: out.output.reason || `About ${p.topic}`, via: "ai" })) matched++;

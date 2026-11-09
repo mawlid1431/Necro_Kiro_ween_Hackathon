@@ -26,7 +26,7 @@ export async function composeFor(ctx: ActionCtx, userId: Id<"users">, days = 7):
       prompt: grimoirePrompt({ voice: c.voice, weekOf, items: c.items }),
       schema: GrimoireSchema,
       maxOutputTokens: 1500,
-    });
+    }, { userId });
     await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
     draft = filterSections(out.output, c.items.map((i) => i.ref));
     model = spec;

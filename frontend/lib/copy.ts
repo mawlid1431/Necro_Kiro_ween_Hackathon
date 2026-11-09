@@ -279,6 +279,24 @@ export const settings = {
   export: "Export OPML",
 } as const;
 
+export const privacy = {
+  title: "Privacy",
+  privateMode: "Private mode",
+  privateHint:
+    "Every AI task uses only providers that do not train on your data. If none is free, Necro answers without AI. Your voice, questions and Omens are always private, even with this off.",
+  on: "On",
+  off: "Off",
+  dataTitle: "Your data",
+  dataHint: "Download everything you created, or delete your account and every row you own.",
+  exportJson: "Export my data (JSON)",
+  exporting: "Preparing…",
+  deleteTitle: "Delete my account",
+  deleteHint: "This deletes your feeds, posts, Séances, drafts, Omens, collections, Grimoires and keys. It cannot be undone.",
+  deleteType: "Type DELETE to confirm",
+  deleteButton: "Delete everything",
+  deleting: "Deleting…",
+} as const;
+
 export const voice = {
   listen: "Listen",
   stop: "Stop",

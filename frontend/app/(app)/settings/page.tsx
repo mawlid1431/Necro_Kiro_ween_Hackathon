@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ApiKeys } from "@/components/settings/ApiKeys";
+import { PrivacyCard, YourDataCard } from "@/components/settings/PrivacyCard";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { UsageAndExport } from "@/components/settings/UsageAndExport";
 import { VoiceForm } from "@/components/settings/VoiceForm";
@@ -17,7 +18,9 @@ export default function SettingsPage() {
         <ProfileForm />
         <VoiceForm />
         <ApiKeys />
+        <PrivacyCard />
         <UsageAndExport />
+        <YourDataCard />
       </Container>
     </main>
   );

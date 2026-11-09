@@ -32,6 +32,7 @@ export default defineSchema({
     publicSlug: v.optional(v.string()), // random; set only when publishing is on
     isDemo: v.optional(v.boolean()), // demo account: AI reads from demoCache
     displayName: v.optional(v.string()), // public name on shared collections (never the email)
+    privateMode: v.optional(v.boolean()), // every AI task skips providers that may train on prompts
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_clerk", ["clerkId"])

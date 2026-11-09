@@ -46,7 +46,7 @@ export async function compareFor(ctx: ActionCtx, userId: Id<"users">, itemId: Id
       prompt: opinionPrompt(c.sources),
       schema: OpinionSchema,
       maxOutputTokens: 900,
-    });
+    }, { userId });
     await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
     const clean = filterCitations(out.output, sources.map((s) => s.label));
     return await ctx.runMutation(internal.opinions.save, { ...base, ...clean, model: spec });

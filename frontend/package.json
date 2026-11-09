@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "bun run lint && bun run typecheck"
+    "check": "bun run lint && bun run typecheck",
+    "smoke": "bun scripts/smoke.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.23",

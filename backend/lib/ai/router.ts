@@ -68,8 +68,9 @@ export async function runWithLadder<T>(
   validate: (out: T) => boolean = () => true,
   repair?: (rung: Rung, bad: T) => Promise<T>,
   chain: string[] = chainFor(task),
+  forcePrivate = false, // the user's Private mode: treat every task as private
 ): Promise<{ out: T; spec: string; rung: number; ms: number }> {
-  const privacy = TASK_PRIVACY[task];
+  const privacy: Privacy = forcePrivate ? "private" : TASK_PRIVACY[task];
   const attempts: { spec: string; outcome: string }[] = [];
   const started = Date.now();
 

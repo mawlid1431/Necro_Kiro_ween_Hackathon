@@ -73,7 +73,7 @@ export const explain = action({
         prompt: doctorPrompt({ code: g.lastErrorCode, detail: g.lastErrorDetail ?? "", feedUrl: g.feedUrl }),
         schema: DoctorSchema,
         maxOutputTokens: 120,
-      });
+      }, { userId });
       await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
       await ctx.runMutation(internal.doctor.saveNote, { graveId, note: out.output.note, forCode: g.lastErrorCode });
       return { note: out.output.note };

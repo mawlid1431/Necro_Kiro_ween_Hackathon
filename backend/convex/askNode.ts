@@ -53,7 +53,7 @@ export async function askFor(ctx: ActionCtx, userId: Id<"users">, question: stri
       prompt: askPrompt({ question: q, items: found.map((i) => ({ id: i._id, title: i.title, feed: i.graveTitle ?? "", excerpt: i.excerpt })) }),
       schema: AskSchema,
       maxOutputTokens: 500,
-    });
+    }, { userId });
     await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
     const citations = keepCitations(out.output.citations, new Set(items.map((i) => i.id)));
     return { answer: out.output.answer, citations, confident: out.output.confident && citations.length > 0, ghost: false, model: spec, items };

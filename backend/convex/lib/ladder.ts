@@ -7,7 +7,8 @@ import type { z } from "zod";
 import type { ActionCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { resolveRung, type Rung } from "../../lib/ai/providers";
-import { RUNG_TIMEOUT_MS, runWithLadder, type AiTask, type RouterDeps } from "../../lib/ai/router";
+import type { Id } from "../_generated/dataModel";
+import { chainFor, RUNG_TIMEOUT_MS, runWithLadder, type AiTask, type RouterDeps } from "../../lib/ai/router";
 
 export function convexDeps(ctx: ActionCtx): RouterDeps {
   return {
@@ -69,16 +70,24 @@ async function structuredCall<S extends z.ZodType>(
   }
 }
 
-/** Runs a structured task down its ladder. Throws AllRungsFailed when the caller should use Ghost mode. */
-export function ladderObject<S extends z.ZodType>(
+/**
+ * Runs a structured task down its ladder for one user. Throws AllRungsFailed when the caller should use Ghost mode.
+ * `userId` is required so every AI call honours that user's Private mode.
+ */
+export async function ladderObject<S extends z.ZodType>(
   ctx: ActionCtx,
   task: AiTask,
   p: { system: string; prompt: string; schema: S; maxOutputTokens: number },
+  who: { userId: Id<"users"> },
 ) {
-  return runWithLadder(
+  const forcePrivate = await ctx.runQuery(internal.users.privateModeOf, { userId: who.userId });
+  return await runWithLadder(
     task,
     convexDeps(ctx),
     (rung) => structuredCall(rung, p),
     (r) => p.schema.safeParse(r.output).success,
+    undefined,
+    chainFor(task),
+    forcePrivate,
   );
 }

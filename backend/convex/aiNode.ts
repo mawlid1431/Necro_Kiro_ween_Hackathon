@@ -58,7 +58,7 @@ export async function seanceFor(ctx: ActionCtx, userId: Id<"users">, itemId: Id<
       prompt: seancePrompt({ interests, title: item.title, text, language }),
       schema: SeanceSchema,
       maxOutputTokens: 400,
-    });
+    }, { userId });
     return await ctx.runMutation(internal.seances.save, {
       userId,
       itemId,
@@ -90,7 +90,7 @@ export async function resurrectFor(ctx: ActionCtx, userId: Id<"users">, itemId: 
       prompt: resurrectPrompt({ voice: c.voice, title: c.item.title, link, source: c.source, summary, text }),
       schema: ResurrectSchema,
       maxOutputTokens: 1200,
-    });
+    }, { userId });
     const o = out.output;
     const hashtags = cleanHashtags(o.hashtags).slice(0, 6);
     return await ctx.runMutation(internal.drafts.replaceForItem, {

@@ -46,6 +46,7 @@ export const me = query({
       interests: user.interests,
       summaryLanguage: user.summaryLanguage ?? "English",
       displayName: user.displayName ?? null,
+      privateMode: user.privateMode ?? false,
       onboarded: user.onboardedAt !== undefined,
       usage: await usageToday(ctx, user._id),
     };
@@ -85,6 +86,20 @@ export const setDisplayName = mutation({
 });
 
 /** Settings: summary language (multilingual Séance), timezone and Morning Séance hour. */
+/** Private mode: every AI task skips providers that may train on prompts (Ghost mode if none is left). */
+export const setPrivateMode = mutation({
+  args: { value: v.boolean() },
+  handler: async (ctx, { value }) => {
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, { privateMode: value });
+  },
+});
+
+export const privateModeOf = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => (await ctx.db.get(userId))?.privateMode ?? false,
+});
+
 export const setPreferences = mutation({
   args: {
     summaryLanguage: v.optional(v.string()),
@@ -183,6 +198,7 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("opinions").withIndex("by_user_kindred", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("grimoires").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("briefings").withIndex("by_user_day", (q) => q.eq("userId", userId)).take(BATCH),
     ].flat();
     for (const row of small) await ctx.db.delete(row._id);
     if (small.length) {
