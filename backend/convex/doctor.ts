@@ -63,7 +63,16 @@ export const applyFix = mutation({
         .first();
       if (clash) fail("DUPLICATE", "You already follow that feed.");
     }
-    await ctx.db.patch(graveId, { feedUrl, etag: undefined, lastModified: undefined, failureCount: 0, nextFetchAt: Date.now() });
+    // Clearing lastFetchedAt makes the next successful fetch adopt the new feed's own title
+    // (graves.recordSuccess), so "Moved blog" becomes "The GitHub Blog". customTitle still wins.
+    await ctx.db.patch(graveId, {
+      feedUrl,
+      etag: undefined,
+      lastModified: undefined,
+      lastFetchedAt: undefined,
+      failureCount: 0,
+      nextFetchAt: Date.now(),
+    });
     await ctx.scheduler.runAfter(0, internal.feedsNode.fetchOne, { graveId });
   },
 });

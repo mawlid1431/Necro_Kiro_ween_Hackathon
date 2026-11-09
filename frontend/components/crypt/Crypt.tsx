@@ -10,7 +10,7 @@ import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
-import { crypt as copy } from "@/lib/copy";
+import { crypt as copy, labels } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ItemList, type ItemCard } from "./ItemList";
 import { ReadingPane } from "./ReadingPane";
@@ -33,6 +33,16 @@ export function Crypt() {
 
   const graves = useQuery(api.graves.list, {});
   const markAll = useMutation(api.items.markAllRead);
+  const layToRest = useMutation(api.graves.layToRest);
+  const selectedGrave = graves?.find((g) => g._id === graveId);
+
+  // Unsubscribe from the selected feed. Deletes its posts, Séances and drafts, so ask first.
+  async function bury() {
+    if (!selectedGrave) return;
+    if (!window.confirm(`Bury “${selectedGrave.title}”? Its posts, Séances and drafts will be deleted.`)) return;
+    await layToRest({ graveId: selectedGrave._id });
+    go({ grave: null, item: null });
+  }
   const page = usePaginatedQuery(api.items.list, { graveId, filter, sort }, { initialNumItems: 30 });
   const results = useQuery(api.items.search, term.trim().length >= 2 ? { query: term, graveId } : "skip");
 
@@ -136,6 +146,11 @@ export function Crypt() {
               <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void markAll({ graveId })}>
                 {copy.markAllRead}
               </Button>
+              {selectedGrave ? (
+                <Button variant="destructive" size="sm" onClick={() => void bury()}>
+                  {labels.bury.themed}
+                </Button>
+              ) : null}
             </div>
           </div>
 
