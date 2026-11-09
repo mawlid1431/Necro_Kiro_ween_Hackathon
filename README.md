@@ -2,6 +2,8 @@
 
 **RSS, resurrected with AI.** A Kiroween 2026 project (category: **Resurrection**) by Mowlid Haibe · a Faafi project.
 
+**Live app:** [necro.malitos.tech](https://necro.malitos.tech) · **MCP endpoint:** `https://necro.malitos.tech/api/mcp` ([setup](docs/MCP.md))
+
 Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X and Instagram in your own voice (**Resurrect**), a doctor for broken feeds (**Feed Doctor**), and an MCP server so Claude, Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
 
 > **Goal of the build.** A new user can sign up, add three feeds, read an article, hold a Séance, resurrect it into drafts and connect an MCP client, in under five minutes, with no errors.
@@ -194,7 +196,7 @@ sequenceDiagram
   CX-->>U: { name, interests, summaryLanguage, onboarded, usage }
   Note over U,CX: UserGate renders the page only now, so no query runs before the user row exists
   U->>CX: graves.list({}) (live subscription)
-  CX-->>U: tombstones; pushed again whenever data changes
+  CX-->>U: tombstones, pushed again whenever data changes
 ```
 
 Every public Convex function starts with `requireUser` (`backend/convex/lib/auth.ts`). A record owned by someone else is reported exactly like a missing one (`NOT_FOUND`), so ids cannot be probed across accounts.
@@ -224,7 +226,7 @@ sequenceDiagram
     A->>DB: graves.create, then items.ingest in chunks of 20 (dedupe by graveId + guid)
     A-->>UI: { status: "summoned", graveId, title, itemCount, alternatives }
   end
-  Note over UI,DB: the Graveyard updates live through useQuery; no refresh needed
+  Note over UI,DB: the Graveyard updates live through useQuery, no refresh needed
 ```
 
 **OPML import** (`feedsNode.importOpml`, max 1 MB, 200 feeds) creates the graves at once with `nextFetchAt` staggered 2 seconds apart and returns `{ created, duplicates, skipped }`. The poller fetches them, and tombstones fill in live.
@@ -262,7 +264,7 @@ flowchart TD
   C -- "yes (model)" --> OUT["return it"]
   C -- "no, or retry of a Ghost one" --> L{"Daily limit OK?<br/>aiUsage.reserve (100/day)"}
   L -- no --> GH["Ghost Séance<br/>extractive, labelled 'summary without AI'"]
-  L -- yes --> T["text = full text or content<br/>truncated to 6,000 chars, wrapped in &lt;article&gt;"]
+  L -- yes --> T["text = full text or content<br/>truncated to 6,000 chars, wrapped in article tags"]
   T --> R1["Rung 1: groq"]
   R1 -->|"fail · breaker open · budget spent"| R2["Rung 2: google (Gemini)"]
   R2 -->|fail| R3["Rung 3: openrouter (:free)"]
@@ -465,7 +467,7 @@ erDiagram
     string[] samplePosts "max 3"
   }
   apiKeys {
-    string hash "sha256; raw key never stored"
+    string hash "sha256, raw key never stored"
     string prefix
     number lastUsedAt
     number revokedAt
