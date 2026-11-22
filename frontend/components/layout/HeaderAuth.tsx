@@ -22,7 +22,7 @@ export function HeaderAuth() {
           </Button>
         </SignInButton>
         <Button asChild size="sm" className="hidden sm:inline-flex">
-          <Link href="/graveyard">{landing.cta}</Link>
+          <Link href="/home">{landing.cta}</Link>
         </Button>
       </Show>
     </>

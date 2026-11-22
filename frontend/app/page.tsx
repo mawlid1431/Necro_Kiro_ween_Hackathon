@@ -4,6 +4,7 @@ import { FogBackground } from "@/components/brand/FogBackground";
 import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
 import { HeroStage } from "@/components/landing/Mockups";
+import { SignedInToHome } from "@/components/layout/HomeLink";
 import { Showcase } from "@/components/landing/Showcase";
 import { LegalFooter } from "@/components/layout/LegalPage";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -16,6 +17,7 @@ export default function LandingPage() {
   return (
     <>
       <FogBackground />
+      <SignedInToHome />
       <SiteHeader />
       <main className="flex-1">
         <section className="overflow-x-clip py-16 sm:py-24 lg:py-28">
@@ -28,7 +30,7 @@ export default function LandingPage() {
             <p className="mt-6 max-w-2xl text-lg text-pretty text-copy sm:text-xl">{landing.lead}</p>
             <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <Button asChild size="lg">
-                <Link href="/graveyard">
+                <Link href="/home">
                   {landing.cta}
                   <ArrowRight aria-hidden strokeWidth={1.75} />
                 </Link>

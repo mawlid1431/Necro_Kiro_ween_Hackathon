@@ -56,6 +56,10 @@ Necro brings RSS back with today's technology and closes the loop from **reading
   then post with one click and see the result live. *(Each platform switches on once its developer-app keys are set;
   until then sharing uses copy and the platform's own composer.)* **(you: update this line to match what works on
   submission day)**
+- **Witching Hour**: a live calendar and timeline. Schedule posts for later, or press New post to upload your own image,
+  let AI write the caption in your voice, pick accounts, and post now or at a time. Connected accounts post on their own;
+  the others remind you, with one-tap sharing. The same post can never go out twice.
+- **Home**: a live overview of your feeds, posts, connected accounts and tools used today, with a getting-started checklist.
 - **Talk to the Dead**: an MCP server, so Kiro or any AI assistant can list, read, summarise and draft from your feeds.
 - **Feed Doctor**: explains broken or moved feeds in plain words and suggests a fix.
 - **Covens, Omens, Grimoire, Kindred, Second Opinion**: shared feed collections, topic alerts, a weekly newsletter,
@@ -117,7 +121,11 @@ Meta and TikTok app reviews so everyone can post directly, scheduled posts, and 
 3. Crypt → open an article → read the **Séance** summary.
 4. Click **Resurrect** → switch between LinkedIn, X, Instagram and TikTok and compare the previews.
 5. Settings → **MCP keys** → create a key and follow `docs/MCP.md` to connect an AI assistant.
-6. **Connectors** shows which platforms are connected. **(you: say which ones are live for judges)**
+6. **Settings → Connected accounts** shows which platforms are connected. **(you: say which ones are live for judges)**
+7. **Witching Hour** → **New post**: upload any photo, press **Write with AI**, tick an account, choose **Schedule** in a few
+   minutes. Watch it appear in the calendar and on **Home** (click the Necro logo) without reloading; at that time a
+   reminder turns "Time to post" with a badge in the nav.
+8. Try to schedule the same post again: Necro refuses it ("Already scheduled…"). Cancel it and you can schedule it again.
 
 ## Pre-existing code and assets (disclosure)
 

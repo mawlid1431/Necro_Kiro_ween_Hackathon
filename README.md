@@ -4,7 +4,7 @@
 
 **Live app:** [necro.malitos.tech](https://necro.malitos.tech) · **MCP endpoint:** `https://necro.malitos.tech/api/mcp` ([setup](docs/MCP.md))
 
-Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X, Instagram and TikTok in your own voice (**Resurrect**), posted straight to your own accounts from **Connectors** with a preview that matches the real post, a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
+Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X, Instagram and TikTok in your own voice (**Resurrect**), posted straight to your own accounts from **Connectors** with a preview that matches the real post, planned in **Witching Hour** (a live calendar with scheduling, reminders and a composer for your own images with AI captions), all summed up on your **Home** dashboard, a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
 
 ### The real-world problem
 
@@ -28,6 +28,7 @@ Necro closes the whole loop in one calm place: **follow** any site (or bring bac
    - [4.4 Séance: the AI ladder](#44-séance-the-ai-ladder)
    - [4.5 Resurrect: drafts with privacy routing](#45-resurrect-drafts-with-privacy-routing)
    - [4.8 Connectors: post to LinkedIn, X, Instagram and TikTok](#48-connectors-post-to-linkedin-x-instagram-and-tiktok)
+   - [4.9 Witching Hour, Home and "one post, once"](#49-witching-hour-home-and-one-post-once)
    - [4.6 MCP: Talk to the Dead](#46-mcp-talk-to-the-dead)
    - [4.7 Feed Doctor](#47-feed-doctor)
 5. [AI models and providers](#5-ai-models-and-providers)
@@ -381,6 +382,13 @@ flowchart LR
 - **Tokens** never reach the browser. X and TikTok refresh on use, Instagram refreshes daily, LinkedIn asks to reconnect after 60 days.
 - A platform without app keys shows **Coming soon** instead of failing.
 
+### 4.9 Witching Hour, Home and "one post, once"
+
+- **Home** (`/home`, the logo when signed in, and where sign-in lands): a live overview of your feeds, unread and risen posts, your posts (up next and recent), connected accounts, AI tools used today and MCP keys, with a getting-started checklist and alerts that link to where you fix things (`backend/convex/dashboard.ts`).
+- **Witching Hour** (`/calendar`): a month calendar and live timeline of every post. **Schedule for later** from Resurrect, or **New post** to upload your own JPG/PNG (Convex storage), write a caption or press **Write with AI** (a vision model looks at the image and writes in your saved voice), pick accounts, and post now or at a time. Connected accounts post on their own at that time (Convex scheduler); the others, and TikTok always, become **reminders**: the card turns due, the nav shows a badge, the browser notifies you, and **Share now** opens the share sheet with the image (`backend/convex/social.ts`, `socialNode.ts`, `captionNode.ts`).
+- **One post, once.** Every post carries a content key (`backend/lib/social/dedupe.ts`): one per article per platform, or the same caption and image per platform. While a post with that key is going out, waiting or posted, the same post is refused, checked inside the same Convex transaction that creates it (so two clicks or two tabs cannot both pass) and again by the scheduled job before sending. Resurrect locks its buttons live when a platform already has the article. Cancelled and failed posts can be retried. A post stuck "posting" for 15 minutes is marked failed (never retried automatically: the platform may already have it).
+- **Real time.** Every screen reads Convex live queries: a post scheduled in one tab, a reminder coming due, a cancel or an article read appears everywhere at once, without a reload. Time windows on Home ("rose today", "last 30 days") follow the page's clock, refreshed every minute.
+
 ## 5. AI models and providers
 
 All model calls run inside Convex actions through the Vercel AI SDK (`ai` v7, `generateText` with `Output.object`). Models are **never hard-coded**: each task reads a chain of `provider:model-id` rungs from a Convex env var.
@@ -424,7 +432,7 @@ Check the chains with `bunx convex run aiNode:healthCheck`, and the breakers, Gh
 
 ## 6. Database
 
-Convex, 17 tables (including `connections`, `oauthStates`, `publishes` for Connectors). Every table except `users`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it.
+Convex, 18 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour). Every table except `users`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it.
 
 ```mermaid
 erDiagram
@@ -520,7 +528,8 @@ erDiagram
 | `voice` | Writing voice for Resurrect | by_user |
 | `connections` | Connected social accounts; tokens sealed (AES-256-GCM) | by_user_platform, by_platform |
 | `oauthStates` | Single-use OAuth state + PKCE verifier (15 min) | by_state, by_user |
-| `publishes` | Each Post now and its live status | by_user, by_item |
+| `publishes` | Every post, scheduled post and reminder with its live status and content key | by_user, by_user_key, by_user_at, by_user_status, by_status_since, by_item |
+| `uploads` | Images uploaded in the composer (owner-checked) | by_user, by_storage |
 | `apiKeys` | MCP keys (hashed) | by_user, by_hash |
 | `aiUsage` | Daily AI quota rows | by_user_day_task |
 | `rateLimits` | Fixed-window counters (summons, MCP, provider budgets) | by_key, by_windowStart |
@@ -623,7 +632,10 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | Active MCP keys | 5 |
 | Fetch size / items per fetch / stored HTML | 5 MB / 200 / 200 KB |
 | OPML import | 1 MB, 200 feeds |
-| Post now | 30 per hour per user; one in flight per article and platform |
+| Post now | 30 per hour per user |
+| Posts and reminders created (all paths) | 60 per hour per user; 100 scheduled at once; the same post only once per platform |
+| Composer uploads | JPG/PNG up to 8 MB, 50 per day |
+| AI captions | 30 per day |
 
 ---
 
@@ -641,6 +653,7 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | `MCP_SERVER_SECRET`, `AGENT_SERVER_SECRET` | both (same value) | **yes** | Guard the server-to-Convex functions |
 | `APP_URL`, `NECRO_BOT_CONTACT_URL` | backend | **yes** | OpenRouter referer, fetcher User-Agent |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | frontend | no | Voice (planned) |
+| `AI_CHAIN_CAPTION` | backend | **yes** | Optional: image-capable models for "Write with AI" (default: paid OpenRouter vision models) |
 | `SOCIAL_TOKEN_KEY` | backend | **yes** | 32 random bytes (base64): seals connected-account tokens |
 | `POST_IMAGE_SECRET` | both (same value) | **yes** | Signs the post-image links Instagram and TikTok fetch |
 | `LINKEDIN_CLIENT_ID/SECRET`, `X_CLIENT_ID/SECRET`, `INSTAGRAM_APP_ID/SECRET`, `TIKTOK_CLIENT_KEY/SECRET` | backend | **yes** | Connectors app keys (each optional; unset = Coming soon) |

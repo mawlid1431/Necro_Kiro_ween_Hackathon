@@ -22,3 +22,13 @@ Truthful, specific notes per phase. Source for `docs/KIRO_WRITEUP.md`.
 - Kept to the project's Kiro conventions: a spec in `.kiro/specs/connectors/`, steering rules (security, brand voice),
   and the pre-submit check (all items pass).
 - Recorded here so the Kiro write-up is accurate about which tool did what.
+
+## Witching Hour, Home and "one post, once" (Nov 22–23, 2026) — built with Claude Code, not Kiro
+
+- Built outside Kiro with **Claude Code**: Witching Hour (live calendar and timeline, scheduling from Resurrect,
+  reminders with one-tap sharing), the composer (upload your own image, AI caption from a vision model in your voice,
+  pick accounts, post now or schedule), the Home dashboard (logo and sign-in land there), duplicate-post protection
+  (content keys checked inside the creating transaction and again before sending; a sweep for stuck posts), the
+  compact menu and 6-link nav with tabs, Privacy and Terms pages, and the landing-page phone mockups.
+- Kept to the project's conventions: steering rules (security, brand voice), the same isolation pattern
+  (`requireUser` + owner checks), and tests (207 passing, including duplicate, isolation and real-time cases).

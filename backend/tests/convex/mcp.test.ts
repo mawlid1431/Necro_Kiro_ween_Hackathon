@@ -1,6 +1,6 @@
 // MCP Convex functions: secret guard, key auth, rate limit, revocation and user isolation.
 import { convexTest } from "convex-test";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -53,10 +53,13 @@ describe("MCP auth", () => {
   });
 
   it("allows 60 calls a minute per key, then 429", async () => {
+    // The limit counts per clock minute: pin the clock so a slow run cannot straddle a minute boundary.
+    vi.useFakeTimers({ now: new Date("2026-11-23T03:00:01Z") });
     const { t } = await setup();
     for (let i = 0; i < 60; i++) expect((await t.mutation(api.mcp.authenticate, { hash: BOB_HASH, secret: SECRET })).ok).toBe(true);
     expect(await t.mutation(api.mcp.authenticate, { hash: BOB_HASH, secret: SECRET })).toEqual({ ok: false, status: 429 });
     expect((await t.mutation(api.mcp.authenticate, { hash: ALICE_HASH, secret: SECRET })).ok).toBe(true); // per key
+    vi.useRealTimers();
   });
 });
 

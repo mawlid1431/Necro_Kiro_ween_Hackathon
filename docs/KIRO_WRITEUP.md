@@ -11,8 +11,9 @@ two **custom agents** for the hardest specialist jobs (feed parsing and brand co
 the advanced features. **Property-based tests** guard the parser and the network layer. Necro also *is* an **MCP
 server**, so Kiro can read your feeds and draft from them.
 
-Honest note: later work, including the Connectors feature (direct posting to LinkedIn, X, Instagram and TikTok),
-was built with **Claude Code**. It still follows the same steering rules, has a spec in Kiro's format, and passes
+Honest note: later work was built with **Claude Code**: Connectors (direct posting to LinkedIn, X, Instagram and
+TikTok), Witching Hour (calendar, scheduling, reminders, the image composer with AI captions), the Home dashboard,
+duplicate-post protection and the landing-page mockups. It follows the same steering rules and conventions, and passes
 the same Kiro pre-submit hook. See `docs/KIRO_LOG.md`.
 
 ## Steering docs — `.kiro/steering/`
