@@ -13,6 +13,7 @@ import type * as aiNode from "../aiNode.js";
 import type * as aiUsage from "../aiUsage.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as askNode from "../askNode.js";
+import type * as captionNode from "../captionNode.js";
 import type * as covens from "../covens.js";
 import type * as covensNode from "../covensNode.js";
 import type * as crons from "../crons.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   aiUsage: typeof aiUsage;
   apiKeys: typeof apiKeys;
   askNode: typeof askNode;
+  captionNode: typeof captionNode;
   covens: typeof covens;
   covensNode: typeof covensNode;
   crons: typeof crons;

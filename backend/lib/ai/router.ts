@@ -4,7 +4,7 @@
 // AllRungsFailed and the caller answers with Ghost mode, so users never see an AI error.
 import type { Rung } from "./providers";
 
-export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask" | "omen" | "opinion" | "grimoire";
+export type AiTask = "seance" | "resurrect" | "doctor" | "briefing" | "ask" | "omen" | "opinion" | "grimoire" | "caption";
 export type Privacy = "public" | "private";
 
 export const TASK_PRIVACY: Record<AiTask, Privacy> = {
@@ -16,10 +16,19 @@ export const TASK_PRIVACY: Record<AiTask, Privacy> = {
   omen: "private", // the user's watched topics
   opinion: "public", // article text only
   grimoire: "private", // voice samples and reading history
+  caption: "private", // the user's own photo and voice samples
 };
 
 /** A new task with no chain of its own borrows one with the same privacy, so it works without new env vars. */
 const CHAIN_FALLBACK: Partial<Record<AiTask, AiTask>> = { omen: "ask", opinion: "seance", grimoire: "resurrect" };
+
+/**
+ * Built-in chains for tasks that need a special kind of model when no AI_CHAIN_<TASK> is set.
+ * Captions need a model that can see images: paid OpenRouter vision models (they do not train on prompts).
+ */
+const DEFAULT_CHAINS: Partial<Record<AiTask, string>> = {
+  caption: "openrouter:google/gemma-4-26b-a4b-it,openrouter:google/gemini-2.5-flash-lite",
+};
 
 /** Per-rung timeout so the whole ladder stays under ~30 s. */
 export const RUNG_TIMEOUT_MS = 12_000;
@@ -32,7 +41,9 @@ export function chainFor(task: AiTask, env: Record<string, string | undefined> =
   const own = env[`AI_CHAIN_${task.toUpperCase()}`] ?? env[`AI_${task.toUpperCase()}_MODEL`];
   const borrowed = CHAIN_FALLBACK[task];
   if (!own && borrowed) return chainFor(borrowed, env);
-  const raw = env[`AI_CHAIN_${task.toUpperCase()}`] ?? [env[`AI_${task.toUpperCase()}_MODEL`], env.AI_FALLBACK_MODEL].filter(Boolean).join(",");
+  const raw =
+    env[`AI_CHAIN_${task.toUpperCase()}`] ??
+    (!own && DEFAULT_CHAINS[task] ? DEFAULT_CHAINS[task]! : [env[`AI_${task.toUpperCase()}_MODEL`], env.AI_FALLBACK_MODEL].filter(Boolean).join(","));
   return [...new Set(raw.split(",").map((s) => s.trim()).filter(Boolean))];
 }
 

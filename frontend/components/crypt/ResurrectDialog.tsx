@@ -17,22 +17,16 @@ import { Notice, Textarea } from "@/components/ui/field";
 import { connectors as names, resurrect as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-import { draftFor, finalPost, POST_LIMITS, postImageUrl, postLength } from "@/lib/post";
+import { draftFor, finalPost, POST_LIMITS, postLength } from "@/lib/post";
+import { copyText, shareByHand, shareSheet } from "@/lib/share";
 import { PostPreview, type Article } from "./PostPreview";
+import { ScheduleControl } from "./ScheduleControl";
 
 type Draft = { _id: Id<"drafts">; platform: Platform; text: string; hashtags: string[]; status: string; ghost: boolean };
 type PublishRow = { platform: SocialPlatform; status: "posting" | "posted" | "failed"; url?: string; note?: string; error?: string };
 
 const LIMITS: Record<SocialPlatform, number> = { linkedin: 1300, x: 280, instagram: 2200, tiktok: POST_LIMITS.tiktok };
 const ORDER: SocialPlatform[] = ["linkedin", "x", "instagram", "tiktok"];
-
-/** The platform's own composer with the text filled in (the manual route, when not connected). */
-function shareUrl(p: SocialPlatform, text: string): string {
-  if (p === "x") return `https://x.com/intent/post?text=${encodeURIComponent(text)}`; // the link is already in the text
-  if (p === "linkedin") return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
-  if (p === "tiktok") return "https://www.tiktok.com/upload";
-  return "https://www.instagram.com/"; // no web composer: the caption is copied and the image saved
-}
 
 const hostOf = (u?: string) => {
   try {
@@ -141,7 +135,7 @@ function DirectPost({
         <PlatformIcon platform={p} brand className="size-4" />
         <span className="font-semibold">{conn?.connected ? copy.reconnect(name) : copy.connectFirst(name)}</span>
         <Button asChild variant="link" size="sm" className="ml-auto h-auto p-0">
-          <Link href="/connectors">{copy.openConnectors}</Link>
+          <Link href="/settings#connections">{copy.openConnectors}</Link>
         </Button>
       </div>
     );
@@ -263,20 +257,6 @@ export function ResurrectDialog({
   // The exact post: shared, copied, counted, previewed and posted from this one string.
   const full = (p: SocialPlatform, d: Draft, text: string) => finalPost(p, text, d.hashtags, article.link);
 
-  /** Instagram and TikTok need the picture too: save the same image the preview shows. */
-  async function saveImage() {
-    try {
-      const res = await fetch(postImageUrl(article.title, imageSource));
-      if (!res.ok) throw new Error();
-      const url = URL.createObjectURL(await res.blob());
-      const a = Object.assign(document.createElement("a"), { href: url, download: "necro-post.png" });
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    } catch {
-      setError(copy.imageFailed);
-    }
-  }
-
   async function save(d: Draft) {
     const text = edits[d._id];
     if (text === undefined) return;
@@ -288,44 +268,30 @@ export function ResurrectDialog({
     }
   }
 
-  async function toClipboard(text: string): Promise<boolean> {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      setError(copy.clipboardBlocked);
-      return false;
-    }
-  }
-
   async function copyDraft(p: SocialPlatform, d: Draft) {
-    if (!(await toClipboard(full(p, d, edits[d._id] ?? d.text)))) return;
+    if (!(await copyText(full(p, d, edits[d._id] ?? d.text)))) return setError(copy.clipboardBlocked);
     setFlash(`${p}:copied`);
     void setStatus({ draftId: d._id, status: "copied" });
   }
 
-  /** One click: copy the post (so it can be pasted if a composer ignores the text), open the composer, mark shared. */
+  /** One click: copy the post (in case a composer ignores the text), open the composer, save the image where needed. */
   async function share(p: SocialPlatform, d: Draft) {
-    const text = full(p, d, edits[d._id] ?? d.text);
-    // Start the copy while this page still has focus, then open the tab synchronously inside the click
-    // (popup blockers only allow that). "noopener" would make window.open return null, so cut the opener by hand.
-    const copied = toClipboard(text);
-    const win = window.open(shareUrl(p, text), "_blank");
-    if (win) win.opener = null;
-    else setError(copy.popupBlocked);
-    await copied;
-    if (p === "instagram" || p === "tiktok") await saveImage();
+    const r = await shareByHand(p, full(p, d, edits[d._id] ?? d.text), { title: article.title, source: imageSource });
+    if (!r.opened) setError(copy.popupBlocked);
+    else if (!r.copied) setError(copy.clipboardBlocked);
     setFlash(`${p}:shared`);
     void setStatus({ draftId: d._id, status: "shared" });
   }
 
+  /** The phone's share sheet, with the post image attached for Instagram and TikTok (and the caption copied). */
   async function nativeShare(p: SocialPlatform, d: Draft) {
-    try {
-      await navigator.share({ title: article.title, text: full(p, d, edits[d._id] ?? d.text), url: article.link });
-      void setStatus({ draftId: d._id, status: "shared" });
-    } catch {
-      // the user closed the share sheet: nothing to do
-    }
+    const ok = await shareSheet({
+      title: article.title,
+      text: full(p, d, edits[d._id] ?? d.text),
+      url: article.link,
+      image: p === "instagram" || p === "tiktok" ? { title: article.title, source: imageSource } : undefined,
+    });
+    if (ok) void setStatus({ draftId: d._id, status: "shared" });
   }
 
   return (
@@ -400,6 +366,7 @@ export function ResurrectDialog({
                       </Button>
                     ) : null}
                   </div>
+                  <ScheduleControl key={`${p}:${d._id}`} platform={p} draftId={d._id} text={text} disabled={over} auto={direct} />
                   <div className="flex flex-wrap gap-2">
                     {edits[d._id] !== undefined && edits[d._id] !== d.text ? (
                       <Button variant="ghost" size="sm" onClick={() => void save(d)} disabled={text.length > LIMITS[d.platform]}>

@@ -13,6 +13,7 @@ export const DAILY_AI_LIMITS = {
   omen: 200, // AI confirmations of Omen matches; beyond this, keyword matches only
   opinion: 30, // Second Opinions (compare sources)
   grimoire: 10, // weekly newsletter drafts composed (AI or template)
+  caption: 30, // AI captions for your own images (Witching Hour composer)
 } as const;
 
 export type LimitedAiTask = keyof typeof DAILY_AI_LIMITS;

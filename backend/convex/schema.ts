@@ -9,7 +9,7 @@ import { v } from "convex/values";
 
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
-export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"));
+export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"), v.literal("caption"));
 export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
 export const collectionTopic = v.union(
   v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
@@ -311,6 +311,17 @@ export default defineSchema({
     .index("by_user_platform", ["userId", "platform"])
     .index("by_platform", ["platform"]),
 
+  // Images uploaded in the Witching Hour composer (owner check before use; deleted with the account).
+  uploads: defineTable({
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+    contentType: v.string(),
+    size: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_storage", ["storageId"]),
+
   // One-time OAuth `state` (+ PKCE verifier), deleted on use, valid 15 minutes.
   oauthStates: defineTable({
     userId: v.id("users"),
@@ -325,18 +336,31 @@ export default defineSchema({
   // Each "Post now". The Resurrect dialog watches these live.
   publishes: defineTable({
     userId: v.id("users"),
-    itemId: v.id("items"),
-    draftId: v.id("drafts"),
+    itemId: v.optional(v.id("items")), // absent for a manual post from the Witching Hour composer
+    draftId: v.optional(v.id("drafts")),
+    kind: v.optional(v.union(v.literal("article"), v.literal("manual"))),
+    imageId: v.optional(v.id("_storage")), // manual post image
     platform: socialPlatform,
-    status: v.union(v.literal("posting"), v.literal("posted"), v.literal("failed")),
+    // posting/posted/failed: Post now. scheduled -> (auto) posting -> posted/failed, or (reminder) due -> posted.
+    status: v.union(
+      v.literal("posting"), v.literal("posted"), v.literal("failed"),
+      v.literal("scheduled"), v.literal("due"), v.literal("canceled"),
+    ),
     url: v.optional(v.string()),
     note: v.optional(v.string()),
     error: v.optional(v.string()),
     createdAt: v.number(),
     finishedAt: v.optional(v.number()),
+    // Witching Hour (calendar): when it happens, how, and what.
+    at: v.optional(v.number()), // the scheduled time, or when Post now was pressed
+    mode: v.optional(v.union(v.literal("auto"), v.literal("reminder"))),
+    text: v.optional(v.string()), // the post body as written when scheduled (hashtags and link are added at send time)
+    jobId: v.optional(v.id("_scheduled_functions")),
   })
     .index("by_user", ["userId", "createdAt"])
-    .index("by_item", ["itemId", "platform"]),
+    .index("by_item", ["itemId", "platform"])
+    .index("by_user_at", ["userId", "at"])
+    .index("by_user_status", ["userId", "status"]),
 
   collectionReports: defineTable({ userId: v.id("users"), collectionId: v.id("collections"), reason: v.string() })
     .index("by_user", ["userId"])

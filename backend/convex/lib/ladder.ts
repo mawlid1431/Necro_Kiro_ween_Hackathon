@@ -38,8 +38,12 @@ const REASONING_HEADROOM = 1024;
  */
 async function structuredCall<S extends z.ZodType>(
   rung: Rung,
-  p: { system: string; prompt: string; schema: S; maxOutputTokens: number },
+  p: { system: string; prompt: string; schema: S; maxOutputTokens: number; image?: { bytes: Uint8Array; mediaType: string } },
 ): Promise<StructuredResult<z.infer<S>>> {
+  // With an image, the user turn carries the text and the picture (vision models only).
+  const userTurn = p.image
+    ? { role: "user" as const, content: [{ type: "text" as const, text: p.prompt }, { type: "image" as const, image: p.image.bytes, mediaType: p.image.mediaType }] }
+    : { role: "user" as const, content: p.prompt };
   const base = {
     model: rung.model,
     system: p.system,
@@ -52,7 +56,7 @@ async function structuredCall<S extends z.ZodType>(
     maxRetries: 0, // the ladder retries, not the SDK
   };
   try {
-    const r = await generateText({ ...base, prompt: p.prompt, abortSignal: AbortSignal.timeout(RUNG_TIMEOUT_MS) });
+    const r = await generateText({ ...base, messages: [userTurn], abortSignal: AbortSignal.timeout(RUNG_TIMEOUT_MS) });
     // parse() re-checks with our own Zod schema and gives the output its static type.
     return { output: p.schema.parse(r.output), inputTokens: r.usage.inputTokens ?? 0, outputTokens: r.usage.outputTokens ?? 0 };
   } catch (e) {
@@ -70,7 +74,7 @@ async function structuredCall<S extends z.ZodType>(
     const r = await generateText({
       ...base,
       messages: [
-        { role: "user", content: p.prompt },
+        userTurn,
         { role: "assistant", content: previous.slice(0, 4000) || "(no answer)" },
         { role: "user", content: `Your last answer did not match the schema: ${issues}. Return only valid JSON.` },
       ],
@@ -92,7 +96,7 @@ async function structuredCall<S extends z.ZodType>(
 export async function ladderObject<S extends z.ZodType>(
   ctx: ActionCtx,
   task: AiTask,
-  p: { system: string; prompt: string; schema: S; maxOutputTokens: number },
+  p: { system: string; prompt: string; schema: S; maxOutputTokens: number; image?: { bytes: Uint8Array; mediaType: string } },
   who: { userId: Id<"users"> },
 ) {
   const forcePrivate = await ctx.runQuery(internal.users.privateModeOf, { userId: who.userId });

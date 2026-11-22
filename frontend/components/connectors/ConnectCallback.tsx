@@ -33,7 +33,7 @@ export function ConnectCallback({ platform }: { platform: SocialPlatform }) {
     complete({ platform, code, state })
       .then((r) => {
         setResult({ ok: true, text: copy.callbackDone(name, r.name) });
-        router.replace(`/connectors?connected=${platform}`);
+        router.replace(`/settings?connected=${platform}#connections`);
       })
       .catch((e) => setResult({ ok: false, text: errorMessage(e) }));
   }, [isAuthenticated, code, state, denied, platform, complete, name, router]);
@@ -46,7 +46,7 @@ export function ConnectCallback({ platform }: { platform: SocialPlatform }) {
       {message ? <Notice tone={message.ok ? "ok" : "error"}>{message.text}</Notice> : <p role="status" className="text-body text-subtle">{copy.callbackWorking(name)}</p>}
       {message && !message.ok ? (
         <Button asChild variant="secondary">
-          <Link href="/connectors">{copy.back}</Link>
+          <Link href="/settings#connections">{copy.back}</Link>
         </Button>
       ) : null}
     </div>

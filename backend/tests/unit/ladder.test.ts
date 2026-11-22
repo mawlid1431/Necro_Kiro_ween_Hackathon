@@ -175,3 +175,21 @@ describe("schemaRejectedByProvider", () => {
     expect(schemaRejectedByProvider(new Error("json_validate_failed"))).toBeNull();
   });
 });
+
+describe("caption chain", () => {
+  it("defaults to paid vision models, and AI_CHAIN_CAPTION overrides it", () => {
+    expect(chainFor("caption", {})).toEqual(["openrouter:google/gemma-4-26b-a4b-it", "openrouter:google/gemini-2.5-flash-lite"]);
+    expect(chainFor("caption", { AI_CHAIN_CAPTION: "openrouter:x/y" })).toEqual(["openrouter:x/y"]);
+  });
+});
+
+import { tidyCaption } from "../../lib/ai/prompts";
+describe("tidyCaption", () => {
+  it("drops a trailing hashtag block that repeats the list, keeps one clean list", () => {
+    const r = tidyCaption("Morning coffee and RSS. ☕\n\n#rss #Coffee", ["#rss", "coffee", "#reading"]);
+    expect(r).toEqual({ caption: "Morning coffee and RSS. ☕", hashtags: ["#rss", "#coffee", "#reading"] });
+  });
+  it("keeps hashtags used inside the sentence and does not repeat them", () => {
+    expect(tidyCaption("Why #RSS still matters today", ["#rss", "#web"])).toEqual({ caption: "Why #RSS still matters today", hashtags: ["#web"] });
+  });
+});

@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { fail, utcDay } from "./lib/auth";
 import { DAILY_AI_LIMITS, VOICE_SECONDS_PER_DAY } from "../lib/limits";
 
-const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"));
+const limitedTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"), v.literal("caption"));
 
 /**
  * Atomically checks today's count and inserts a pending row, so two fast clicks

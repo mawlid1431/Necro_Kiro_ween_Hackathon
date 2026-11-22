@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ApiKeys } from "@/components/settings/ApiKeys";
@@ -30,6 +31,13 @@ export default function SettingsPage() {
           </nav>
           <div className="flex min-w-0 flex-col gap-6">
             <div id="profile" className="scroll-mt-24"><ProfileForm /></div>
+            <section id="connections" aria-labelledby="connections-title" className="scroll-mt-24 flex flex-col gap-3">
+              <div>
+                <h2 id="connections-title" className="font-display text-h3 font-bold">{labels.connectors.themed}</h2>
+                <p className="text-meta text-subtle">{labels.connectors.plain}</p>
+              </div>
+              <ConnectorsPanel />
+            </section>
             <div id="voice" className="scroll-mt-24"><VoiceForm /></div>
             <div id="privacy" className="scroll-mt-24"><PrivacyCard /></div>
             <div id="keys" className="scroll-mt-24"><ApiKeys /></div>

@@ -19,6 +19,7 @@ const PUSH = [
   "AI_CHAIN_BRIEFING",
   "AI_CHAIN_ASK",
   "AI_EMBED_MODEL",
+  "AI_CHAIN_CAPTION", // optional: image-capable models for "Write with AI" (default: paid OpenRouter vision models)
   "AI_BUDGET_GROQ",
   "AI_BUDGET_GOOGLE",
   "AI_BUDGET_OPENROUTER",

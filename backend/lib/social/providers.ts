@@ -226,6 +226,54 @@ export function escapeLinkedIn(text: string): string {
 }
 
 export type LinkedInArticle = { url: string; title: string; description?: string; image?: { bytes: Uint8Array; type: string } };
+export type ImageBytes = { bytes: Uint8Array; type: string };
+
+const linkedInHeaders = (accessToken: string) => ({
+  authorization: `Bearer ${accessToken}`,
+  "linkedin-version": LINKEDIN_VERSION(),
+  "x-restli-protocol-version": "2.0.0",
+  "content-type": "application/json",
+});
+
+/** Uploads an image to LinkedIn and returns its urn:li:image. */
+async function uploadLinkedInImage(accessToken: string, author: string, image: ImageBytes): Promise<string> {
+  const { body } = await call("https://api.linkedin.com/rest/images?action=initializeUpload", {
+    method: "POST",
+    headers: linkedInHeaders(accessToken),
+    body: JSON.stringify({ initializeUploadRequest: { owner: author } }),
+  });
+  const v = body.value as Json;
+  const up = await fetch(String(v.uploadUrl), {
+    method: "PUT",
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": image.type },
+    body: Buffer.from(image.bytes),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!up.ok) throw new SocialError("PLATFORM", `LinkedIn did not accept the image (HTTP ${up.status}).`);
+  return String(v.image);
+}
+
+/** A LinkedIn post with your own photo (Witching Hour composer). */
+export async function publishLinkedInImagePost(accessToken: string, personId: string, text: string, image: ImageBytes, altText: string): Promise<Published> {
+  const author = `urn:li:person:${personId}`;
+  const imageUrn = await uploadLinkedInImage(accessToken, author, image);
+  const { res } = await call("https://api.linkedin.com/rest/posts", {
+    method: "POST",
+    headers: linkedInHeaders(accessToken),
+    body: JSON.stringify({
+      author,
+      commentary: escapeLinkedIn(text),
+      visibility: "PUBLIC",
+      distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+      content: { media: { id: imageUrn, altText: altText.slice(0, 300) } },
+      lifecycleState: "PUBLISHED",
+      isReshareDisabledByAuthor: false,
+    }),
+    expect: [201],
+  });
+  const urn = res.headers.get("x-restli-id") ?? "";
+  return { postId: urn, url: urn ? `https://www.linkedin.com/feed/update/${urn}/` : undefined };
+}
 
 export async function publishLinkedIn(accessToken: string, personId: string, text: string, article?: LinkedInArticle): Promise<Published> {
   const author = `urn:li:person:${personId}`;
@@ -278,11 +326,19 @@ export async function publishLinkedIn(accessToken: string, personId: string, tex
   return { postId: urn, url: urn ? `https://www.linkedin.com/feed/update/${urn}/` : undefined };
 }
 
-export async function publishX(accessToken: string, username: string | undefined, text: string): Promise<Published> {
+export async function publishX(accessToken: string, username: string | undefined, text: string, image?: ImageBytes): Promise<Published> {
+  let mediaIds: string[] | undefined;
+  if (image) {
+    const form = new FormData();
+    form.append("media", new Blob([Buffer.from(image.bytes)], { type: image.type }), image.type === "image/png" ? "image.png" : "image.jpg");
+    form.append("media_category", "tweet_image");
+    const up = await call("https://api.x.com/2/media/upload", { method: "POST", headers: { authorization: `Bearer ${accessToken}` }, body: form, expect: [200, 201] });
+    mediaIds = [String(((up.body.data ?? {}) as Json).id ?? up.body.media_id_string)];
+  }
   const { body } = await call("https://api.x.com/2/tweets", {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(mediaIds ? { text, media: { media_ids: mediaIds } } : { text }),
     expect: [200, 201],
   });
   const id = String((body.data as Json).id);

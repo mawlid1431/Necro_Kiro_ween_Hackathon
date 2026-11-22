@@ -21,6 +21,7 @@ import {
   fetchProfile,
   publishInstagram,
   publishLinkedIn,
+  publishLinkedInImagePost,
   publishTikTok,
   publishX,
   refreshTokens,
@@ -30,6 +31,8 @@ import {
   type Creds,
   type LinkedInArticle,
   type TikTokCreator,
+  type ImageBytes,
+  type TikTokOptions,
   type Tokens,
 } from "../lib/social/providers";
 import { safeFetch } from "../lib/security/ssrf";
@@ -158,10 +161,43 @@ export const publish = action({
     if (!conn) fail("FORBIDDEN", `Connect ${NAMES[platform]} first, in Connectors.`);
 
     const publishId: Id<"publishes"> = await ctx.runMutation(internal.social.startPublish, { userId, itemId: item._id, draftId, platform });
-    try {
-      const token = await freshToken(ctx, conn);
+    const r = await sendAndRecord(ctx, { publishId, platform, post, conn, tiktok, attach: { kind: "article", item, source } });
+    if (!r.ok) fail("FORBIDDEN", r.error);
+    return { url: r.url, note: r.note };
+  },
+});
+
+type PostItem = { title: string; link?: string };
+
+/** What goes with the text: the article (link card / generated image), or your own uploaded image. */
+type Attachment = { kind: "article"; item: PostItem; source: string } | { kind: "manual"; image?: ImageBytes & { url: string } };
+
+/** Sends one post through the platform API and records the result on its `publishes` row (Post now and scheduled). */
+async function sendAndRecord(
+  ctx: ActionCtx,
+  a: { publishId: Id<"publishes">; platform: SocialPlatform; post: string; conn: Doc<"connections">; attach: Attachment; tiktok?: TikTokOptions },
+): Promise<{ ok: true; url?: string; note?: string } | { ok: false; error: string }> {
+  const { publishId, platform, post, conn, attach } = a;
+  try {
+    const token = await freshToken(ctx, conn);
+    let out;
+    if (attach.kind === "manual") {
+      const img = attach.image;
+      if (platform === "linkedin") {
+        out = img
+          ? await publishLinkedInImagePost(token, conn.accountId, post, img, post.split("\n")[0] ?? "")
+          : await publishLinkedIn(token, conn.accountId, post);
+      } else if (platform === "x") {
+        out = await publishX(token, conn.username, post, img);
+      } else if (platform === "instagram") {
+        if (!img) throw new SocialError("INVALID_INPUT", "Instagram needs an image.");
+        out = await publishInstagram(token, conn.accountId, post, img.url);
+      } else {
+        throw new SocialError("INVALID_INPUT", "TikTok posts are shared by you, from the reminder.");
+      }
+    } else {
+      const { item, source } = attach;
       const image = () => signedImageUrl(appUrl(), item.title, source || hostOf(item.link));
-      let out;
       if (platform === "linkedin") {
         out = await publishLinkedIn(token, conn.accountId, post, item.link ? await linkedInArticle(item.link, item.title) : undefined);
       } else if (platform === "x") {
@@ -169,16 +205,52 @@ export const publish = action({
       } else if (platform === "instagram") {
         out = await publishInstagram(token, conn.accountId, post, image());
       } else {
-        out = await publishTikTok(token, item.title, post, image(), tiktok!);
+        if (!a.tiktok) throw new SocialError("INVALID_INPUT", "TikTok needs your privacy choice for each post.");
+        out = await publishTikTok(token, item.title, post, image(), a.tiktok);
       }
-      await ctx.runMutation(internal.social.finishPublish, { publishId, status: "posted", url: out.url, note: out.note });
-      return { url: out.url, note: out.note };
-    } catch (e) {
-      const message =
-        e instanceof SocialError ? `${NAMES[platform]} said: ${e.message}` : e instanceof Error && "data" in e ? String((e as { data?: { message?: string } }).data?.message ?? e.message) : "Something went wrong while posting.";
-      if (e instanceof SocialError && e.code === "AUTH_EXPIRED") await ctx.runMutation(internal.social.markExpired, { connectionId: conn._id });
-      await ctx.runMutation(internal.social.finishPublish, { publishId, status: "failed", error: message.slice(0, 400) });
-      fail("FORBIDDEN", message);
+    }
+    await ctx.runMutation(internal.social.finishPublish, { publishId, status: "posted", url: out.url, note: out.note });
+    return { ok: true, url: out.url, note: out.note };
+  } catch (e) {
+    const message =
+      e instanceof SocialError
+        ? `${NAMES[platform]} said: ${e.message}`
+        : e instanceof Error && "data" in e
+          ? String((e as { data?: { message?: string } }).data?.message ?? e.message)
+          : "Something went wrong while posting.";
+    if (e instanceof SocialError && e.code === "AUTH_EXPIRED") await ctx.runMutation(internal.social.markExpired, { connectionId: conn._id });
+    await ctx.runMutation(internal.social.finishPublish, { publishId, status: "failed", error: message.slice(0, 400) });
+    return { ok: false, error: message };
+  }
+}
+
+/** Runs at a scheduled time (or right away for Post now from the composer): reminders turn due; auto posts go out. */
+export const runScheduled = internalAction({
+  args: { publishId: v.id("publishes") },
+  handler: async (ctx, { publishId }) => {
+    const row = await ctx.runMutation(internal.social.claimScheduled, { publishId });
+    if (!row) return; // cancelled, moved, already run, or a reminder (now due)
+    const failRow = (error: string) => ctx.runMutation(internal.social.finishPublish, { publishId, status: "failed", error });
+    const conn = await ctx.runQuery(internal.social.getConnection, { userId: row.userId, platform: row.platform });
+    if (!conn || !credsFor(row.platform)) return void (await failRow(`${NAMES[row.platform]} is not connected any more. Reconnect it and reschedule.`));
+
+    if (row.kind === "manual" || !row.draftId) {
+      let image: (ImageBytes & { url: string }) | undefined;
+      if (row.imageId) {
+        const [blob, url] = await Promise.all([ctx.storage.get(row.imageId), ctx.storage.getUrl(row.imageId)]);
+        if (!blob || !url) return void (await failRow("The image for this post no longer exists."));
+        image = { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type || "image/jpeg", url };
+      }
+      await sendAndRecord(ctx, { publishId, platform: row.platform, post: row.text ?? "", conn, attach: { kind: "manual", image } });
+      return;
+    }
+    try {
+      const { draft, item, source } = await ctx.runQuery(internal.social.draftForPublish, { userId: row.userId, draftId: row.draftId });
+      const post = finalPost(row.platform, row.text ?? draft.text, draft.hashtags, item.link);
+      if (postLength(row.platform, post) > POST_LIMITS[row.platform]) return void (await failRow(`Too long for ${NAMES[row.platform]}.`));
+      await sendAndRecord(ctx, { publishId, platform: row.platform, post, conn, attach: { kind: "article", item, source } });
+    } catch {
+      await failRow("The article or draft for this post no longer exists.");
     }
   },
 });

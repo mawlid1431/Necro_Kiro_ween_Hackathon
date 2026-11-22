@@ -204,6 +204,15 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("oauthStates").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("publishes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
     ].flat();
+    const uploads = await ctx.db.query("uploads").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH);
+    for (const u of uploads) {
+      await ctx.storage.delete(u.storageId).catch(() => {});
+      await ctx.db.delete(u._id);
+    }
+    if (uploads.length) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteBatch, { userId });
+      return;
+    }
     for (const row of small) await ctx.db.delete(row._id);
     if (small.length) {
       await ctx.scheduler.runAfter(0, internal.users.deleteBatch, { userId });
