@@ -3,6 +3,8 @@ import { ArrowRight, Ghost, Rss, Sparkles } from "lucide-react";
 import { FogBackground } from "@/components/brand/FogBackground";
 import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
+import { HeroStage } from "@/components/landing/Mockups";
+import { Showcase } from "@/components/landing/Showcase";
 import { LegalFooter } from "@/components/layout/LegalPage";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,7 @@ export default function LandingPage() {
       <FogBackground />
       <SiteHeader />
       <main className="flex-1">
-        <section className="py-16 sm:py-24 lg:py-32">
+        <section className="overflow-x-clip py-16 sm:py-24 lg:py-28">
           <Container className="flex flex-col items-center text-center">
             <Logo variant="symbol" className="w-14 animate-float sm:w-16" priority />
             <p className="mt-8 text-overline font-bold text-subtle uppercase">{landing.overline}</p>
@@ -32,6 +34,7 @@ export default function LandingPage() {
                 </Link>
               </Button>
             </div>
+            <HeroStage />
           </Container>
         </section>
 
@@ -55,6 +58,8 @@ export default function LandingPage() {
             </ul>
           </Container>
         </section>
+
+        <Showcase />
       </main>
       <LegalFooter />
     </>

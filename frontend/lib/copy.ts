@@ -24,6 +24,7 @@ export const labels = {
   grimoire: { themed: "Grimoire", plain: "Weekly newsletter" },
   connectors: { themed: "Connectors", plain: "Link your LinkedIn, X, Instagram and TikTok to post straight from Resurrect" },
   calendar: { themed: "Witching Hour", plain: "Calendar and live timeline of your posts" },
+  home: { themed: "Home", plain: "Your feeds, posts and accounts at a glance" },
 } as const;
 
 export const TOPICS = {
@@ -123,6 +124,27 @@ export const landing = {
       body: "Turn an article into LinkedIn, X, Instagram and TikTok posts in your own voice, then post them in one click.",
     },
   ] satisfies { key: LabelKey; body: string }[],
+  showcase: {
+    overline: "See it in action",
+    title: "From the feed to the post, in one calm place",
+    lead: "Follow what you care about, understand it in seconds, and share it in your own voice, now or at the perfect hour.",
+    rows: [
+      {
+        key: "resurrect",
+        step: "Share",
+        title: "Posts in your voice, previewed exactly as they'll appear",
+        body: "Resurrect turns an article into posts for LinkedIn, X, Instagram and TikTok, written the way you write. The preview shows the real link card or image.",
+        points: ["Tell Necro your tone once; every draft sounds like you", "Post now from your connected accounts", "Each post goes out once, never twice"],
+      },
+      {
+        key: "calendar",
+        step: "Plan",
+        title: "Witching Hour: your calendar, live",
+        body: "Schedule posts for later, or add your own image and let AI write the caption. Connected accounts post on their own; the rest remind you when it's time.",
+        points: ["Calendar and timeline that update as posts go out", "Reminders with one-tap sharing on your phone", "Move or cancel anything before it goes"],
+      },
+    ],
+  },
 } as const;
 
 export const graveyard = {
@@ -473,6 +495,66 @@ export const composer = {
   close: "Close",
 } as const;
 
+const shortDate = (d: Date) => d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+export const home = {
+  greetMorning: "Good morning",
+  greetAfternoon: "Good afternoon",
+  greetEvening: "Good evening",
+  greetNight: "Up late",
+  subtitle: "here is what rose and what is next",
+  actionRead: "Read what rose",
+  actionPost: "New post",
+  actionSummon: "Summon a feed",
+  dueBanner: (n: number) => (n === 1 ? "1 reminder is waiting: time to post" : `${n} reminders are waiting: time to post`),
+  failedBanner: (n: number) => (n === 1 ? "1 post failed this week. See why." : `${n} posts failed this week. See why.`),
+  brokenBanner: (n: number) => (n === 1 ? "1 feed needs the Doctor" : `${n} feeds need the Doctor`),
+  checklistTitle: "Get Necro working for you",
+  checklistProgress: (d: number, t: number) => `${d} of ${t} done`,
+  hideChecklist: "Hide checklist",
+  stepFeeds: "Summon your first feed",
+  stepInterests: "Tell Necro your interests",
+  stepVoice: "Teach it your writing voice",
+  stepConnect: "Connect a social account",
+  stepPost: "Schedule or share a post",
+  stepMcp: "Connect your AI assistant (MCP)",
+  statUnread: "Unread",
+  statFeeds: (n: number) => (n === 1 ? "in 1 feed" : `in ${n} feeds`),
+  statRisen: "Rose today",
+  statRisenHint: "fresh in the last 24 h",
+  statPosted: "Posted",
+  statPostedHint: "last 30 days",
+  statScheduled: "Scheduled",
+  statDue: (n: number) => `${n} due now`,
+  readNextTitle: "Read next",
+  openCrypt: "Open the Crypt",
+  readNextEmpty: "Hold a Séance on new articles and the most relevant ones show up here.",
+  noFeeds: "Summon a feed and your best articles will show up here.",
+  postsTitle: "Your posts",
+  openCalendar: "Witching Hour",
+  upNext: "Up next",
+  recent: "Recently posted",
+  nothingNext: "Nothing scheduled.",
+  nothingRecent: "Nothing posted yet.",
+  view: "View",
+  accountsTitle: "Connected accounts",
+  manage: "Manage",
+  accConnected: (who: string) => (who ? `Connected · ${who}` : "Connected"),
+  accExpired: "Expired: reconnect",
+  accNotConnected: "Not connected",
+  accSoon: "Coming soon",
+  connect: "Connect",
+  toolsTitle: "Tools used today",
+  details: "Details",
+  toolSeance: "Séances",
+  toolResurrect: "Resurrects",
+  toolCaption: "AI captions",
+  toolAsk: "Questions",
+  mcp: "AI assistant (MCP)",
+  mcpNone: "Not set up",
+  mcpKeys: (n: number, last: Date | null) => `${n} key${n === 1 ? "" : "s"}${last ? ` · used ${shortDate(last)}` : " · not used yet"}`,
+} as const;
+
 export const tabs = {
   feeds: "Your feeds",
   doctor: "Broken feeds",
@@ -603,6 +685,7 @@ export const doctorCopy = {
 } as const;
 
 export const nav = {
+  home: "Home",
   graveyard: "Graveyard",
   crypt: "Crypt",
   discover: "Discover",

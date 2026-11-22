@@ -17,6 +17,7 @@ import type * as captionNode from "../captionNode.js";
 import type * as covens from "../covens.js";
 import type * as covensNode from "../covensNode.js";
 import type * as crons from "../crons.js";
+import type * as dashboard from "../dashboard.js";
 import type * as doctor from "../doctor.js";
 import type * as doctorNode from "../doctorNode.js";
 import type * as drafts from "../drafts.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   covens: typeof covens;
   covensNode: typeof covensNode;
   crons: typeof crons;
+  dashboard: typeof dashboard;
   doctor: typeof doctor;
   doctorNode: typeof doctorNode;
   drafts: typeof drafts;

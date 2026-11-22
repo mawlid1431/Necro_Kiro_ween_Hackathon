@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { ChevronLeft, ChevronRight, ExternalLink, Plus, Share2 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
@@ -195,7 +196,9 @@ export function WitchingHour() {
     return { y: d.getFullYear(), m: d.getMonth() };
   });
   const [selected, setSelected] = useState(() => startOfDay(Date.now()));
-  const [composing, setComposing] = useState(false);
+  // Home and the checklist link to /calendar?compose=1 to open the composer straight away.
+  const params = useSearchParams();
+  const [composing, setComposing] = useState(() => params.get("compose") === "1");
   const cells = useMemo(() => monthGrid(view.y, view.m), [view]);
   // Stable query ranges (not "now", which ticks), so the live subscription is not re-created every 30 s.
   const monthRange = useMemo(() => ({ from: cells[0], to: cells[41] + DAY - 1 }), [cells]);

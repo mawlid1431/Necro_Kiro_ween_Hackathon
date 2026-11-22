@@ -10,8 +10,9 @@ import { OmenNotifier } from "@/components/omens/Omens";
 import { connectors, nav, witching } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
-// Six sections. Doctor is a tab of the Graveyard, Grimoire a tab of Omens, Connectors a section of Settings.
+// Seven sections (Home first). Doctor is a tab of the Graveyard, Grimoire a tab of Omens, Connectors a section of Settings.
 const links = [
+  { href: "/home", label: nav.home },
   { href: "/graveyard", label: nav.graveyard },
   { href: "/crypt", label: nav.crypt },
   { href: "/discover", label: nav.discover },
@@ -75,7 +76,7 @@ function NavLinks({ vertical, onPick }: { vertical?: boolean; onPick?: () => voi
   });
 }
 
-/** Section links for signed-in pages: inline in the header from `md`, a compact menu on phones. */
+/** Section links for signed-in pages: inline in the header from `lg`, a compact menu below. */
 export function AppNav() {
   const [open, setOpen] = useState(false);
   const path = usePathname();
@@ -114,7 +115,7 @@ export function AppNav() {
     <>
       <OmenNotifier />
       <ReminderNotifier />
-      <div className="hidden items-center gap-0.5 md:flex">
+      <div className="hidden items-center gap-0.5 lg:flex">
         <NavLinks />
       </div>
       <button
@@ -124,7 +125,7 @@ export function AppNav() {
         aria-expanded={open}
         aria-controls="app-menu"
         aria-label={open ? nav.closeMenu : nav.openMenu}
-        className="grid size-10 place-items-center rounded-md text-ink transition-colors hover:bg-surface-muted md:hidden"
+        className="grid size-10 place-items-center rounded-md text-ink transition-colors hover:bg-surface-muted lg:hidden"
       >
         {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
       </button>
@@ -132,7 +133,7 @@ export function AppNav() {
         <div
           ref={panel}
           id="app-menu"
-          className="fixed top-[3.75rem] right-4 z-50 flex max-h-[calc(100dvh-5rem)] w-52 flex-col gap-0.5 overflow-y-auto rounded-lg border border-line bg-page p-1.5 shadow-lg md:hidden"
+          className="fixed top-[3.75rem] right-4 z-50 flex max-h-[calc(100dvh-5rem)] w-52 flex-col gap-0.5 overflow-y-auto rounded-lg border border-line bg-page p-1.5 shadow-lg lg:hidden"
         >
           <NavLinks vertical onPick={() => setOpen(false)} />
         </div>

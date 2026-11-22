@@ -41,7 +41,7 @@ export const release = internalMutation({
 
 export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
   const day = utcDay();
-  const count = async (task: "seance" | "resurrect" | "doctor" | "ask" | "omen" | "opinion" | "grimoire") =>
+  const count = async (task: "seance" | "resurrect" | "doctor" | "ask" | "omen" | "opinion" | "grimoire" | "caption") =>
     (
       await ctx.db
         .query("aiUsage")
@@ -61,6 +61,7 @@ export async function usageToday(ctx: QueryCtx, userId: Id<"users">) {
     omen: { used: await count("omen"), limit: DAILY_AI_LIMITS.omen },
     opinion: { used: await count("opinion"), limit: DAILY_AI_LIMITS.opinion },
     grimoire: { used: await count("grimoire"), limit: DAILY_AI_LIMITS.grimoire },
+    caption: { used: await count("caption"), limit: DAILY_AI_LIMITS.caption },
     voiceMinutes: { used: Math.ceil(voiceSeconds / 60), limit: VOICE_SECONDS_PER_DAY / 60 },
   };
 }
