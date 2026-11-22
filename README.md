@@ -4,7 +4,13 @@
 
 **Live app:** [necro.malitos.tech](https://necro.malitos.tech) · **MCP endpoint:** `https://necro.malitos.tech/api/mcp` ([setup](docs/MCP.md))
 
-Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X and Instagram in your own voice (**Resurrect**), a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
+Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X, Instagram and TikTok in your own voice (**Resurrect**), posted straight to your own accounts from **Connectors** with a preview that matches the real post, a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
+
+### The real-world problem
+
+People who **read to create** (creators, marketers, students, researchers, founders) follow dozens of sources and are expected to share what they learn. Today that means social feeds ranked by an algorithm, dozens of open tabs, and copy-pasting into four different apps. RSS still exists on almost every blog, newsroom and channel, but the good way to use it died with the classic feed readers.
+
+Necro closes the whole loop in one calm place: **follow** any site (or bring back an old OPML export) → **read** chronologically → **understand** with a three-line AI summary ranked by your interests → **share** a post in your own voice to LinkedIn, X, Instagram and TikTok, previewed exactly as it will appear. It also lets your AI assistant read your sources through MCP.
 
 > **Goal of the build.** A new user can sign up, add three feeds, read an article, hold a Séance, resurrect it into drafts and connect an MCP client, in under five minutes, with no errors.
 
@@ -21,6 +27,7 @@ Necro follows the sites you care about and turns each feed into a tombstone that
    - [4.3 Polling: how tombstones rise](#43-polling-how-tombstones-rise)
    - [4.4 Séance: the AI ladder](#44-séance-the-ai-ladder)
    - [4.5 Resurrect: drafts with privacy routing](#45-resurrect-drafts-with-privacy-routing)
+   - [4.8 Connectors: post to LinkedIn, X, Instagram and TikTok](#48-connectors-post-to-linkedin-x-instagram-and-tiktok)
    - [4.6 MCP: Talk to the Dead](#46-mcp-talk-to-the-dead)
    - [4.7 Feed Doctor](#47-feed-doctor)
 5. [AI models and providers](#5-ai-models-and-providers)
@@ -297,7 +304,7 @@ flowchart LR
   GR --> SAVE
 ```
 
-Voice samples are **private data**, so the router never sends them to providers flagged `trainsOnPrompts` (the Gemini free tier, and OpenRouter `:free` models and `openrouter/free`). This is checked in code (`backend/lib/ai/router.ts`) and covered by a test. Sharing is copy-to-clipboard, or opening the platform's own composer (`x.com/intent/post`, LinkedIn share). Necro never posts for you.
+Voice samples are **private data**, so the router never sends them to providers flagged `trainsOnPrompts` (the Gemini free tier, and OpenRouter `:free` models and `openrouter/free`). This is checked in code (`backend/lib/ai/router.ts`) and covered by a test. Sharing is **Post now** through a connected account (see [4.8](#48-connectors-post-to-linkedin-x-instagram-and-tiktok)), or by hand: copy-to-clipboard and the platform's own composer (`x.com/intent/post`, LinkedIn share). Necro only posts when you press the button.
 
 ### 4.6 MCP: Talk to the Dead
 
@@ -353,6 +360,27 @@ flowchart LR
 
 ---
 
+### 4.8 Connectors: post to LinkedIn, X, Instagram and TikTok
+
+Spec: [`.kiro/specs/connectors`](.kiro/specs/connectors) · setup and platform research: [`docs/specs/connectors.md`](docs/specs/connectors.md).
+
+```mermaid
+flowchart LR
+  C["/connectors<br/>Connect"] --> B["socialNode.begin<br/>state + PKCE → oauthStates"]
+  B --> P["platform consent screen"]
+  P --> CB["/connectors/callback/[platform]"]
+  CB --> CO["socialNode.complete<br/>single-use state → code exchange → profile"]
+  CO --> DB[("connections<br/>tokens sealed AES-256-GCM")]
+  R["Resurrect · Post now"] --> PU["socialNode.publish<br/>finalPost → refresh token → platform API"]
+  DB --> PU
+  PU --> PB[("publishes<br/>status read live")]
+```
+
+- **Preview = post.** `finalPost()` builds the one string used by the preview, the counter, Copy, the share link and the API call. Link cards come from the article's own Open Graph tags (what X and LinkedIn read); Instagram and TikTok get the same 1080×1080 image the preview shows, as a signed JPEG link.
+- **Platforms.** LinkedIn Posts API (article card with uploaded thumbnail), X `POST /2/tweets`, Instagram Login content publishing (Business/Creator accounts), TikTok Content Posting API photo posts (with TikTok's required privacy, comments, disclosure and consent choices).
+- **Tokens** never reach the browser. X and TikTok refresh on use, Instagram refreshes daily, LinkedIn asks to reconnect after 60 days.
+- A platform without app keys shows **Coming soon** instead of failing.
+
 ## 5. AI models and providers
 
 All model calls run inside Convex actions through the Vercel AI SDK (`ai` v7, `generateText` with `Output.object`). Models are **never hard-coded**: each task reads a chain of `provider:model-id` rungs from a Convex env var.
@@ -396,7 +424,7 @@ Check the chains with `bunx convex run aiNode:healthCheck`, and the breakers, Gh
 
 ## 6. Database
 
-Convex, 14 tables. Every table except `users`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it.
+Convex, 17 tables (including `connections`, `oauthStates`, `publishes` for Connectors). Every table except `users`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it.
 
 ```mermaid
 erDiagram
@@ -490,6 +518,9 @@ erDiagram
 | `seances` | One AI summary per item | by_item, by_user |
 | `drafts` | Social drafts, three per item | by_item, by_user |
 | `voice` | Writing voice for Resurrect | by_user |
+| `connections` | Connected social accounts; tokens sealed (AES-256-GCM) | by_user_platform, by_platform |
+| `oauthStates` | Single-use OAuth state + PKCE verifier (15 min) | by_state, by_user |
+| `publishes` | Each Post now and its live status | by_user, by_item |
 | `apiKeys` | MCP keys (hashed) | by_user, by_hash |
 | `aiUsage` | Daily AI quota rows | by_user_day_task |
 | `rateLimits` | Fixed-window counters (summons, MCP, provider budgets) | by_key, by_windowStart |
@@ -575,6 +606,8 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | Leaked API keys | Stored as SHA-256 only, shown once, revocable, 60 calls/min, max 5 per user |
 | Secret-guarded functions | `MCP_SERVER_SECRET` (32+ chars) checked on every `mcp.*` call, server-side only |
 | AI cost abuse | Daily limits with atomic reservation, input truncation, output token caps, caching, provider budgets |
+| Social account tokens | Official OAuth only (single-use state, PKCE on X); tokens sealed with AES-256-GCM, never returned to the browser; deleted on disconnect and account deletion |
+| Post image misuse | `/api/post-image` needs a signed-in user or an HMAC-signed link valid for 1 hour |
 | Secrets in git | `.env*` ignored (only `.env.example` committed). No secrets under `NEXT_PUBLIC_` |
 
 ---
@@ -590,6 +623,7 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | Active MCP keys | 5 |
 | Fetch size / items per fetch / stored HTML | 5 MB / 200 / 200 KB |
 | OPML import | 1 MB, 200 feeds |
+| Post now | 30 per hour per user; one in flight per article and platform |
 
 ---
 
@@ -607,6 +641,9 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | `MCP_SERVER_SECRET`, `AGENT_SERVER_SECRET` | both (same value) | **yes** | Guard the server-to-Convex functions |
 | `APP_URL`, `NECRO_BOT_CONTACT_URL` | backend | **yes** | OpenRouter referer, fetcher User-Agent |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | frontend | no | Voice (planned) |
+| `SOCIAL_TOKEN_KEY` | backend | **yes** | 32 random bytes (base64): seals connected-account tokens |
+| `POST_IMAGE_SECRET` | both (same value) | **yes** | Signs the post-image links Instagram and TikTok fetch |
+| `LINKEDIN_CLIENT_ID/SECRET`, `X_CLIENT_ID/SECRET`, `INSTAGRAM_APP_ID/SECRET`, `TIKTOK_CLIENT_KEY/SECRET` | backend | **yes** | Connectors app keys (each optional; unset = Coming soon) |
 
 `bun run env:push` (in `backend/`) pushes the backend set to the dev deployment. Add `-- --prod` for production. When deploying the frontend to Vercel, set the frontend variables in the Vercel project.
 

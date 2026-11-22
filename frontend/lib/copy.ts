@@ -119,7 +119,7 @@ export const landing = {
     },
     {
       key: "resurrect",
-      body: "Turn an article into LinkedIn, X and Instagram drafts in your own voice.",
+      body: "Turn an article into LinkedIn, X, Instagram and TikTok posts in your own voice, then post them in one click.",
     },
   ] satisfies { key: LabelKey; body: string }[],
 } as const;

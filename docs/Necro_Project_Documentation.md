@@ -497,9 +497,9 @@ Under 3:00. Record the real app. Royalty-free sound only.
 | Running out of time | MVP = features 1 to 6. Feed Doctor basic. Digest is a stretch goal |
 | AI costs | Limits, caching, truncation; use free credits; Groq as a cheap fallback |
 | Assistant connector setup differs by app | Test early (week 4); if blocked, demo with another MCP client and say so honestly |
-| Platform posting APIs | Out of scope; use copy and official share links |
+| Platform posting APIs | Built as **Connectors** (official OAuth + posting APIs for LinkedIn, X, Instagram, TikTok; see `.kiro/specs/connectors`). Copy and official share links stay as the fallback. Instagram needs Meta App Review and TikTok an app audit before the public can post |
 | Feeds blocking bots | Polite User-Agent, conditional requests, backoff |
-| Trademarks | No Google product name or logo in video or images |
+| Trademarks | No Google product name or logo in video or images. The Connectors page and Resurrect tabs show LinkedIn, X, Instagram and TikTok marks: keep them out of the demo video or blur them |
 
 ---
 
