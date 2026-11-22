@@ -38,6 +38,8 @@ import type * as rateLimits from "../rateLimits.js";
 import type * as seances from "../seances.js";
 import type * as seed from "../seed.js";
 import type * as seedNode from "../seedNode.js";
+import type * as social from "../social.js";
+import type * as socialNode from "../socialNode.js";
 import type * as usage from "../usage.js";
 import type * as users from "../users.js";
 import type * as voice from "../voice.js";
@@ -79,6 +81,8 @@ declare const fullApi: ApiFromModules<{
   seances: typeof seances;
   seed: typeof seed;
   seedNode: typeof seedNode;
+  social: typeof social;
+  socialNode: typeof socialNode;
   usage: typeof usage;
   users: typeof users;
   voice: typeof voice;

@@ -26,6 +26,17 @@ const PUSH = [
   "MCP_SERVER_SECRET",
   "AGENT_SERVER_SECRET",
   "NECRO_BOT_CONTACT_URL",
+  // Connectors (docs/specs/connectors.md). Unset platforms show "Not set up yet".
+  "SOCIAL_TOKEN_KEY",
+  "POST_IMAGE_SECRET",
+  "LINKEDIN_CLIENT_ID",
+  "LINKEDIN_CLIENT_SECRET",
+  "X_CLIENT_ID",
+  "X_CLIENT_SECRET",
+  "INSTAGRAM_APP_ID",
+  "INSTAGRAM_APP_SECRET",
+  "TIKTOK_CLIENT_KEY",
+  "TIKTOK_CLIENT_SECRET",
 ];
 
 const prod = process.argv.includes("--prod");

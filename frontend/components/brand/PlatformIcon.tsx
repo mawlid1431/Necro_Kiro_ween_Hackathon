@@ -2,8 +2,19 @@
 import type { SVGProps } from "react";
 
 export type Platform = "linkedin" | "x" | "instagram";
+export type SocialPlatform = Platform | "tiktok";
 
-export function PlatformIcon({ platform, brand = false, ...props }: { platform: Platform; brand?: boolean } & SVGProps<SVGSVGElement>) {
+export function PlatformIcon({ platform, brand = false, ...props }: { platform: SocialPlatform; brand?: boolean } & SVGProps<SVGSVGElement>) {
+  if (platform === "tiktok") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden {...props}>
+        <rect width="24" height="24" rx="5" fill={brand ? "#000" : "currentColor"} />
+        {brand ? <path fill="#25F4EE" d="M15.3 5c.3 1.6 1.4 2.9 3.2 3.1v2.2a5.8 5.8 0 0 1-3.2-1v4.6a4.2 4.2 0 1 1-4.2-4.2h.3v2.3a2 2 0 1 0 1.6 1.9V5h2.3Z" transform="translate(-.6 -.4)" /> : null}
+        {brand ? <path fill="#FE2C55" d="M15.3 5c.3 1.6 1.4 2.9 3.2 3.1v2.2a5.8 5.8 0 0 1-3.2-1v4.6a4.2 4.2 0 1 1-4.2-4.2h.3v2.3a2 2 0 1 0 1.6 1.9V5h2.3Z" transform="translate(.6 .4)" /> : null}
+        <path fill="#fff" d="M15.3 5c.3 1.6 1.4 2.9 3.2 3.1v2.2a5.8 5.8 0 0 1-3.2-1v4.6a4.2 4.2 0 1 1-4.2-4.2h.3v2.3a2 2 0 1 0 1.6 1.9V5h2.3Z" />
+      </svg>
+    );
+  }
   if (platform === "linkedin") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden {...props}>

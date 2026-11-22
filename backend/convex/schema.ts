@@ -15,6 +15,7 @@ export const collectionTopic = v.union(
   v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
   v.literal("business"), v.literal("news"), v.literal("creators"), v.literal("other"),
 );
+export const socialPlatform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"), v.literal("tiktok"));
 export const draftStatus =v.union(v.literal("draft"), v.literal("copied"), v.literal("shared"));
 
 export default defineSchema({
@@ -288,6 +289,54 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_collection", ["collectionId"])
     .index("by_user_collection", ["userId", "collectionId"]),
+
+  // ---------- Connectors: the user's own social accounts (spec: docs/specs/connectors.md) ----------
+  // Tokens are sealed with AES-256-GCM (SOCIAL_TOKEN_KEY) and never leave Convex actions.
+  connections: defineTable({
+    userId: v.id("users"),
+    platform: socialPlatform,
+    accountId: v.string(),
+    username: v.optional(v.string()),
+    name: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    accessToken: v.string(), // sealed
+    refreshToken: v.optional(v.string()), // sealed
+    expiresAt: v.optional(v.number()),
+    refreshExpiresAt: v.optional(v.number()),
+    scope: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("expired")),
+    connectedAt: v.number(),
+    refreshedAt: v.optional(v.number()),
+  })
+    .index("by_user_platform", ["userId", "platform"])
+    .index("by_platform", ["platform"]),
+
+  // One-time OAuth `state` (+ PKCE verifier), deleted on use, valid 15 minutes.
+  oauthStates: defineTable({
+    userId: v.id("users"),
+    platform: socialPlatform,
+    state: v.string(),
+    verifier: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_state", ["state"])
+    .index("by_user", ["userId"]),
+
+  // Each "Post now". The Resurrect dialog watches these live.
+  publishes: defineTable({
+    userId: v.id("users"),
+    itemId: v.id("items"),
+    draftId: v.id("drafts"),
+    platform: socialPlatform,
+    status: v.union(v.literal("posting"), v.literal("posted"), v.literal("failed")),
+    url: v.optional(v.string()),
+    note: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_item", ["itemId", "platform"]),
 
   collectionReports: defineTable({ userId: v.id("users"), collectionId: v.id("collections"), reason: v.string() })
     .index("by_user", ["userId"])

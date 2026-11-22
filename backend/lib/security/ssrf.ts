@@ -21,6 +21,7 @@ export interface SafeFetchResult {
   lastModified: string | null;
   body: string; // decoded text ("" when notModified)
   permanentRedirect: boolean; // true when every redirect hop was 301 or 308
+  bytes?: Uint8Array; // the raw body, only when `raw` was asked for (images)
 }
 
 export interface SafeFetchOptions {
@@ -29,6 +30,9 @@ export interface SafeFetchOptions {
   maxBytes?: number; // default 5 MB
   timeoutMs?: number; // default 10 s
   maxRedirects?: number; // default 5
+  raw?: boolean; // also return the raw bytes (for images)
+  userAgent?: string; // default: the Necro feed bot
+  accept?: string; // default: feeds first, then HTML
 }
 
 // ---------- IP rules ----------
@@ -143,8 +147,8 @@ export async function safeFetch(input: string, opts: SafeFetchOptions = {}): Pro
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const headers: Record<string, string> = {
-      "user-agent": `Necro/1.0 (+${process.env.NECRO_BOT_CONTACT_URL ?? "https://github.com/mawlid1431/Necro_Kiro_ween_Hackathon"})`,
-      accept: ACCEPT,
+      "user-agent": opts.userAgent ?? `Necro/1.0 (+${process.env.NECRO_BOT_CONTACT_URL ?? "https://github.com/mawlid1431/Necro_Kiro_ween_Hackathon"})`,
+      accept: opts.accept ?? ACCEPT,
     };
     if (hop === 0 && opts.etag) headers["if-none-match"] = opts.etag;
     if (hop === 0 && opts.lastModified) headers["if-modified-since"] = opts.lastModified;
@@ -195,6 +199,7 @@ export async function safeFetch(input: string, opts: SafeFetchOptions = {}): Pro
     }
 
     const bytes = await readCapped(res.body, maxBytes);
+    if (opts.raw) return { ...base, notModified: false, body: "", bytes };
     return { ...base, notModified: false, body: decodeBody(bytes, base.contentType) };
   }
 

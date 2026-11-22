@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { FogBackground } from "@/components/brand/FogBackground";
-import { AppNav } from "@/components/layout/AppNav";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { UserGate } from "@/components/providers/UserGate";
 import { ConfirmProvider } from "@/components/ui/confirm";
@@ -20,11 +19,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense>
         <ConfirmProvider>
         <UserGate>
-          <div className="flex flex-1 flex-col pb-16 md:pb-0">{children}</div>
+          <div className="flex flex-1 flex-col">{children}</div>
         </UserGate>
-        <nav aria-label="Sections">
-          <AppNav mobile />
-        </nav>
         </ConfirmProvider>
       </Suspense>
     </>

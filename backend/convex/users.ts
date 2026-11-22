@@ -200,6 +200,9 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("opinions").withIndex("by_user_kindred", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("grimoires").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("briefings").withIndex("by_user_day", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("connections").withIndex("by_user_platform", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("oauthStates").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("publishes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
     ].flat();
     for (const row of small) await ctx.db.delete(row._id);
     if (small.length) {
