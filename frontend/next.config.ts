@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   // Pages merged into tabs (Nov 2026): old links keep working.
   async redirects() {
     return [
+      { source: "/home", destination: "/dashboard", permanent: false },
       { source: "/doctor", destination: "/graveyard?tab=doctor", permanent: false },
       { source: "/grimoire", destination: "/omens?tab=grimoire", permanent: false },
       { source: "/connectors", destination: "/settings#connections", permanent: false },

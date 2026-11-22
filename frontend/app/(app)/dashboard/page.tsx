@@ -5,7 +5,7 @@ import { labels } from "@/lib/copy";
 
 export const metadata: Metadata = { title: labels.home.themed };
 
-export default function HomePage() {
+export default function DashboardPage() {
   return (
     <main className="flex-1 py-8 sm:py-12">
       <Container>

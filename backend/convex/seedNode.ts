@@ -5,6 +5,7 @@
 //   bun run seed                                  -> built-in demo user
 //   bun run seed -- '{"email":"you@example.com"}' -> your account (sign in once first)
 //   bun run seed -- '{"apiKey":true}'             -> also prints an MCP key for that user, once
+//   bun run seed -- '{"userId":"<id>"}'          -> a signed-in account by id (when the sign-in token carries no email)
 import { createHash, randomInt } from "node:crypto";
 import { ConvexError, v } from "convex/values";
 import { internalAction } from "./_generated/server";
@@ -35,9 +36,9 @@ interface SeedReport {
 }
 
 export const run = internalAction({
-  args: { email: v.optional(v.string()), apiKey: v.optional(v.boolean()) },
-  handler: async (ctx, { email, apiKey }): Promise<SeedReport> => {
-    const who: { userId: Id<"users">; label: string; created: boolean } = await ctx.runMutation(internal.seed.resolveUser, { email });
+  args: { email: v.optional(v.string()), userId: v.optional(v.id("users")), apiKey: v.optional(v.boolean()) },
+  handler: async (ctx, { email, userId, apiKey }): Promise<SeedReport> => {
+    const who: { userId: Id<"users">; label: string; created: boolean } = await ctx.runMutation(internal.seed.resolveUser, { email, userId });
     await ctx.runMutation(internal.seed.ensureProfile, { userId: who.userId });
 
     const feeds: { kind: string; url: string; result: string }[] = [];

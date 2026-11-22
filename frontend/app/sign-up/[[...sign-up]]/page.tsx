@@ -6,7 +6,7 @@ export default function SignUpPage() {
   return (
     <AuthShell>
       <Suspense fallback={<div className="h-[500px]" />}>
-        <SignUp fallbackRedirectUrl="/home" signInFallbackRedirectUrl="/home" />
+        <SignUp fallbackRedirectUrl="/dashboard" signInFallbackRedirectUrl="/dashboard" />
       </Suspense>
     </AuthShell>
   );

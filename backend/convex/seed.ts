@@ -9,8 +9,13 @@ const DEMO_INTERESTS = ["ai", "security", "open source", "web development", "sci
 
 /** The user to seed: by email (must have signed in once), or the built-in demo user. */
 export const resolveUser = internalMutation({
-  args: { email: v.optional(v.string()) },
-  handler: async (ctx, { email }): Promise<{ userId: Id<"users">; label: string; created: boolean }> => {
+  args: { email: v.optional(v.string()), userId: v.optional(v.id("users")) },
+  handler: async (ctx, { email, userId: forUser }): Promise<{ userId: Id<"users">; label: string; created: boolean }> => {
+    if (forUser) {
+      const user = await ctx.db.get(forUser);
+      if (!user) throw new Error(`No user ${forUser}. Sign in to the app once, then run the seed again.`);
+      return { userId: forUser, label: user.name ?? `user ${forUser}`, created: false };
+    }
     if (email) {
       const user = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email.trim())).first();
       if (!user) throw new Error(`No user with email ${email}. Sign in to the app once with that account, then run the seed again.`);

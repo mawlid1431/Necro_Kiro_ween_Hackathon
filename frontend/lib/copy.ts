@@ -24,7 +24,7 @@ export const labels = {
   grimoire: { themed: "Grimoire", plain: "Weekly newsletter" },
   connectors: { themed: "Connectors", plain: "Link your LinkedIn, X, Instagram and TikTok to post straight from Resurrect" },
   calendar: { themed: "Witching Hour", plain: "Calendar and live timeline of your posts" },
-  home: { themed: "Home", plain: "Your feeds, posts and accounts at a glance" },
+  home: { themed: "Dashboard", plain: "Your feeds, posts and accounts at a glance" },
 } as const;
 
 export const TOPICS = {
@@ -685,7 +685,7 @@ export const doctorCopy = {
 } as const;
 
 export const nav = {
-  home: "Home",
+  home: "Dashboard",
   graveyard: "Graveyard",
   crypt: "Crypt",
   discover: "Discover",

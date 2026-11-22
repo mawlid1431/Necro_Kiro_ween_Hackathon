@@ -30,7 +30,7 @@ export default function LandingPage() {
             <p className="mt-6 max-w-2xl text-lg text-pretty text-copy sm:text-xl">{landing.lead}</p>
             <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <Button asChild size="lg">
-                <Link href="/home">
+                <Link href="/dashboard">
                   {landing.cta}
                   <ArrowRight aria-hidden strokeWidth={1.75} />
                 </Link>
