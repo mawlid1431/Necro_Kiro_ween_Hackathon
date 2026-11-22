@@ -1,17 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, Ghost, Rss, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { FogBackground } from "@/components/brand/FogBackground";
 import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
 import { HeroStage } from "@/components/landing/Mockups";
 import { SignedInToHome } from "@/components/layout/HomeLink";
+import { Audience, Faq, FinalCta, HowItWorks } from "@/components/landing/Sections";
 import { Showcase } from "@/components/landing/Showcase";
 import { LegalFooter } from "@/components/layout/LegalPage";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { labels, landing } from "@/lib/copy";
-
-const featureIcons = { summon: Rss, seance: Sparkles, resurrect: Ghost } as const;
+import { landing } from "@/lib/copy";
 
 export default function LandingPage() {
   return (
@@ -28,6 +27,7 @@ export default function LandingPage() {
               {landing.title}
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-pretty text-copy sm:text-xl">{landing.lead}</p>
+            <p className="mt-3 max-w-2xl text-body text-pretty text-subtle">{landing.plain}</p>
             <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <Button asChild size="lg">
                 <Link href="/dashboard">
@@ -35,33 +35,20 @@ export default function LandingPage() {
                   <ArrowRight aria-hidden strokeWidth={1.75} />
                 </Link>
               </Button>
+              <Button asChild size="lg" variant="secondary">
+                <a href="#how">{landing.ctaHow}</a>
+              </Button>
             </div>
             <HeroStage />
           </Container>
         </section>
 
-        <section aria-labelledby="features-title" className="pb-20 sm:pb-28">
-          <Container>
-            <h2 id="features-title" className="sr-only">
-              Features
-            </h2>
-            <ul className="grid gap-4 sm:gap-6 md:grid-cols-3">
-              {landing.features.map(({ key, body }) => {
-                const Icon = featureIcons[key as keyof typeof featureIcons];
-                return (
-                  <li key={key} className="rounded-2xl border border-line bg-surface p-6 lg:p-8">
-                    <Icon aria-hidden className="size-5 text-ecto-ink" strokeWidth={1.75} />
-                    <h3 className="mt-4 text-h3 font-semibold">{labels[key].themed}</h3>
-                    <p className="text-meta font-medium text-subtle">{labels[key].plain}</p>
-                    <p className="mt-3 text-copy">{body}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          </Container>
-        </section>
+        <HowItWorks />
 
         <Showcase />
+        <Audience />
+        <Faq />
+        <FinalCta />
       </main>
       <LegalFooter />
     </>

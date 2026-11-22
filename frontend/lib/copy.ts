@@ -109,7 +109,43 @@ export const landing = {
   overline: "Kiroween 2026 · Resurrection category",
   title: "RSS is back from the dead",
   lead: "Almost every blog, newsroom and channel still publishes a feed. Necro gives them a good place to rise again.",
+  plain: "Follow any website, get a 3-point AI summary of what's new, and share it to LinkedIn, X, Instagram or TikTok in your own voice. All in one calm place, free.",
   cta: "Enter the graveyard",
+  ctaHow: "See how it works",
+  how: {
+    overline: "How it works",
+    title: "Three steps, no feed jargon",
+    steps: [
+      { key: "summon", title: "1. Follow what you love", body: "Paste any website, like a blog or a news site. Necro finds its feed for you. Or bring back your old reader's export in one file." },
+      { key: "seance", title: "2. Understand it fast", body: "New posts arrive in one calm, chronological reader. Each gets three key points and a score for how much it matters to you." },
+      { key: "resurrect", title: "3. Share it your way", body: "Turn an article into posts that sound like you, see exactly how they will look, then post now or schedule them for later." },
+    ],
+  },
+  who: {
+    title: "Made for people who read to create",
+    people: [
+      { title: "Creators and marketers", body: "Stay on top of your niche and turn what you read into posts, without the scroll." },
+      { title: "Students and researchers", body: "Follow papers, blogs and news in one place, with summaries that save hours." },
+      { title: "Founders", body: "Keep up with your market and share smart takes, even on busy weeks." },
+      { title: "Former RSS fans", body: "Your old reader is gone. Import your feeds in one file and they come back to life." },
+    ],
+  },
+  faq: {
+    title: "Questions, answered",
+    items: [
+      { q: "What is RSS, and do I need to know?", a: "RSS is how websites announce new posts. You don't need to know anything about it: paste a website's address and Necro finds the feed for you." },
+      { q: "Is Necro free?", a: "Yes. Necro is free to use, with fair daily limits on AI features so it stays fast for everyone." },
+      { q: "Will it post anything without me?", a: "Never on its own. Necro only posts when you press Post now or schedule a post yourself, and the same post can never go out twice." },
+      { q: "Which networks can I share to?", a: "LinkedIn, X, Instagram and TikTok. Connect an account to post directly, or share with one tap from your phone." },
+      { q: "Is my data private?", a: "Your reading stays yours. Social account access is encrypted, we show no ads, and you can export or delete everything at any time." },
+    ],
+  },
+  final: {
+    title: "Bring your favourite sites back to life",
+    body: "Sign up, paste one website, and see your first summary in under a minute.",
+    cta: "Start free",
+    note: "No credit card. Your data stays yours.",
+  },
   features: [
     {
       key: "summon",
@@ -696,6 +732,21 @@ export const nav = {
   doctor: "Doctor",
   settings: "Settings",
   openMenu: "Open menu",
+  menuFeeds: "Your feeds",
+  menuFeedsHint: "Every feed you follow, as tombstones",
+  menuDiscoverHint: "Collections other readers trust",
+  menuDoctor: "Broken feeds",
+  menuDoctorHint: "Fix feeds that stopped working",
+  menuAlerts: "Topic alerts",
+  menuAlertsHint: "Get told when a topic you watch appears",
+  menuGrimoire: "Weekly newsletter",
+  menuGrimoireHint: "Your week's best reads, written up",
+  menuCalendar: "Calendar",
+  menuCalendarHint: "Scheduled and published posts, live",
+  menuNewPost: "New post",
+  menuNewPostHint: "Your image + an AI caption, now or later",
+  menuAccounts: "Connected accounts",
+  menuAccountsHint: "LinkedIn, X, Instagram, TikTok",
   closeMenu: "Close menu",
 } as const;
 
