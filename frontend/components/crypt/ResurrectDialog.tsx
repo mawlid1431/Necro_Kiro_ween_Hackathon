@@ -410,7 +410,7 @@ export function ResurrectDialog({
                       {busy ? copy.working : copy.again}
                     </Button>
                   </div>
-                  {(p === "instagram" || p === "tiktok") && !direct ? <p className="text-meta text-subtle">{copy.instagramHint}</p> : null}
+                  {(p === "instagram" || p === "tiktok") && !direct ? <p className="text-meta text-subtle">{p === "tiktok" ? copy.tiktokHint : copy.instagramHint}</p> : null}
                 </div>
 
                 <div className="min-w-0">

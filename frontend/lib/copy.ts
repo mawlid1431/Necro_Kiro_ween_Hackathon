@@ -324,6 +324,7 @@ export const resurrect = {
   orShare: "Or share by hand:",
   tiktokTab: "TikTok",
   tiktokSound: "Music added by TikTok",
+  tiktokHint: "The image is saved and the caption copied: upload that image on TikTok and paste the caption.",
   tiktokFrom: "Uses the Instagram caption and image.",
   tiktokAs: (n: string) => `Posting as ${n}`,
   tiktokWho: "Who can see this post",
