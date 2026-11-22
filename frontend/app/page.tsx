@@ -3,9 +3,10 @@ import { ArrowRight, Ghost, Rss, Sparkles } from "lucide-react";
 import { FogBackground } from "@/components/brand/FogBackground";
 import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
+import { LegalFooter } from "@/components/layout/LegalPage";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { labels, landing, site } from "@/lib/copy";
+import { labels, landing } from "@/lib/copy";
 
 const featureIcons = { summon: Rss, seance: Sparkles, resurrect: Ghost } as const;
 
@@ -55,12 +56,7 @@ export default function LandingPage() {
           </Container>
         </section>
       </main>
-      <footer className="border-t border-line/60 py-6">
-        <Container className="flex flex-col items-center justify-between gap-2 text-meta text-subtle sm:flex-row">
-          <span>{site.tagline}</span>
-          <span>MIT licensed · Built with Kiro</span>
-        </Container>
-      </footer>
+      <LegalFooter />
     </>
   );
 }
