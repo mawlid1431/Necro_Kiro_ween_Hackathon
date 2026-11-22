@@ -314,6 +314,12 @@ export const resurrect = {
   saved: "Saved",
   again: "Raise again",
   postNow: (p: string) => `Post now to ${p}`,
+  alreadyPosted: (p: string, d: Date) =>
+    `Already posted to ${p} on ${d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. The same post can't go out twice.`,
+  alreadyWaiting: (p: string, d: Date) =>
+    `Scheduled for ${p} on ${d.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Move or cancel it there.`,
+  goingOut: (p: string) => `Going out to ${p} now.`,
+  openWitching: "Open Witching Hour",
   posting: "Posting…",
   posted: "Posted",
   viewPost: "View post",

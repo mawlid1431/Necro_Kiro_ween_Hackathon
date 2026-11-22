@@ -10,9 +10,40 @@ import { fail, getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { credsFor } from "../lib/social/providers";
 import { draftFor, finalPost, POST_LIMITS, postLength, SOCIAL_PLATFORMS, type SocialPlatform } from "../lib/social/post";
 import { internal } from "./_generated/api";
+import { articleKey, duplicateMessage, isBlocking, manualKey } from "../lib/social/dedupe";
 
 const STATE_TTL_MS = 15 * 60 * 1000;
 export const PUBLISHES_PER_HOUR_PER_USER = 30;
+/** Posts and reminders a user can create per hour, across Post now, Schedule and the composer. */
+export const PUBLISH_ROWS_PER_HOUR_PER_USER = 60;
+/** A post still "posting" after this long lost its job (server restart): it is marked failed, never retried. */
+export const STUCK_POSTING_MS = 15 * 60 * 1000;
+
+const PLATFORM_NAMES: Record<SocialPlatform, string> = { linkedin: "LinkedIn", x: "X", instagram: "Instagram", tiktok: "TikTok" };
+const fmtWhen = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+
+/** A row with the same content that is going out, waiting or posted (cancelled and failed rows do not count). */
+async function blockingDuplicate(ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, key: string, except?: Id<"publishes">) {
+  const rows = await ctx.db.query("publishes").withIndex("by_user_key", (q) => q.eq("userId", userId).eq("contentKey", key)).take(50);
+  return rows.find((r) => r._id !== except && isBlocking(r.status)) ?? null;
+}
+
+/** Refuses a post whose content already went out, is going out, or is waiting (atomic: Convex mutations are serialised). */
+async function refuseDuplicate(ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, key: string, platform: SocialPlatform) {
+  const dup = await blockingDuplicate(ctx, userId, key);
+  if (dup) fail("DUPLICATE", duplicateMessage(PLATFORM_NAMES[platform], dup, fmtWhen));
+}
+
+/** Fair use across every way of creating a post, so one account cannot flood the platforms or the scheduler. */
+async function checkHourlyCap(ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, adding: number) {
+  const recent = await ctx.db
+    .query("publishes")
+    .withIndex("by_user", (q) => q.eq("userId", userId).gt("createdAt", Date.now() - 3_600_000))
+    .take(PUBLISH_ROWS_PER_HOUR_PER_USER + 1);
+  if (recent.length + adding > PUBLISH_ROWS_PER_HOUR_PER_USER) {
+    fail("LIMIT", `You can create up to ${PUBLISH_ROWS_PER_HOUR_PER_USER} posts or reminders an hour. Try again a little later.`);
+  }
+}
 
 export type ConnectionView = {
   platform: SocialPlatform;
@@ -209,12 +240,14 @@ export const startPublish = internalMutation({
       .query("publishes")
       .withIndex("by_user", (q) => q.eq("userId", a.userId).gt("createdAt", now - 3_600_000))
       .collect();
-    if (recent.length >= PUBLISHES_PER_HOUR_PER_USER) fail("LIMIT", `You can post up to ${PUBLISHES_PER_HOUR_PER_USER} times an hour from Necro.`);
-    // One post at a time per platform for an article: a double click never posts twice.
-    if (recent.some((p) => p.itemId === a.itemId && p.platform === a.platform && p.status === "posting" && p.createdAt > now - 120_000)) {
-      fail("DUPLICATE", "This post is already going out.");
+    if (recent.filter((r) => r.mode === "auto" && r.status !== "scheduled").length >= PUBLISHES_PER_HOUR_PER_USER) {
+      fail("LIMIT", `You can post up to ${PUBLISHES_PER_HOUR_PER_USER} times an hour from Necro.`);
     }
-    return await ctx.db.insert("publishes", { ...a, kind: "article", status: "posting", createdAt: now, at: now, mode: "auto" });
+    await checkHourlyCap(ctx, a.userId, 1);
+    // One post, once: not again after it went out, and not while it is going out or scheduled (double clicks too).
+    const contentKey = articleKey(a.itemId, a.platform);
+    await refuseDuplicate(ctx, a.userId, contentKey, a.platform);
+    return await ctx.db.insert("publishes", { ...a, kind: "article", status: "posting", createdAt: now, at: now, mode: "auto", contentKey, postingSince: now });
   },
 });
 
@@ -275,6 +308,9 @@ export const schedule = mutation({
       .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "scheduled"))
       .take(MAX_PENDING_SCHEDULED);
     if (pending.length >= MAX_PENDING_SCHEDULED) fail("LIMIT", `You can have up to ${MAX_PENDING_SCHEDULED} scheduled posts.`);
+    await checkHourlyCap(ctx, user._id, 1);
+    const contentKey = articleKey(item._id, platform);
+    await refuseDuplicate(ctx, user._id, contentKey, platform);
 
     const mode = modeFor(platform, await byUserPlatform(ctx, user._id, platform));
     const publishId = await ctx.db.insert("publishes", {
@@ -288,6 +324,7 @@ export const schedule = mutation({
       at,
       mode,
       text: text.trim(),
+      contentKey,
     });
     const jobId = await ctx.scheduler.runAt(at, internal.socialNode.runScheduled, { publishId });
     await ctx.db.patch(publishId, { jobId });
@@ -431,11 +468,17 @@ export const claimScheduled = internalMutation({
   handler: async (ctx, { publishId }) => {
     const p = await ctx.db.get(publishId);
     if (!p || p.status !== "scheduled") return null;
+    // Last line of defence: if the same post went out meanwhile (by any path), do not send it again.
+    const dup = p.contentKey ? await blockingDuplicate(ctx, p.userId, p.contentKey, publishId) : null;
+    if (dup && (dup.status === "posted" || dup.status === "posting")) {
+      await ctx.db.patch(publishId, { status: "canceled", jobId: undefined, finishedAt: Date.now(), note: "duplicate", error: "Not sent: the same post already went out." });
+      return null;
+    }
     if (p.mode === "reminder") {
       await ctx.db.patch(publishId, { status: "due", jobId: undefined });
       return null;
     }
-    await ctx.db.patch(publishId, { status: "posting", jobId: undefined });
+    await ctx.db.patch(publishId, { status: "posting", jobId: undefined, postingSince: Date.now() });
     return p;
   },
 });
@@ -519,6 +562,11 @@ export const composePost = mutation({
       .withIndex("by_user_status", (q) => q.eq("userId", user._id).eq("status", "scheduled"))
       .take(MAX_PENDING_SCHEDULED);
     if (pending.length + chosen.length > MAX_PENDING_SCHEDULED) fail("LIMIT", `You can have up to ${MAX_PENDING_SCHEDULED} scheduled posts.`);
+    await checkHourlyCap(ctx, user._id, chosen.length);
+    // One post, once per account: the same caption and image cannot go to the same platform twice
+    // (checked for every platform first, so nothing is created when one of them is a duplicate).
+    const keys = new Map(chosen.map((p) => [p, manualKey(p, text, upload?.storageId)] as const));
+    for (const p of chosen) await refuseDuplicate(ctx, user._id, keys.get(p)!, p);
 
     const results: { platform: SocialPlatform; mode: "auto" | "reminder"; publishId: Id<"publishes"> }[] = [];
     for (const platform of chosen) {
@@ -536,6 +584,7 @@ export const composePost = mutation({
         mode,
         text,
         imageId: upload?.storageId,
+        contentKey: keys.get(platform),
       });
       const jobId = at === undefined
         ? await ctx.scheduler.runAfter(0, internal.socialNode.runScheduled, { publishId })
@@ -552,5 +601,55 @@ export const voiceOf = internalQuery({
   handler: async (ctx, { userId }) => {
     const p = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).first();
     return p ? { tone: p.tone, audience: p.audience, wordsToUse: p.wordsToUse, wordsToAvoid: p.wordsToAvoid, samplePosts: p.samplePosts } : null;
+  },
+});
+
+// ---------- reliability: stuck posts, and what each article has on each platform ----------
+
+/**
+ * A post whose job died mid-way (deploy or crash) would show "Posting…" forever. After 15 minutes it is marked
+ * failed with an honest message. It is never retried automatically: the platform may already have it.
+ */
+export const sweepStuck = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - STUCK_POSTING_MS;
+    const stuck = await ctx.db.query("publishes").withIndex("by_status_since", (q) => q.eq("status", "posting").lt("postingSince", cutoff)).take(200);
+    for (const p of stuck) {
+      await ctx.db.patch(p._id, {
+        status: "failed",
+        finishedAt: Date.now(),
+        error: `We could not confirm this post. Check your ${PLATFORM_NAMES[p.platform]} account before posting it again.`,
+      });
+    }
+    return stuck.length;
+  },
+});
+
+export type PostState = { platform: SocialPlatform; posted?: { at: number; url?: string }; pending?: { at: number; status: "scheduled" | "due" | "posting" } };
+
+/** Live, per platform: has this article already gone out, or is it waiting? Resurrect locks its buttons on this. */
+export const postStateForItem = query({
+  args: { itemId: v.id("items") },
+  handler: async (ctx, { itemId }): Promise<PostState[]> => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return [];
+    const item = await ctx.db.get(itemId);
+    if (!item || item.userId !== user._id) return [];
+    const out: PostState[] = [];
+    for (const platform of SOCIAL_PLATFORMS) {
+      const rows = await ctx.db
+        .query("publishes")
+        .withIndex("by_user_key", (q) => q.eq("userId", user._id).eq("contentKey", articleKey(itemId, platform)))
+        .take(50);
+      const posted = rows.filter((r) => r.status === "posted").sort((a, b) => (b.at ?? b.createdAt) - (a.at ?? a.createdAt))[0];
+      const pending = rows.find((r) => r.status === "scheduled" || r.status === "due" || r.status === "posting");
+      out.push({
+        platform,
+        posted: posted ? { at: posted.at ?? posted.createdAt, url: posted.url } : undefined,
+        pending: pending ? { at: pending.at ?? pending.createdAt, status: pending.status as "scheduled" | "due" | "posting" } : undefined,
+      });
+    }
+    return out;
   },
 });

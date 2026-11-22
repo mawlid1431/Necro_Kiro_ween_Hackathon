@@ -356,8 +356,12 @@ export default defineSchema({
     mode: v.optional(v.union(v.literal("auto"), v.literal("reminder"))),
     text: v.optional(v.string()), // the post body as written when scheduled (hashtags and link are added at send time)
     jobId: v.optional(v.id("_scheduled_functions")),
+    contentKey: v.optional(v.string()), // one post, once: see lib/social/dedupe.ts
+    postingSince: v.optional(v.number()), // when sending started (stuck-post sweep)
   })
     .index("by_user", ["userId", "createdAt"])
+    .index("by_user_key", ["userId", "contentKey"])
+    .index("by_status_since", ["status", "postingSince"])
     .index("by_item", ["itemId", "platform"])
     .index("by_user_at", ["userId", "at"])
     .index("by_user_status", ["userId", "status"]),

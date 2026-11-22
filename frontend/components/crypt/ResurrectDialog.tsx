@@ -103,6 +103,7 @@ function DirectPost({
   over,
   conn,
   last,
+  locked,
 }: {
   p: SocialPlatform;
   draftId: Id<"drafts">;
@@ -110,6 +111,7 @@ function DirectPost({
   over: boolean;
   conn: ConnectionView | undefined;
   last: PublishRow | undefined;
+  locked: boolean; // already posted or waiting on this platform: one post, once
 }) {
   const publish = useAction(api.socialNode.publish);
   const loadCreator = useAction(api.socialNode.tiktokCreator);
@@ -165,7 +167,7 @@ function DirectPost({
     <div className="flex flex-col gap-2">
       {p === "tiktok" ? <TikTokOptions value={tt} onChange={setTt} creator={creator} error={creatorError} /> : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => void go()} disabled={over || posting || ttInvalid}>
+        <Button onClick={() => void go()} disabled={over || posting || ttInvalid || locked}>
           {posting ? <Loader2 aria-hidden className="animate-spin" /> : <Send aria-hidden strokeWidth={1.75} />}
           {posting ? copy.posting : copy.postNow(name)}
         </Button>
@@ -222,6 +224,8 @@ export function ResurrectDialog({
   // Live: a connection made in another tab, or a post finishing, shows up here at once.
   const connections = useQuery(api.social.list, open ? {} : "skip");
   const publishes = useQuery(api.social.publishesForItem, open ? { itemId } : "skip");
+  // Live: has this article already gone out (or is it waiting) on each platform? Locks the buttons below.
+  const postState = useQuery(api.social.postStateForItem, open ? { itemId } : "skip");
   const { user } = useUser();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -330,6 +334,8 @@ export function ResurrectDialog({
             const over = total > LIMITS[p];
             const conn = connections?.find((c) => c.platform === p);
             const direct = !!conn?.connected && conn.status !== "expired";
+            const st = postState?.find((x) => x.platform === p);
+            const locked = !!st?.posted || !!st?.pending;
             return (
               <Tabs.Content key={p} value={p} className="grid gap-5 lg:grid-cols-[1fr_minmax(0,22rem)]">
                 <div className="flex min-w-0 flex-col gap-3">
@@ -348,11 +354,32 @@ export function ResurrectDialog({
                     {over ? <span className="text-danger">{copy.tooLong}</span> : null}
                   </div>
 
-                  <DirectPost p={p} draftId={d._id} text={text} over={over} conn={conn} last={publishes?.find((x) => x.platform === p)} />
+                  {st?.posted ? (
+                    <Notice tone="ok">
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        {copy.alreadyPosted(names.names[p], new Date(st.posted.at))}
+                        {st.posted.url ? (
+                          <a href={st.posted.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                            {copy.viewPost} <ExternalLink aria-hidden className="size-3.5" />
+                          </a>
+                        ) : null}
+                      </span>
+                    </Notice>
+                  ) : st?.pending ? (
+                    <Notice>
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        {st.pending.status === "posting" ? copy.goingOut(names.names[p]) : copy.alreadyWaiting(names.names[p], new Date(st.pending.at))}
+                        <Link href="/calendar" className="underline">
+                          {copy.openWitching}
+                        </Link>
+                      </span>
+                    </Notice>
+                  ) : null}
+                  <DirectPost p={p} draftId={d._id} text={text} over={over} conn={conn} last={publishes?.find((x) => x.platform === p)} locked={locked} />
 
                   {direct ? <p className="text-meta text-subtle">{copy.orShare}</p> : null}
                   <div className="flex flex-wrap gap-2">
-                    <Button variant={direct ? "secondary" : "default"} onClick={() => void share(p, d)} disabled={over}>
+                    <Button variant={direct ? "secondary" : "default"} onClick={() => void share(p, d)} disabled={over || locked}>
                       <PlatformIcon platform={p} className="size-4" />
                       {flash === `${p}:shared` ? copy.sharedHint : p === "tiktok" ? copy.shareOnTikTok : copy.shareOn(p as Platform)}
                     </Button>
@@ -366,7 +393,7 @@ export function ResurrectDialog({
                       </Button>
                     ) : null}
                   </div>
-                  <ScheduleControl key={`${p}:${d._id}`} platform={p} draftId={d._id} text={text} disabled={over} auto={direct} />
+                  {locked ? null : <ScheduleControl key={`${p}:${d._id}`} platform={p} draftId={d._id} text={text} disabled={over} auto={direct} />}
                   <div className="flex flex-wrap gap-2">
                     {edits[d._id] !== undefined && edits[d._id] !== d.text ? (
                       <Button variant="ghost" size="sm" onClick={() => void save(d)} disabled={text.length > LIMITS[d.platform]}>
