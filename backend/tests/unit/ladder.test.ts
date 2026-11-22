@@ -152,3 +152,26 @@ describe("budgets", () => {
     expect(budgetFor("unknown", {})).toEqual({ perMinute: 20, perDay: 500 });
   });
 });
+
+// Groq answers HTTP 400 json_validate_failed when the model's JSON breaks the schema: that is a schema miss
+// to repair on the same rung, not a provider failure.
+import { APICallError } from "ai";
+import { schemaRejectedByProvider } from "../../lib/ai/structured";
+
+describe("schemaRejectedByProvider", () => {
+  const err = (statusCode: number, responseBody: string) =>
+    new APICallError({ message: "x", url: "https://api.groq.com", requestBodyValues: {}, statusCode, responseBody, isRetryable: false });
+
+  it("returns the rejected answer for Groq json_validate_failed", () => {
+    const body = JSON.stringify({ error: { code: "json_validate_failed", message: "Failed to validate JSON", failed_generation: '{"summary":["too long"]}' } });
+    expect(schemaRejectedByProvider(err(400, body))).toBe('{"summary":["too long"]}');
+  });
+  it("returns an empty answer when Groq sends no failed_generation", () => {
+    expect(schemaRejectedByProvider(err(400, '{"error":{"code":"json_validate_failed"}}'))).toBe("");
+  });
+  it("ignores other 400s, other statuses and non-API errors", () => {
+    expect(schemaRejectedByProvider(err(400, '{"error":{"code":"invalid_request"}}'))).toBeNull();
+    expect(schemaRejectedByProvider(err(429, "json_validate_failed"))).toBeNull();
+    expect(schemaRejectedByProvider(new Error("json_validate_failed"))).toBeNull();
+  });
+});

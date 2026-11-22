@@ -1,6 +1,6 @@
 # Necro Brand Guide
 
-**RSS, resurrected with AI.** · v1.0 · November 2026 · a Faafi project
+**RSS, resurrected with AI.** · v1.0 · November 2026
 
 Visual summary: `Necro_Brand_Assets/necro-brand-sheet.png`
 
@@ -20,7 +20,7 @@ Necro is a graveyard where dead feeds come back to life. The mood is **elegant, 
 
 ## 2. Logo
 
-**Symbol:** an arched tombstone with the "spreading signal" (dot and two arcs) inside, meaning a dead feed rising again. The signal is the same mark as the Faafi logo, linking Necro to Faafi.
+**Symbol:** an arched tombstone with the "spreading signal" (dot and two arcs) inside, meaning a dead feed rising again.
 **Wordmark:** NECRO in Cinzel Bold, wide letter spacing, converted to outlines.
 
 | Version | Use on | Colours |

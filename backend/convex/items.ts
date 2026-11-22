@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { indexItem, scheduleCluster, unindexItem } from "./kindred";
 import { scheduleOmenCheck, unmatchItem } from "./omens";
+import { feedsNamedIn } from "../lib/feeds/match";
 
 const DAY = 86_400_000;
 const MAX_CONTENT = 200 * 1024;
@@ -192,6 +193,29 @@ export const searchInternal = internalQuery({
   args: { userId: v.id("users"), query: v.string(), limit: v.number() },
   // Explicit return type breaks a type-inference cycle through the generated api.
   handler: (ctx, { userId, query: text, limit }): Promise<ItemCard[]> => searchFor(ctx, userId, text, limit),
+});
+
+/**
+ * Items for Ask: when the question names one of the user's feeds, that feed's latest items come first
+ * (titles rarely contain the source's name), then the title-search matches. De-duplicated, capped at `limit`.
+ */
+export const askCandidates = internalQuery({
+  args: { userId: v.id("users"), query: v.string(), limit: v.number() },
+  handler: async (ctx, { userId, query: text, limit }): Promise<ItemCard[]> => {
+    const graves = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", userId)).take(300);
+    const named = feedsNamedIn(text, graves.map((g) => ({ id: g._id, title: g.customTitle ?? g.title })));
+    const out = new Map<Id<"items">, ItemCard>();
+    for (const g of named) {
+      const latest = await ctx.db
+        .query("items")
+        .withIndex("by_grave_published", (q) => q.eq("graveId", g.id))
+        .order("desc")
+        .take(Math.ceil(limit / Math.max(named.length, 1)));
+      for (const i of latest) out.set(i._id, itemCard(i, g.title));
+    }
+    for (const c of await searchFor(ctx, userId, text, limit)) if (!out.has(c._id)) out.set(c._id, c);
+    return [...out.values()].slice(0, limit);
+  },
 });
 
 export const setRead = mutation({

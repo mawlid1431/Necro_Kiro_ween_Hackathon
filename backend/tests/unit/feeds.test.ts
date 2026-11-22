@@ -167,3 +167,28 @@ describe("feed URL helpers", () => {
     expect(withScheme("http://example.com")).toBe("http://example.com");
   });
 });
+
+// Ask: questions that name a source ("What has Simon Willison written?") must reach that feed's items.
+import { feedsNamedIn } from "../../lib/feeds/match";
+
+describe("feedsNamedIn", () => {
+  const feeds = [
+    { title: "Simon Willison's Weblog" },
+    { title: "The Verge" },
+    { title: "Hacker News: Front Page" },
+    { title: "Netflix TechBlog - Medium" },
+    { title: "BBC News" },
+  ];
+  const names = (q: string) => feedsNamedIn(q, feeds).map((f) => f.title);
+  it("finds a feed named in the question, with or without possessive", () => {
+    expect(names("What has Simon Willison written about recently?")).toEqual(["Simon Willison's Weblog"]);
+    expect(names("anything new on the verge")).toEqual(["The Verge"]);
+    expect(names("top stories on Hacker News today")).toEqual(["Hacker News: Front Page"]);
+    expect(names("What did Netflix publish on their techblog?")).toEqual(["Netflix TechBlog - Medium"]);
+  });
+  it("ignores generic words and partial names", () => {
+    expect(names("What is the latest news?")).toEqual([]);
+    expect(names("What did Simon say about Rust?")).toEqual([]);
+    expect(names("Explain transformers")).toEqual([]);
+  });
+});

@@ -7,6 +7,7 @@ import { ZodError, type z } from "zod";
 import type { ActionCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { resolveRung, type Rung } from "../../lib/ai/providers";
+import { schemaRejectedByProvider } from "../../lib/ai/structured";
 import type { Id } from "../_generated/dataModel";
 import { chainFor, RUNG_TIMEOUT_MS, runWithLadder, type AiTask, type RouterDeps } from "../../lib/ai/router";
 
@@ -56,19 +57,27 @@ async function structuredCall<S extends z.ZodType>(
     return { output: p.schema.parse(r.output), inputTokens: r.usage.inputTokens ?? 0, outputTokens: r.usage.outputTokens ?? 0 };
   } catch (e) {
     if (e instanceof ZodError) throw new Error("schema"); // bad JSON shape: the model's fault, not the provider's health
-    if (!NoObjectGeneratedError.isInstance(e)) throw e;
-    const issues = e.cause instanceof Error ? e.cause.message.slice(0, 600) : "it was not valid JSON";
+    // Groq rejects schema-breaking JSON with HTTP 400 json_validate_failed: repair it here too.
+    const rejected = schemaRejectedByProvider(e);
+    if (rejected === null && !NoObjectGeneratedError.isInstance(e)) throw e;
+    const issues =
+      rejected !== null
+        ? "it broke the JSON schema (check every length limit, required field and type)"
+        : NoObjectGeneratedError.isInstance(e) && e.cause instanceof Error
+          ? e.cause.message.slice(0, 600)
+          : "it was not valid JSON";
+    const previous = rejected ?? (NoObjectGeneratedError.isInstance(e) ? (e.text ?? "") : "");
     const r = await generateText({
       ...base,
       messages: [
         { role: "user", content: p.prompt },
-        { role: "assistant", content: (e.text ?? "").slice(0, 4000) },
+        { role: "assistant", content: previous.slice(0, 4000) || "(no answer)" },
         { role: "user", content: `Your last answer did not match the schema: ${issues}. Return only valid JSON.` },
       ],
       abortSignal: AbortSignal.timeout(RUNG_TIMEOUT_MS),
     }).catch((err: unknown) => {
       // The repair also failed to produce valid JSON: still a schema miss, so the breaker is not tripped.
-      throw NoObjectGeneratedError.isInstance(err) ? new Error("schema") : err;
+      throw NoObjectGeneratedError.isInstance(err) || schemaRejectedByProvider(err) !== null ? new Error("schema") : err;
     });
     const parsed = p.schema.safeParse(r.output);
     if (!parsed.success) throw new Error("schema");

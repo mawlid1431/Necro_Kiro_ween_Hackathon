@@ -1,7 +1,7 @@
 # Necro: Project Documentation
 
 **RSS, resurrected with AI.**
-A Kiroween 2026 project by Mowlid Haibe · a Faafi project
+A Kiroween 2026 project by Mowlid Haibe
 
 | | |
 |---|---|
@@ -47,7 +47,7 @@ In 2013 the most popular RSS reader in the world was shut down, and RSS itself w
 
 > **Trademark note.** Tell the story in writing (description, blog). In the **video, logo and images**, say "RSS" and "classic feed readers" instead of naming the old Google product, because the rules forbid third-party trademarks in the video without permission.
 
-**Why it is the first piece of Faafi:** Faafi (Somali for "spread") is a workspace for publishing to every channel. Necro is its first module: the *input* side, turning what you read into content you spread.
+**Why it matters:** Necro covers the whole path from reading to sharing: turning what you read into content you share.
 
 ---
 
@@ -80,7 +80,7 @@ The feature names follow the theme, and each has a plain-language subtitle in th
 | 8 | **Haunted digest** | Daily email or page: "What rose last night" | Stretch |
 | 9 | **Share** | Copy draft, or open the platform's own share/compose page with the text filled in | ✅ |
 
-**Out of scope for the hackathon:** posting directly through social APIs (needs platform app reviews). Share links and copy are reliable and need no review. Direct publishing comes later through Faafi.
+**Out of scope for the hackathon:** posting directly through social APIs (needs platform app reviews). Share links and copy are reliable and need no review. Direct publishing was added later as Connectors.
 
 ---
 
@@ -451,7 +451,7 @@ Today is Nov 1. Deadline Dec 5, 6:00 AM Malaysia time.
 | 2 | Nov 9 to 15 | Graveyard UI, polling cron, OPML import, Crypt reader. Attend **Devpost build session Nov 11** |
 | 3 | Nov 16 to 22 | Séance + Resurrect (AI), voice profile, share links. Hooks running. Deploy to Vercel |
 | 4 | Nov 23 to 29 | MCP server + assistant demo, Feed Doctor, security hardening, Playwright tests, spooky polish (fog, glow, sound) |
-| 5 | Nov 30 to Dec 3 | Freeze features. Video, write-up, README, blog post, social post, Faafi website (for startup prize). **Submit Dec 3** |
+| 5 | Nov 30 to Dec 3 | Freeze features. Video, write-up, README, blog post, social post, startup details (for startup prize). **Submit Dec 3** |
 
 ---
 
@@ -466,7 +466,7 @@ Today is Nov 1. Deadline Dec 5, 6:00 AM Malaysia time.
 - [ ] Demo video **under 3 minutes**, public on YouTube, no copyrighted music, no third-party trademarks
 - [ ] Kiro write-up covering every feature in section 14
 - [ ] Student proof: LinkedIn, student email, year, degree, school (AIU)
-- [ ] Startup: confirm founder, LinkedIn, Faafi website URL
+- [ ] Startup: confirm founder, LinkedIn, Barkulanhub website URL (barkulanhub.com)
 - [ ] Blog post (dev.to or Hashnode) stating it is written for the Kiroween 2026 hackathon
 - [ ] Social post starting with **#KiroweenHackathon26**
 - [ ] All code written between Oct 30 and Dec 4, 2026

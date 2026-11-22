@@ -1,5 +1,9 @@
 # Connectors — requirements
 
+> **How this spec was made (disclosure).** Connectors, the compact menu and the exact-match preview were planned and built
+> on Nov 22, 2026 with **Claude Code** (Anthropic), not in Kiro. The plan (`docs/specs/connectors.md`) was written before
+> the code; this spec was written in Kiro's format at the same time so the feature follows the project's conventions.
+
 Themed label: **Connectors** · plain subtitle: **Link your LinkedIn, X, Instagram and TikTok to post straight from Resurrect**.
 
 ## Problem

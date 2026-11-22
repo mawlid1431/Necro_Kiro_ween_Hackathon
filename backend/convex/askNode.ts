@@ -1,6 +1,7 @@
 "use node";
 // Ask the Crypt (Final Draft 6.8): answer a question from the user's own items, with citations.
-// Retrieval: full-text title search (the vector path joins once embeddings are filled in).
+// Retrieval: the latest items of any feed the question names, then full-text title search
+// (the vector path joins once embeddings are filled in).
 // Private task: the router never sends the question to providers that may train on prompts.
 // Ghost answer when every rung fails or the daily limit is used: the matching items, no prose.
 import { ConvexError, v } from "convex/values";
@@ -25,7 +26,7 @@ export async function askFor(ctx: ActionCtx, userId: Id<"users">, question: stri
   const q = question.trim();
   if (q.length < 2 || q.length > 500) throw new ConvexError({ code: "INVALID_INPUT", message: "Ask a question of 2 to 500 characters." });
 
-  const found: ItemCard[] = await ctx.runQuery(internal.items.searchInternal, { userId, query: q, limit: 8 });
+  const found: ItemCard[] = await ctx.runQuery(internal.items.askCandidates, { userId, query: q, limit: 8 });
   const items = found.map((i) => ({ id: i._id as string, title: i.title, feed: i.graveTitle, link: i.link, publishedAt: i.publishedAt }));
   if (!found.length) {
     return { answer: "Nothing in your graveyard matches that yet.", citations: [], confident: false, ghost: true, model: "ghost:search", items };

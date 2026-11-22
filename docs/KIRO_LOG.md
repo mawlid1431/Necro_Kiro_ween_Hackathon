@@ -13,3 +13,12 @@ Truthful, specific notes per phase. Source for `docs/KIRO_WRITEUP.md`.
 ## Phase 1: Foundation
 
 - (fill in)
+
+## Connectors (Nov 22, 2026) — built with Claude Code, not Kiro
+
+- Built outside Kiro with **Claude Code**: direct posting to LinkedIn, X, Instagram and TikTok (official OAuth + posting APIs),
+  a preview that uses the exact post text and the article's real link card, a compact menu on small screens, and the
+  Next.js 16.4.4 → 16.4.6 security patch (the build refused to run on 16.4.4).
+- Kept to the project's Kiro conventions: a spec in `.kiro/specs/connectors/`, steering rules (security, brand voice),
+  and the pre-submit check (all items pass).
+- Recorded here so the Kiro write-up is accurate about which tool did what.
