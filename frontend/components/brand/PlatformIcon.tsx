@@ -7,7 +7,7 @@ export type SocialPlatform = Platform | "tiktok";
 export function PlatformIcon({ platform, brand = false, ...props }: { platform: SocialPlatform; brand?: boolean } & SVGProps<SVGSVGElement>) {
   if (platform === "tiktok") {
     return (
-      <svg viewBox="0 0 24 24" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" aria-hidden data-brand-mark="" {...props}>
         <rect width="24" height="24" rx="5" fill={brand ? "#000" : "currentColor"} />
         {brand ? <path fill="#25F4EE" d="M15.3 5c.3 1.6 1.4 2.9 3.2 3.1v2.2a5.8 5.8 0 0 1-3.2-1v4.6a4.2 4.2 0 1 1-4.2-4.2h.3v2.3a2 2 0 1 0 1.6 1.9V5h2.3Z" transform="translate(-.6 -.4)" /> : null}
         {brand ? <path fill="#FE2C55" d="M15.3 5c.3 1.6 1.4 2.9 3.2 3.1v2.2a5.8 5.8 0 0 1-3.2-1v4.6a4.2 4.2 0 1 1-4.2-4.2h.3v2.3a2 2 0 1 0 1.6 1.9V5h2.3Z" transform="translate(.6 .4)" /> : null}
@@ -17,7 +17,7 @@ export function PlatformIcon({ platform, brand = false, ...props }: { platform: 
   }
   if (platform === "linkedin") {
     return (
-      <svg viewBox="0 0 24 24" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" aria-hidden data-brand-mark="" {...props}>
         <rect width="24" height="24" rx="4" fill={brand ? "#0A66C2" : "currentColor"} />
         <path fill="#fff" d="M6.94 8.5H4.3V19h2.64V8.5ZM5.62 4.5a1.53 1.53 0 1 0 0 3.06 1.53 1.53 0 0 0 0-3.06ZM19.7 13.06c0-2.82-1.5-4.75-4.12-4.75-1.26 0-2.1.69-2.45 1.34h-.04V8.5H10.6V19h2.64v-5.2c0-1.37.26-2.7 1.96-2.7 1.67 0 1.7 1.57 1.7 2.79V19h2.64v-5.94Z" />
       </svg>
@@ -25,14 +25,14 @@ export function PlatformIcon({ platform, brand = false, ...props }: { platform: 
   }
   if (platform === "x") {
     return (
-      <svg viewBox="0 0 24 24" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" aria-hidden data-brand-mark="" {...props}>
         <rect width="24" height="24" rx="4" fill={brand ? "#000" : "currentColor"} />
         <path fill="#fff" d="M16.2 5.5h2.2l-4.8 5.5 5.65 7.5h-4.42l-3.47-4.53-3.96 4.53H5.2l5.14-5.88L4.92 5.5h4.53l3.13 4.14L16.2 5.5Zm-.77 11.68h1.22L8.75 6.75H7.44l7.99 10.43Z" />
       </svg>
     );
   }
   return (
-    <svg viewBox="0 0 24 24" aria-hidden {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden data-brand-mark="" {...props}>
       <defs>
         <linearGradient id="ig-grad" x1="0" y1="24" x2="24" y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#FEDA75" />
