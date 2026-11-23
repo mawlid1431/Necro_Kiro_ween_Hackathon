@@ -180,6 +180,17 @@
       font-size: 150%;
     }
   }
+  /* 5K and 8K panels shown at 100% scaling (about 5120 to 7680 CSS px wide). */
+  @media (min-width: 300rem) {
+    html {
+      font-size: 200%;
+    }
+  }
+  @media (min-width: 420rem) {
+    html {
+      font-size: 275%;
+    }
+  }
   body {
     @apply bg-background text-body text-foreground antialiased;
   }

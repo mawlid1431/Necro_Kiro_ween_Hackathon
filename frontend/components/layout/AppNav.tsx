@@ -80,6 +80,16 @@ function activeKey(path: string): string | null {
   return null;
 }
 
+/** Is this menu link the page you are on? Compares the path and the ?tab / ?compose that pick a view. */
+function isCurrent(href: string, path: string, params: URLSearchParams): boolean {
+  const [base, query = ""] = href.split("#")[0].split("?");
+  if (href.includes("#")) return false;
+  if (path !== base) return false;
+  const want = new URLSearchParams(query);
+  for (const k of ["tab", "compose"]) if ((want.get(k) ?? "") !== (params.get(k) ?? "")) return false;
+  return true;
+}
+
 function useBadges() {
   const unseen = useQuery(api.omens.unseenCount, {}) ?? 0;
   const due = useQuery(api.social.dueReminders, {})?.length ?? 0;
@@ -131,7 +141,7 @@ function DesktopNav() {
   const current = activeKey(path);
   const badges = useBadges();
   return (
-    <div className="hidden items-center gap-0.5 md:flex">
+    <div className="hidden items-center gap-0.5 lg:flex">
       {ITEMS.map((it) => {
         const active = current === it.key;
         const badge = it.badge ? <Badge n={badges[it.badge]} tone={it.badge} /> : null;
@@ -207,25 +217,36 @@ function MobileNav() {
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
     panel.current?.querySelector("a")?.focus();
+    // The page behind stays still while the menu is open.
+    const before = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
+      document.body.style.overflow = before;
     };
   }, [open]);
 
   const anyBadge = badges.omens + badges.due;
-  const row = (href: string, label: string, Icon: Icon, extra?: ReactNode) => (
-    <Link
-      key={href + label}
-      href={href}
-      onClick={() => setOpen(false)}
-      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-meta font-semibold text-ink hover:bg-surface-muted"
-    >
-      <Icon aria-hidden className="size-4 text-ecto-ink" strokeWidth={1.75} />
-      {label}
-      {extra}
-    </Link>
-  );
+  const row = (href: string, label: string, Icon: Icon, extra?: ReactNode) => {
+    const here = isCurrent(href, path, params);
+    return (
+      <Link
+        key={href + label}
+        href={href}
+        onClick={() => setOpen(false)}
+        aria-current={here ? "page" : undefined}
+        className={cn(
+          "flex min-h-11 items-center gap-3 rounded-lg px-3 text-body font-semibold transition-colors",
+          here ? "bg-ecto/25 text-ink" : "text-ink hover:bg-surface-muted",
+        )}
+      >
+        <Icon aria-hidden className="size-[1.125rem] shrink-0 text-ecto-ink" strokeWidth={1.75} />
+        <span className="flex-1">{label}</span>
+        {extra}
+      </Link>
+    );
+  };
 
   return (
     <>
@@ -236,21 +257,22 @@ function MobileNav() {
         aria-expanded={open}
         aria-controls="app-menu"
         aria-label={open ? nav.closeMenu : nav.openMenu}
-        className="relative grid size-10 place-items-center rounded-md text-ink transition-colors hover:bg-surface-muted md:hidden"
+        className="relative grid size-11 place-items-center rounded-lg text-ink transition-colors hover:bg-surface-muted lg:hidden"
       >
-        {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
-        {!open && anyBadge ? <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-amber-400" /> : null}
+        {open ? <X aria-hidden className="size-6" /> : <Menu aria-hidden className="size-6" />}
+        {!open && anyBadge ? <span aria-hidden className="absolute top-2 right-2 size-2.5 rounded-full bg-amber-400 ring-2 ring-page" /> : null}
       </button>
+      {open ? <div aria-hidden className="fixed inset-x-0 top-16 bottom-0 z-40 bg-ink/30 backdrop-blur-[2px] lg:hidden" /> : null}
       {open ? (
         <div
           ref={panel}
           id="app-menu"
-          className="fixed top-[3.75rem] right-4 z-50 flex max-h-[calc(100dvh-5rem)] w-64 flex-col gap-0.5 overflow-y-auto rounded-xl border border-line bg-page p-1.5 shadow-lg md:hidden"
+          className="fixed inset-x-0 top-16 z-50 flex max-h-[calc(100dvh-4rem)] flex-col gap-0.5 overflow-y-auto overscroll-contain border-b border-line bg-page p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg sm:inset-x-auto sm:top-[4.25rem] sm:right-6 sm:w-80 sm:max-h-[calc(100dvh-5rem)] sm:rounded-xl sm:border lg:hidden"
         >
           {ITEMS.map((it, i) =>
             it.children ? (
               <div key={it.key} className="mt-1 border-t border-line pt-1">
-                <p className="px-3 pt-1.5 pb-0.5 text-overline font-bold text-subtle uppercase">
+                <p className="px-3 pt-2 pb-1 text-overline font-bold text-subtle uppercase">
                   {it.label}
                   {it.badge ? <Badge n={badges[it.badge]} tone={it.badge} /> : null}
                 </p>

@@ -4,7 +4,6 @@ import { FogBackground } from "@/components/brand/FogBackground";
 import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
 import { HeroStage } from "@/components/landing/Mockups";
-import { SignedInToHome } from "@/components/layout/HomeLink";
 import { Audience, Faq, FinalCta, HowItWorks } from "@/components/landing/Sections";
 import { Showcase } from "@/components/landing/Showcase";
 import { LegalFooter } from "@/components/layout/LegalPage";
@@ -16,7 +15,6 @@ export default function LandingPage() {
   return (
     <>
       <FogBackground />
-      <SignedInToHome />
       <SiteHeader />
       <main className="flex-1">
         <section className="overflow-x-clip py-16 sm:py-24 lg:py-28">
