@@ -6,6 +6,8 @@
 
 Necro follows the sites you care about and turns each feed into a tombstone that *rises* when something new is published. It gives you a calm reader (the **Crypt**), a three-bullet AI summary with a relevance score for every article (**Séance**), social drafts for LinkedIn, X, Instagram and TikTok in your own voice (**Resurrect**), posted straight to your own accounts from **Connectors** with a preview that matches the real post, planned in **Witching Hour** (a live calendar with scheduling, reminders and a composer for your own images with AI captions), all summed up on your **Home** dashboard, a doctor for broken feeds (**Feed Doctor**), and an MCP server so Kiro or any AI assistant can work with your reading list (**Talk to the Dead**).
 
+Every article now carries its lead **image** and one **topic** (AI, Security, Web & dev, Tech & gadgets, Design, Science, Business, News, Creators, Other) that you can filter by. Every AI answer says **who wrote it** ("Written by GPT OSS 120B · Groq", or "Written without AI" in Ghost mode). **The Circle** lets you follow people and see the posts they actually published through Necro, each with its RSS source one click away. A **learning memory** builds a small profile from what you post, draft, star and summarise, shows it to you in Settings, and adds it to the AI prompt as context.
+
 ### The real-world problem
 
 People who **read to create** (creators, marketers, students, researchers, founders) follow dozens of sources and are expected to share what they learn. Today that means social feeds ranked by an algorithm, dozens of open tabs, and copy-pasting into four different apps. RSS still exists on almost every blog, newsroom and channel, but the good way to use it died with the classic feed readers.
@@ -29,6 +31,10 @@ Necro closes the whole loop in one calm place: **follow** any site (or bring bac
    - [4.5 Resurrect: drafts with privacy routing](#45-resurrect-drafts-with-privacy-routing)
    - [4.8 Connectors: post to LinkedIn, X, Instagram and TikTok](#48-connectors-post-to-linkedin-x-instagram-and-tiktok)
    - [4.9 Witching Hour, Home and "one post, once"](#49-witching-hour-home-and-one-post-once)
+   - [4.10 Images, topics and honest AI labels](#410-images-topics-and-honest-ai-labels)
+   - [4.11 The Circle: follow people](#411-the-circle-follow-people)
+   - [4.12 Learning memory](#412-learning-memory)
+   - [4.13 Navigation, landing page and screen sizes](#413-navigation-landing-page-and-screen-sizes)
    - [4.6 MCP: Talk to the Dead](#46-mcp-talk-to-the-dead)
    - [4.7 Feed Doctor](#47-feed-doctor)
 5. [AI models and providers](#5-ai-models-and-providers)
@@ -86,23 +92,32 @@ Each folder keeps its own `node_modules` on purpose. Vercel builds `frontend/`, 
 .
 ├─ frontend/                Next.js 16 app (Vercel)
 │  ├─ app/
-│  │  ├─ page.tsx           Landing
+│  │  ├─ page.tsx           Landing (hero, how it works, showcase, who it's for, FAQ)
 │  │  ├─ sign-in/ sign-up/  Clerk
-│  │  ├─ (app)/             Signed-in area: auth.protect() + UserGate
-│  │  │  ├─ graveyard/      Feeds as tombstones, Summon dialog
-│  │  │  ├─ crypt/          Reader: list, article, Séance, Resurrect
-│  │  │  ├─ doctor/         Broken and sleeping feeds
-│  │  │  └─ settings/       Interests, language, voice, MCP keys, usage, OPML export
+│  │  ├─ (app)/             Signed-in area: auth.protect() + UserGate (layout sets `instant = false`)
+│  │  │  ├─ dashboard/      Home: live overview, where sign-in lands
+│  │  │  ├─ graveyard/      Feeds as tombstones, Summon dialog, Broken feeds tab (Feed Doctor)
+│  │  │  ├─ discover/       Shared feed collections (Covens)
+│  │  │  ├─ crypt/          Reader: list (topic filter, thumbnails), article, Séance, Resurrect
+│  │  │  ├─ circle/         The Circle: Following · In your topics · People; [slug]/ profile pages
+│  │  │  ├─ omens/          Topic alerts and the weekly newsletter (Grimoire)
+│  │  │  ├─ calendar/       Witching Hour: calendar, composer
+│  │  │  ├─ connectors/     OAuth callbacks for connected accounts
+│  │  │  └─ settings/       Interests, voice, public profile, "What Necro learned", MCP keys, usage
 │  │  └─ api/mcp/           MCP server (route.ts + tools.ts)
-│  ├─ components/           brand · layout · graveyard · crypt · doctor · settings · ui · providers
+│  ├─ components/           brand · layout · landing · graveyard · crypt · circle · calendar · settings · ui (incl. model-badge) · providers
 │  └─ lib/                  copy.ts (all UI text) · motion.ts · errors.ts · server/convex.ts
 ├─ backend/                 Convex: the only backend
 │  ├─ convex/               schema, queries, mutations, actions, crons (see §7)
+│  │  ├─ circle.ts          follows, shared posts, profiles (the Circle)
+│  │  ├─ learning.ts        learning memory: refresh, Settings card, on/off, reset
+│  │  ├─ seedCircle.ts      demo people for the Circle (names end in "(demo)")
 │  │  └─ lib/               auth.ts (user isolation) · ladder.ts (AI router glue)
 │  ├─ lib/
-│  │  ├─ feeds/             parse (RSS/RDF/Atom) · jsonfeed · normalize · discover · opml · url · any
+│  │  ├─ feeds/             parse (RSS/RDF/Atom) · jsonfeed · normalize · image (lead image) · discover · opml · url · any
+│  │  ├─ topics.ts          deterministic topic classifier
 │  │  ├─ security/ssrf.ts   safeFetch: the only way Necro fetches a user-supplied URL
-│  │  ├─ ai/                providers · router · breaker · budgets · prompts · ghost · kindred · mock
+│  │  ├─ ai/                providers · router · breaker · budgets · prompts · ghost · kindred · learn · modelName · mock
 │  │  └─ sanitize.ts · schedule.ts · limits.ts · errors.ts · text.ts
 │  ├─ tests/                unit · pbt (fast-check) · convex (convex-test)
 │  └─ scripts/push-env.ts   bun run env:push
@@ -122,7 +137,7 @@ flowchart TB
   end
 
   subgraph Vercel["Vercel: frontend/"]
-    P["Next.js pages<br/>/graveyard /crypt /doctor /settings"]
+    P["Next.js pages<br/>/dashboard /graveyard /crypt /circle /calendar /settings"]
     PX["proxy.ts<br/>clerkMiddleware"]
     MR["/api/mcp<br/>Streamable HTTP, stateless"]
   end
@@ -130,9 +145,9 @@ flowchart TB
   subgraph Convex["Convex cloud: backend/"]
     Q["Queries + mutations<br/>requireUser on every call"]
     A["Node actions (use node)<br/>feedsNode · aiNode · askNode · doctorNode · seedNode"]
-    CR["Crons<br/>poll every 5 min · prune · clear rate limits"]
+    CR["Crons<br/>poll every 5 min · prune · clear rate limits<br/>learning refresh · stuck posts · Instagram tokens"]
     R["AI router<br/>breakers · budgets · privacy · Ghost"]
-    DB[("Database<br/>14 tables, every row has userId")]
+    DB[("Database<br/>27 tables, scoped by userId")]
   end
 
   subgraph External
@@ -287,7 +302,7 @@ flowchart TD
   SAVE2 --> OUT
 ```
 
-Output schema: `{ summary: [3 strings], score: 0-100, reason }`. A Séance is kept forever per item. A Ghost Séance can be replaced by a model Séance with **Try again with AI** (`retry: true`).
+Output schema: `{ summary: [3 strings], score: 0-100, reason, topic? }`. The prompt lists the reader's stated interests first and, when learning memory has enough to say, the learned line second (see [4.12](#412-learning-memory)). When a real model answered, its `topic` replaces the keyword guess on the item (`topicBy: "ai"`). A Séance is kept forever per item. A Ghost Séance can be replaced by a model Séance with **Try again with AI** (`retry: true`).
 
 ### 4.5 Resurrect: drafts with privacy routing
 
@@ -384,10 +399,62 @@ flowchart LR
 
 ### 4.9 Witching Hour, Home and "one post, once"
 
-- **Home** (`/home`, the logo when signed in, and where sign-in lands): a live overview of your feeds, unread and risen posts, your posts (up next and recent), connected accounts, AI tools used today and MCP keys, with a getting-started checklist and alerts that link to where you fix things (`backend/convex/dashboard.ts`).
+- **Home** (`/dashboard`, where sign-in lands; the logo always goes to the landing page `/`): a live overview of your feeds, unread and risen posts, your posts (up next and recent), connected accounts, AI tools used today and MCP keys, with a getting-started checklist and alerts that link to where you fix things (`backend/convex/dashboard.ts`).
 - **Witching Hour** (`/calendar`): a month calendar and live timeline of every post. **Schedule for later** from Resurrect, or **New post** to upload your own JPG/PNG (Convex storage), write a caption or press **Write with AI** (a vision model looks at the image and writes in your saved voice), pick accounts, and post now or at a time. Connected accounts post on their own at that time (Convex scheduler); the others, and TikTok always, become **reminders**: the card turns due, the nav shows a badge, the browser notifies you, and **Share now** opens the share sheet with the image (`backend/convex/social.ts`, `socialNode.ts`, `captionNode.ts`).
 - **One post, once.** Every post carries a content key (`backend/lib/social/dedupe.ts`): one per article per platform, or the same caption and image per platform. While a post with that key is going out, waiting or posted, the same post is refused, checked inside the same Convex transaction that creates it (so two clicks or two tabs cannot both pass) and again by the scheduled job before sending. Resurrect locks its buttons live when a platform already has the article. Cancelled and failed posts can be retried. A post stuck "posting" for 15 minutes is marked failed (never retried automatically: the platform may already have it).
 - **Real time.** Every screen reads Convex live queries: a post scheduled in one tab, a reminder coming due, a cancel or an article read appears everywhere at once, without a reload. Time windows on Home ("rose today", "last 30 days") follow the page's clock, refreshed every minute.
+
+### 4.10 Images, topics and honest AI labels
+
+Spec: [`.kiro/specs/media-topics`](.kiro/specs/media-topics).
+
+- **Lead image** (`backend/lib/feeds/image.ts`): one `https` image per article, picked in this order: Media RSS `media:content`, `media:thumbnail`, an image enclosure, `itunes:image`, the JSON Feed image (the widest one within a source), else the first real `<img>` in the content. `data:` and `javascript:` URLs, URLs with credentials and tracking pixels are rejected; `http` is upgraded to `https`. Stored as `items.imageUrl`, shown as a thumbnail in the Crypt list and as the lead image in the reader. An image that fails to load hides itself.
+- **Topic** (`backend/lib/topics.ts`): one of AI, Security, Web & dev, Tech & gadgets, Design, Science, Business, News, Creators, Other. Whole-word keyword matches are weighted by where they appear: feed categories ×3, title ×2, excerpt ×1. The Séance may confirm or correct it when a real model answered (`items.topicBy` is `"ai"` or `"keywords"`). The Crypt has a topic filter (index `by_user_topic`). `items.backfillMedia` fills in images and topics for older articles.
+- **Who wrote it** (`backend/lib/ai/modelName.ts`, `frontend/components/ui/model-badge.tsx`): under the Séance, Resurrect drafts, Second Opinion, the Grimoire newsletter and image captions, a line reads "Written by *model* · *provider*" or "Written without AI" when Ghost mode answered. Captions also say: "AI can misread a picture. Check the caption matches your image before posting."
+
+### 4.11 The Circle: follow people
+
+Spec: [`.kiro/specs/circle`](.kiro/specs/circle). Code: `backend/convex/circle.ts`, `frontend/components/circle/`.
+
+```mermaid
+flowchart LR
+  P["Post now / scheduled post<br/>status becomes posted"] --> R["recordShared<br/>same transaction, once per publish"]
+  R --> SP[("sharedPosts")]
+  SP --> Q{"author's profilePublic on<br/>and display name set?<br/>(checked on every read)"}
+  Q -- no --> H["hidden from everyone"]
+  Q -- yes --> F["Following tab<br/>(people I follow)"]
+  Q -- yes --> T["In your topics"]
+  Q -- yes --> PR["/circle/[slug] profile"]
+  F & T & PR --> A["Add this feed<br/>→ your Graveyard"]
+```
+
+- **Opt-in.** A public profile is off by default and needs a display name. Turning it off hides the profile and its posts at once, because visibility is checked at every read.
+- **What is shared.** Only posts that actually went out through Necro (publish status `posted`), recorded exactly once in the same transaction that marks them posted (`finishPublish` / `markShared`). Never drafts, reading history or the email. A feed URL is shown only if it is a plain public address (no query string, no credentials, no token-like path).
+- **Pages.** `/circle` with tabs **Following** · **In your topics** · **People**; profiles at `/circle/[slug]`; Follow / Unfollow; **Add this feed** brings the post's RSS source into your Graveyard.
+- **Limits.** Follow up to 500 people, at most 30 follows per minute. Deleting an account removes its follows in both directions and its shared posts.
+- **Demo people** (`backend/convex/seedCircle.ts`): marked `isDemo`, names end in "(demo)".
+
+### 4.12 Learning memory
+
+Spec: [`.kiro/specs/learning`](.kiro/specs/learning). Code: `backend/lib/ai/learn.ts`, `backend/convex/learning.ts`.
+
+Necro cannot retrain hosted models, so it learns the reader from their own actions instead:
+
+| Action | Weight |
+|---|---|
+| Posted | 5 |
+| Drafted | 3 |
+| Starred | 3 |
+| Summarised (Séance) | 1 |
+
+Older actions fade with a 30-day half-life. The profile keeps topic shares, recurring subjects (seen in 2 or more articles) and top sources. Nothing is sent to the AI until there are at least 3 actions. The learned line goes into the Séance prompt after the stated interests, and the user's real published posts are used as voice examples for Resurrect when fewer than 3 samples are saved. It refreshes after actions (at most once per 10 minutes per user) and nightly by cron. **Settings › What Necro learned** shows the profile, the exact line the AI receives, an on/off switch and a reset.
+
+### 4.13 Navigation, landing page and screen sizes
+
+- **Nav:** Dashboard · Graveyard ▾ (Your feeds, Discover, Broken feeds) · Crypt · Circle · Omens ▾ (Topic alerts, Weekly newsletter) · Witching Hour ▾ (Calendar, New post, Connected accounts) · ⚙ Settings. Below 1024 px a hamburger menu opens a full-width sheet on phones and a panel on tablets, with 44 px rows, the current page highlighted and the background dimmed and locked.
+- **Landing (`/`):** a hero with a plain one-line explanation, How it works (3 steps), Showcase (3 phone mockups), Who it's for, FAQ and a final call to action.
+- **Screen sizes:** checked with no horizontal overflow on 8 pages at 13 widths from 320 px to 7680 px. The root font scales to 125% at 2560 px, 150% at 3520 px, 200% at 4800 px and 275% at 6720 px CSS width (`frontend/app/globals.css`), for QHD, 4K, 5K and 8K screens.
+- **Real time, checked in a browser:** a new post by someone you follow appears at the top of Following without a reload; starring 3 articles in one tab updated "What Necro learned" in another; a topic change updated the Crypt list live.
 
 ## 5. AI models and providers
 
@@ -432,7 +499,7 @@ Check the chains with `bunx convex run aiNode:healthCheck`, and the breakers, Gh
 
 ## 6. Database
 
-Convex, 18 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour). Every table except `users`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it.
+Convex, 27 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour, and `follows`, `sharedPosts` for the Circle). Every table except `users`, `follows`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it; `follows` is indexed from both sides (`followerId`, `followeeId`). The learning memory lives on the user row (`users.learned`, `learningOff`, `learnedResetAt`).
 
 ```mermaid
 erDiagram
@@ -446,6 +513,11 @@ erDiagram
   graves ||--o{ items : contains
   items ||--o| seances : "summarised by"
   items ||--o{ drafts : "resurrected into"
+  users ||--o{ publishes : "posts"
+  publishes ||--o| sharedPosts : "recorded once when posted"
+  users ||--o{ follows : "follows (followerId)"
+  users ||--o{ follows : "followed by (followeeId)"
+  users ||--o{ sharedPosts : "shares"
 
   users {
     string tokenIdentifier "Clerk issuer|subject"
@@ -478,8 +550,25 @@ erDiagram
     boolean isRead
     boolean isStarred
     number score "copied from the Séance"
+    string imageUrl "lead image, https only"
+    string topic "ai | security | dev | ... | other"
+    string topicBy "keywords | ai"
     number publishedAt
     number risenAt
+  }
+  follows {
+    id followerId
+    id followeeId
+    number createdAt
+  }
+  sharedPosts {
+    id userId
+    id publishId "one row per publish"
+    string platform
+    string text "max 600"
+    string feedUrl "only plain public URLs"
+    string topic
+    number postedAt
   }
   seances {
     id itemId
@@ -520,9 +609,16 @@ erDiagram
 <!-- data-model:start -->
 | Table | Purpose | Indexes |
 |---|---|---|
-| `users` | Clerk identity, interests, preferences | by_token, by_clerk, by_publicSlug, by_email |
+| `users` | Clerk identity, interests, preferences, public profile (`profilePublic`, `bio`, counters), learning memory (`learned`) | by_token, by_clerk, by_publicSlug, by_email, by_profilePublic |
+| `follows` | The Circle: who follows whom, one row per pair | by_follower, by_followee, by_pair |
+| `sharedPosts` | The Circle: posts that went out through Necro (status posted), recorded once | by_user_posted, by_topic_posted, by_publish |
 | `graves` | Feeds (tombstones) and their fetch state | by_user, by_user_feedUrl, by_user_status, by_user_folder, by_nextFetch |
-| `items` | Articles | by_grave_guid, by_grave_published, by_grave_read, by_grave_starred, by_user_published, by_user_read, by_user_starred, by_user_score, by_user_risen, by_kindred · search `search_text` (title) · vector `by_embedding` (768) |
+| `items` | Articles, with lead `imageUrl`, `topic` and `topicBy` | by_grave_guid, by_grave_published, by_grave_read, by_grave_starred, by_user_published, by_user_read, by_user_starred, by_user_score, by_grave_score, by_user_read_score, by_user_starred_score, by_user_risen, by_user_topic, by_kindred · search `search_text` (title) · vector `by_embedding` (768) |
+| `kindredIndex` | Light title rows for Kindred clustering | by_user_published, by_item |
+| `omens` / `omenMatches` | Topic alerts and their matches | by_user / by_user_seen, by_user_created, by_omen, by_omen_item, by_item |
+| `opinions` | Second Opinion per Kindred group | by_user_kindred |
+| `grimoires` | Weekly newsletter drafts | by_user |
+| `collections` / `collectionFollows` / `collectionReports` | Covens: shared feed collections, follows, reports | by_user, by_slug, by_public_* · search `search_title` / by_user, by_collection, by_user_collection |
 | `seances` | One AI summary per item | by_item, by_user |
 | `drafts` | Social drafts, three per item | by_item, by_user |
 | `voice` | Writing voice for Resurrect | by_user |
@@ -617,6 +713,9 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | AI cost abuse | Daily limits with atomic reservation, input truncation, output token caps, caching, provider budgets |
 | Social account tokens | Official OAuth only (single-use state, PKCE on X); tokens sealed with AES-256-GCM, never returned to the browser; deleted on disconnect and account deletion |
 | Post image misuse | `/api/post-image` needs a signed-in user or an HMAC-signed link valid for 1 hour |
+| Article images | `https` only (http upgraded), no `data:`/`javascript:` URLs, no credentials in the URL, tracking pixels dropped; shown with no referrer and hidden if they fail to load |
+| Circle privacy | Public profile off by default and needs a display name; visibility checked on every read, so turning it off hides everything at once; only posts that actually went out are shared, never drafts, reading or the email; feed URLs shown only when plain and public (no query, credentials or token-like path); 500 follows max, 30 per minute; account deletion removes follows both ways and shared posts |
+| Learning memory | Built only from the user's own actions in Necro; shown in full (including the exact line sent to the AI) in Settings, can be switched off or reset; nothing is sent until there are 3+ actions |
 | Secrets in git | `.env*` ignored (only `.env.example` committed). No secrets under `NEXT_PUBLIC_` |
 
 ---
@@ -636,6 +735,9 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | Posts and reminders created (all paths) | 60 per hour per user; 100 scheduled at once; the same post only once per platform |
 | Composer uploads | JPG/PNG up to 8 MB, 50 per day |
 | AI captions | 30 per day |
+| People followed (the Circle) | 500; at most 30 follows per minute |
+| Profile bio | 160 characters |
+| Learning memory | used once 3+ actions; refreshed at most every 10 minutes per user, plus nightly |
 
 ---
 
@@ -667,6 +769,15 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 ```bash
 cd backend && bun run test
 ```
+
+Last run: **261 tests passing in 30 files** (unit, property-based and convex-test suites). Typecheck and lint are clean on both apps. The table lists the main suites; newer ones include:
+
+| Suite | What it proves |
+|---|---|
+| `tests/unit/media-topics.test.ts` | Lead-image picking order and URL rejection rules; topic classification on real-looking headlines |
+| `tests/unit/learn.test.ts` | Signal weights, 30-day decay, recurring subjects, nothing sent below 3 actions |
+| `tests/convex/circle.test.ts` | Opt-in visibility, exactly-once shared posts, follow limits, public-only feed URLs, account deletion |
+| `tests/convex/learning.test.ts` | Profile refresh from real actions, on/off, reset |
 
 | Suite | What it proves |
 |---|---|

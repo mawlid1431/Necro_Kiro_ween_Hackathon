@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/field";
 import { opinion as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
+import { ModelBadge } from "@/components/ui/model-badge";
 
 /** Second Opinion: how the sources of one Kindred group agree, differ, or stand alone. */
 export function SecondOpinion({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: (id: Id<"items">) => void }) {
@@ -59,6 +60,7 @@ export function SecondOpinion({ itemId, onOpen }: { itemId: Id<"items">; onOpen?
         <span className="font-display text-h3 font-bold">{copy.label}</span>
         <span className="text-meta text-subtle">{copy.plain}</span>
       </h3>
+      <ModelBadge model={cached.model} className="mt-1" />
 
       {cached.ghost ? (
         <>

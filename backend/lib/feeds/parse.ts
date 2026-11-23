@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { decodeHTML } from "entities";
 import { cleanText, normalizeItem, toHttpUrl, type NormalizedItem, type RawItem } from "./normalize";
+import type { ImageCandidate } from "./image";
 
 export type FeedFormat = "rss090" | "rss091" | "rss092" | "rss2" | "rss1" | "atom" | "jsonfeed";
 
@@ -92,6 +93,8 @@ function buildRss(channel: Node, rawItems: Node[], format: FeedFormat, ctx: { fe
         author: firstText(raw["dc:creator"]) ?? firstText(raw.author),
         published: text(raw.pubDate) ?? text(raw["dc:date"]) ?? text(raw.date),
         contentHtml: html(raw["content:encoded"]) ?? html(raw.description),
+        images: imageCandidates(raw),
+        categories: toArray(raw.category).map((c) => text(c) ?? text(c["@_term"]) ?? "").filter(Boolean),
       };
       const n = normalizeItem(item, base);
       if (n) items.push(n);
@@ -125,6 +128,13 @@ function buildAtom(feed: Node, ctx: { feedUrl: string; fetchedAt: number }): Par
         author: authors.length ? text(authors[0].name) : null,
         published: text(raw.published) ?? text(raw.updated) ?? text(raw.issued),
         contentHtml: atomBody(raw.content) ?? atomBody(raw.summary),
+        images: [
+          ...imageCandidates(raw),
+          ...toArray(raw.link)
+            .filter((l) => String(l["@_rel"] ?? "") === "enclosure")
+            .map((l) => ({ url: str(l["@_href"]), type: str(l["@_type"]), priority: 2 })),
+        ],
+        categories: toArray(raw.category).map((c) => str(c["@_label"]) ?? str(c["@_term"]) ?? text(c) ?? "").filter(Boolean),
       };
       const n = normalizeItem(item, base);
       if (n) items.push(n);
@@ -144,6 +154,32 @@ function buildAtom(feed: Node, ctx: { feedUrl: string; fetchedAt: number }): Par
 }
 
 // ---------- helpers ----------
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function num(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Media RSS (also inside <media:group>), image enclosures and iTunes artwork, best source first.
+function imageCandidates(raw: Node): ImageCandidate[] {
+  const out: ImageCandidate[] = [];
+  const groups = [raw, ...toArray(raw["media:group"])];
+  for (const g of groups) {
+    for (const m of toArray(g["media:content"])) {
+      out.push({ url: str(m["@_url"]), type: str(m["@_type"]), medium: str(m["@_medium"]), width: num(m["@_width"]), height: num(m["@_height"]), priority: 0 });
+    }
+    for (const m of toArray(g["media:thumbnail"])) {
+      out.push({ url: str(m["@_url"]), medium: "image", width: num(m["@_width"]), height: num(m["@_height"]), priority: 1 });
+    }
+  }
+  for (const e of toArray(raw.enclosure)) out.push({ url: str(e["@_url"]), type: str(e["@_type"]), priority: 2 });
+  for (const i of toArray(raw["itunes:image"])) out.push({ url: str(i["@_href"]), medium: "image", priority: 3 });
+  return out;
+}
 
 function isNode(v: unknown): v is Node {
   return typeof v === "object" && v !== null && !Array.isArray(v);

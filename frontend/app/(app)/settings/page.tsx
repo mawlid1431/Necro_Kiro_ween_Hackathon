@@ -7,6 +7,7 @@ import { PrivacyCard, YourDataCard } from "@/components/settings/PrivacyCard";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { UsageAndExport } from "@/components/settings/UsageAndExport";
 import { VoiceForm } from "@/components/settings/VoiceForm";
+import { LearningCard } from "@/components/settings/LearningCard";
 import { labels, settingsNav } from "@/lib/copy";
 
 export const metadata: Metadata = { title: labels.settings.themed };
@@ -39,6 +40,7 @@ export default function SettingsPage() {
               <ConnectorsPanel />
             </section>
             <div id="voice" className="scroll-mt-24"><VoiceForm /></div>
+            <div id="learning" className="scroll-mt-24"><LearningCard /></div>
             <div id="privacy" className="scroll-mt-24"><PrivacyCard /></div>
             <div id="keys" className="scroll-mt-24"><ApiKeys /></div>
             <div id="usage" className="scroll-mt-24"><UsageAndExport /></div>

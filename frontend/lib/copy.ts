@@ -25,12 +25,14 @@ export const labels = {
   connectors: { themed: "Connectors", plain: "Link your LinkedIn, X, Instagram and TikTok to post straight from Resurrect" },
   calendar: { themed: "Witching Hour", plain: "Calendar and live timeline of your posts" },
   home: { themed: "Dashboard", plain: "Your feeds, posts and accounts at a glance" },
+  circle: { themed: "The Circle", plain: "Follow people and see what they share" },
 } as const;
 
 export const TOPICS = {
   ai: "AI",
   security: "Security",
   dev: "Web & dev",
+  tech: "Tech & gadgets",
   design: "Design",
   science: "Science",
   business: "Business",
@@ -241,6 +243,9 @@ export const crypt = {
   filters: { all: "All", unread: "Unread", starred: "Starred" },
   sortNewest: "Newest",
   sortRelevance: "Most relevant",
+  topicFilter: "Topic",
+  allTopics: "All topics",
+  topicNewestOnly: "Topic lists are sorted newest first.",
   search: "Search titles",
   allFeeds: "All feeds",
   empty: "Nothing here yet.",
@@ -507,6 +512,7 @@ export const composer = {
   writeWithAi: "Write with AI",
   writing: "Looking at your image…",
   aiNeedsImage: "Upload an image to let the AI write a caption from it, in your voice.",
+  aiCheckImage: "AI can misread a picture. Check the caption matches your image before posting.",
   captionLabel: "Caption",
   captionPlaceholder: "Write your caption, or let the AI write it from the image.",
   step3: "3. Accounts",
@@ -592,6 +598,9 @@ export const home = {
 } as const;
 
 export const tabs = {
+  following: "Following",
+  inTopics: "In your topics",
+  people: "People",
   feeds: "Your feeds",
   doctor: "Broken feeds",
   omens: "Topic alerts",
@@ -602,6 +611,7 @@ export const settingsNav = [
   { id: "profile", label: "Profile" },
   { id: "connections", label: "Connected accounts" },
   { id: "voice", label: "Your voice" },
+  { id: "learning", label: "What Necro learned" },
   { id: "privacy", label: "Privacy" },
   { id: "keys", label: "MCP keys" },
   { id: "usage", label: "Usage and export" },
@@ -722,6 +732,7 @@ export const doctorCopy = {
 
 export const nav = {
   home: "Dashboard",
+  circle: "Circle",
   graveyard: "Graveyard",
   crypt: "Crypt",
   discover: "Discover",
@@ -753,4 +764,74 @@ export const nav = {
 export const auth = {
   signIn: "Sign in",
   signOut: "Sign out",
+} as const;
+
+// The Circle: follow people, see their published posts, find people in your topics.
+export const circle = {
+  profileTitle: "Your profile",
+  privateNow: "Private",
+  publicNow: "Public",
+  privateBody: "Nobody can see your profile. Turn it on to share the posts you publish through Necro, so readers in your topics can find and follow you.",
+  publicBody: "People can follow you and see the posts you publish through Necro. Never your drafts, your reading or your email.",
+  turnOn: "Make my profile public",
+  turnOff: "Make it private",
+  needName: "Add a display name in Settings first, so people know who they follow.",
+  addName: "Add a display name",
+  bioLabel: "Short bio",
+  bioPlaceholder: "What do you read and share about?",
+  saveBio: "Save bio",
+  saved: "Saved",
+  viewProfile: "View my profile",
+  followers: (n: number) => `${n} ${n === 1 ? "follower" : "followers"}`,
+  followingN: (n: number) => `${n} following`,
+  posts: (n: number) => `${n} ${n === 1 ? "post" : "posts"}`,
+  follow: "Follow",
+  followingBtn: "Following",
+  unfollow: "Unfollow",
+  viewPost: "View post",
+  readArticle: "Read the article",
+  addFeed: "Add this feed",
+  addedFeed: "Feed added to your Graveyard",
+  feedFrom: (feed: string) => `From ${feed}`,
+  showMore: "Show more",
+  showLess: "Show less",
+  emptyFollowingTitle: "You don't follow anyone yet",
+  emptyFollowingBody: "Find people who read what you read in People or In your topics. Their published posts will show up here, newest first.",
+  emptyFollowingPosts: "The people you follow have not published anything yet. New posts appear here the moment they go out.",
+  emptyTopicsTitle: "Nothing in your topics yet",
+  emptyTopicsBody: "Add interests in Settings, or read a few articles: Necro learns your topics from both.",
+  emptyTopicsPosts: "No one outside your Following has posted in your topics yet. Check back soon.",
+  yourTopics: "Your topics",
+  emptyPeople: "No public profiles yet. Be the first: make your profile public.",
+  sharedTopics: "Reads about",
+  profilePrivate: "This profile is private or no longer exists.",
+  yourPreview: "Only you can see this page while your profile is private.",
+  noPostsYet: "No published posts yet.",
+  goSettings: "Open Settings",
+  howItWorks: "How the Circle works",
+  howBody: [
+    "Make your profile public (it is off until you choose).",
+    "Every post you publish through Necro to LinkedIn, X, Instagram or TikTok appears on your profile, with the article and its feed.",
+    "Follow people to see their posts in Following. In your topics shows posts from people you do not follow yet.",
+    "Like a post's source? Add its feed to your Graveyard in one click.",
+  ],
+} as const;
+
+// Learning memory: Necro learns the reader from their own actions and gives that to the AI as context.
+export const learning = {
+  title: "What Necro learned",
+  subtitle: "Your AI gets better at knowing you, day by day",
+  on: "Learning on",
+  off: "Learning off",
+  how: "Necro cannot retrain the AI models, so it learns you instead: what you post, draft, star and ask to summarise (posts count most, recent activity more than old). This profile is added to every AI request, so relevance scores and drafts fit you better each day. It is never shared.",
+  offBody: "Learning is off. The AI only sees the interests you typed in your profile.",
+  thin: (n: number) => `Not enough to go on yet (${n} of 3 actions). Star, summarise or post a few articles and this fills in.`,
+  topics: "Topics you engage with",
+  terms: "Subjects that keep coming up",
+  feeds: "Sources you use most",
+  asAiSees: "Show exactly what the AI receives",
+  basedOn: (n: number, when: string) => `Based on ${n} of your actions. Updated ${when}; refreshed after you act and every night.`,
+  reset: "Reset learning",
+  resetTitle: "Forget what Necro learned?",
+  resetBody: "Necro starts again from your next action. Your articles, stars and posts are not deleted.",
 } as const;

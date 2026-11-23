@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TOPICS } from "../topics";
 
 // Structured-output schemas and prompts. Every AI response is validated against
 // one of these before it is stored or shown.
@@ -7,6 +8,8 @@ export const SeanceSchema = z.object({
   summary: z.array(z.string().min(10).max(220)).length(3),
   score: z.number().int().min(0).max(100),
   reason: z.string().max(160),
+  // Optional so a model that leaves it out still passes; the keyword topic then stays.
+  topic: z.enum(TOPICS).optional(),
 });
 
 export const ResurrectSchema = z.object({
@@ -83,16 +86,20 @@ const UNTRUSTED =
 
 export const SEANCE_SYSTEM =
   `You summarise articles for a busy reader. Be accurate and neutral. Never invent facts. ${UNTRUSTED} ` +
-  "Score 0-100 for how relevant the article is to the reader's interests: 80+ only for a direct match, below 30 when unrelated.";
+  "Score 0-100 for how relevant the article is to the reader: weigh their stated interests first and what they actually " +
+  "engage with (the learned line, when given) second; 80+ only for a direct match, below 30 when unrelated. " +
+  "If the article text is short or cut off, summarise only what is there and never fill the gaps.";
 
-export function seancePrompt(p: { interests: string[]; title: string; text: string; language?: string }) {
+export function seancePrompt(p: { interests: string[]; learned?: string | null; title: string; text: string; language?: string }) {
   const lang = p.language?.trim().slice(0, 30).replace(/[^\p{L} -]/gu, "");
   return [
     `Reader interests: ${p.interests.join(", ") || "none given"}`,
+    ...(p.learned ? [p.learned] : []),
     `<article title="${p.title.replace(/"/g, "'")}">`,
     fenced(p.text.slice(0, 6000)),
     `</article>`,
-    "Return exactly 3 short bullet summaries, a relevance score and a one-line reason for the score.",
+    "Return exactly 3 short bullet summaries, a relevance score, a one-line reason for the score, " +
+      `and the article's main topic as exactly one of: ${TOPICS.join(", ")} ("other" when none fits).`,
     ...(lang && lang.toLowerCase() !== "english" ? [`Write the bullets and the reason in ${lang}.`] : []),
   ].join("\n");
 }
@@ -120,13 +127,16 @@ export function resurrectPrompt(p: {
   source: string;
   summary: string[];
   text: string;
+  publishedPosts?: string[]; // posts the user really published through Necro: their real voice
 }) {
   const v = p.voice;
+  // Saved samples first, then real published posts, up to 3 examples in total.
+  const examples = [...(v?.samplePosts ?? []), ...(p.publishedPosts ?? [])].filter((s) => s.trim()).slice(0, 3);
   return [
     v
       ? `Voice: tone=${v.tone}; audience=${v.audience}; use=${v.wordsToUse.join(", ")}; avoid=${v.wordsToAvoid.join(", ")}`
       : "Voice: friendly, clear, professional.",
-    ...(v?.samplePosts.length ? ["Example posts by the user:", ...v.samplePosts.map((s) => `- ${s.slice(0, 600)}`)] : []),
+    ...(examples.length ? ["Example posts by the user (match their style, never copy their facts):", ...examples.map((s) => `- ${s.slice(0, 600)}`)] : []),
     `Source: ${p.source}. Link: ${p.link}`,
     `Key points: ${p.summary.join(" | ")}`,
     `<article title="${p.title.replace(/"/g, "'")}">`,

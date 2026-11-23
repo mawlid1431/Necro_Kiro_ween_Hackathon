@@ -13,6 +13,7 @@ import { grimoire as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import { NewsletterPreview } from "./NewsletterPreview";
+import { ModelBadge } from "@/components/ui/model-badge";
 
 /** Grimoire: compose the week's newsletter, edit it, copy it; past drafts below. */
 export function Grimoire() {
@@ -102,7 +103,7 @@ function Editor({ grimoireId, onDeleted }: { grimoireId: Id<"grimoires">; onDele
   return <EditorForm key={g.updatedAt} grimoire={g} onDeleted={onDeleted} />;
 }
 
-function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">; markdown: string; ghost: boolean }; onDeleted: () => void }) {
+function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">; markdown: string; ghost: boolean; model: string }; onDeleted: () => void }) {
   const update = useMutation(api.grimoires.update);
   const remove = useMutation(api.grimoires.remove);
   const { confirm } = useConfirm();
@@ -118,7 +119,7 @@ function EditorForm({ grimoire, onDeleted }: { grimoire: { _id: Id<"grimoires">;
 
   return (
     <Card>
-      {grimoire.ghost ? <Notice>{copy.ghostHint}</Notice> : null}
+      {grimoire.ghost ? <Notice>{copy.ghostHint}</Notice> : <ModelBadge model={grimoire.model} />}
       <div className={cn("flex gap-1 border-b border-line", grimoire.ghost && "mt-4")} role="tablist" aria-label={copy.editLabel}>
         {(["preview", "edit"] as const).map((v) => (
           <button

@@ -34,6 +34,12 @@ export function parseJsonFeed(body: string, ctx: { feedUrl: string; fetchedAt: n
           author: authors.length ? str(authors[0]?.name) : null,
           published: str(it.date_published) ?? str(it.date_modified),
           contentHtml: str(it.content_html) ?? (str(it.content_text) ? escapeHtml(str(it.content_text)!) : null) ?? str(it.summary),
+          images: [
+            { url: str(it.image), medium: "image", priority: 0 },
+            { url: str(it.banner_image), medium: "image", priority: 1 },
+            ...(Array.isArray(it.attachments) ? (it.attachments as J[]) : []).map((a) => ({ url: str(a?.url), type: str(a?.mime_type), priority: 2 })),
+          ],
+          categories: Array.isArray(it.tags) ? (it.tags as unknown[]).filter((t): t is string => typeof t === "string") : [],
         },
         base,
       );

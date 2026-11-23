@@ -6,6 +6,7 @@ import type { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { crypt as copy, kindred as kindredCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { ArticleImage, TopicChip } from "./media";
 
 export type ItemCard = FunctionReturnType<typeof api.items.search>[number];
 
@@ -60,12 +61,16 @@ export function ItemList({
               selected === i._id ? "border-ecto-dim bg-ecto/10" : "border-line bg-surface hover:bg-surface-muted",
             )}
           >
-            <div className="flex items-start gap-2">
-              {!i.isRead ? <span aria-label="Unread" className="mt-2 size-2 shrink-0 rounded-full bg-ecto-dim" /> : null}
-              <span className={cn("line-clamp-2 flex-1 font-semibold", i.isRead ? "text-copy" : "text-ink")}>{i.title}</span>
-              {i.isStarred ? <Star aria-label="Starred" className="size-4 shrink-0 fill-highlight text-highlight" /> : null}
+            <div className="flex items-start gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                {!i.isRead ? <span aria-label="Unread" className="mt-2 size-2 shrink-0 rounded-full bg-ecto-dim" /> : null}
+                <span className={cn("line-clamp-2 flex-1 font-semibold", i.isRead ? "text-copy" : "text-ink")}>{i.title}</span>
+                {i.isStarred ? <Star aria-label="Starred" className="size-4 shrink-0 fill-highlight text-highlight" /> : null}
+              </div>
+              <ArticleImage src={i.imageUrl} className="size-14 shrink-0 rounded-md sm:size-16" />
             </div>
             <div className="mt-1 flex items-center gap-2 text-meta text-subtle">
+              <TopicChip topic={i.topic} by={i.topicBy} />
               <span className="truncate">{i.graveTitle}</span>
               <span aria-hidden>·</span>
               <span className="shrink-0">{timeAgo(i.publishedAt)}</span>

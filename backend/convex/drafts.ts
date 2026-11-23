@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { platform } from "./schema";
 import { fail, requireOwned, requireUser } from "./lib/auth";
 import { cleanHashtags, PLATFORM_LIMITS } from "../lib/ai/prompts";
+import { learnedLine, scheduleLearn } from "./learning";
 
 export type DraftView = {
   _id: Id<"drafts">;
@@ -52,6 +53,9 @@ export const context = internalQuery({
     return {
       item: { title: item.title, link: item.link ?? grave?.siteUrl ?? "", contentHtml: item.fullHtml ?? item.contentHtml, excerpt: item.excerpt },
       interests: user?.interests ?? [],
+      learned: learnedLine(user),
+      // Posts this user really published through Necro: their real voice, used when they saved fewer than 3 samples.
+      publishedPosts: (await ctx.db.query("sharedPosts").withIndex("by_user_posted", (q) => q.eq("userId", userId)).order("desc").take(3)).map((p) => p.text),
       source,
       voice: voice
         ? { tone: voice.tone, audience: voice.audience, wordsToUse: voice.wordsToUse, wordsToAvoid: voice.wordsToAvoid, samplePosts: voice.samplePosts }
@@ -85,6 +89,7 @@ export const replaceForItem = internalMutation({
       const _id = await ctx.db.insert("drafts", { userId: a.userId, itemId: a.itemId, ...d, status: "draft", model: a.model });
       out.push({ _id, ...d, status: "draft", model: a.model, ghost: a.model.startsWith("ghost:") });
     }
+    await scheduleLearn(ctx, a.userId); // asking for posts about an article says it matters to this reader
     return out;
   },
 });

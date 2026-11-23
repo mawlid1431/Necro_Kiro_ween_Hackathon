@@ -34,7 +34,7 @@ function isLimit(err: unknown): boolean {
  * @param retry  re-run the ladder when the cached Séance is a Ghost one ("try again" button)
  */
 export async function seanceFor(ctx: ActionCtx, userId: Id<"users">, itemId: Id<"items">, retry = false): Promise<SeanceView> {
-  const { item, interests, language, cached } = await ctx.runQuery(internal.seances.context, { userId, itemId });
+  const { item, interests, learned, language, cached } = await ctx.runQuery(internal.seances.context, { userId, itemId });
   if (cached && !(retry && cached.ghost)) return cached; // one model Séance per item, ever
 
   const text = htmlToText(item.contentHtml) || item.excerpt;
@@ -55,7 +55,7 @@ export async function seanceFor(ctx: ActionCtx, userId: Id<"users">, itemId: Id<
   try {
     const { out, spec } = await ladderObject(ctx, "seance", {
       system: SEANCE_SYSTEM,
-      prompt: seancePrompt({ interests, title: item.title, text, language }),
+      prompt: seancePrompt({ interests, learned, title: item.title, text, language }),
       schema: SeanceSchema,
       maxOutputTokens: 400,
     }, { userId });
@@ -87,7 +87,7 @@ export async function resurrectFor(ctx: ActionCtx, userId: Id<"users">, itemId: 
     // Private task: the router drops rungs that may train on prompts (voice samples never reach them).
     const { out, spec } = await ladderObject(ctx, "resurrect", {
       system: RESURRECT_SYSTEM,
-      prompt: resurrectPrompt({ voice: c.voice, title: c.item.title, link, source: c.source, summary, text }),
+      prompt: resurrectPrompt({ voice: c.voice, title: c.item.title, link, source: c.source, summary, text, publishedPosts: c.publishedPosts }),
       schema: ResurrectSchema,
       maxOutputTokens: 1200,
     }, { userId });

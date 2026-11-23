@@ -21,8 +21,9 @@ import { draftFor, finalPost, POST_LIMITS, postLength } from "@/lib/post";
 import { copyText, shareByHand, shareSheet } from "@/lib/share";
 import { PostPreview, type Article } from "./PostPreview";
 import { ScheduleControl } from "./ScheduleControl";
+import { ModelBadge } from "@/components/ui/model-badge";
 
-type Draft = { _id: Id<"drafts">; platform: Platform; text: string; hashtags: string[]; status: string; ghost: boolean };
+type Draft = { _id: Id<"drafts">; platform: Platform; text: string; hashtags: string[]; status: string; ghost: boolean; model?: string };
 type PublishRow = { platform: SocialPlatform; status: "posting" | "posted" | "failed"; url?: string; note?: string; error?: string };
 
 const LIMITS: Record<SocialPlatform, number> = { linkedin: 1300, x: 280, instagram: 2200, tiktok: POST_LIMITS.tiktok };
@@ -340,6 +341,7 @@ export function ResurrectDialog({
               <Tabs.Content key={p} value={p} className="grid gap-5 lg:grid-cols-[1fr_minmax(0,22rem)]">
                 <div className="flex min-w-0 flex-col gap-3">
                   {d.ghost ? <Notice>{copy.template}: {copy.templateHint}</Notice> : null}
+                  <ModelBadge model={d.model} />
                   {p === "tiktok" ? <p className="text-meta text-subtle">{copy.tiktokFrom}</p> : null}
                   <Textarea
                     aria-label={`${p === "tiktok" ? copy.tiktokTab : copy.platforms[p as Platform]} draft`}

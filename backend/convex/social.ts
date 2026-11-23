@@ -11,6 +11,7 @@ import { credsFor } from "../lib/social/providers";
 import { draftFor, finalPost, POST_LIMITS, postLength, SOCIAL_PLATFORMS, type SocialPlatform } from "../lib/social/post";
 import { internal } from "./_generated/api";
 import { articleKey, duplicateMessage, isBlocking, manualKey } from "../lib/social/dedupe";
+import { recordShared } from "./circle";
 
 const STATE_TTL_MS = 15 * 60 * 1000;
 export const PUBLISHES_PER_HOUR_PER_USER = 30;
@@ -264,6 +265,7 @@ export const finishPublish = internalMutation({
     if (!p) return;
     await ctx.db.patch(publishId, { ...rest, finishedAt: Date.now() });
     if (rest.status === "posted" && p.draftId) await ctx.db.patch(p.draftId, { status: "shared" });
+    if (rest.status === "posted") await recordShared(ctx, publishId); // the Circle: exactly once, in this same transaction
   },
 });
 
@@ -372,6 +374,7 @@ export const markShared = mutation({
     if (p.jobId) await ctx.scheduler.cancel(p.jobId);
     await ctx.db.patch(publishId, { status: "posted", finishedAt: Date.now(), jobId: undefined, note: "shared" });
     if (p.draftId) await ctx.db.patch(p.draftId, { status: "shared" });
+    await recordShared(ctx, publishId);
   },
 });
 

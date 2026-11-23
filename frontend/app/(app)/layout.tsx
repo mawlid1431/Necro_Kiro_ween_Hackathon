@@ -11,6 +11,11 @@ import { ConfirmProvider } from "@/components/ui/confirm";
  * page into a prerender + resume, and Clerk's provider renders a different tree on resume
  * ("Expected the resume to render <ReactClerkProvider>…"), forcing a client re-render.
  */
+// The signed-in pages render only after Clerk confirms the user on the client (UserGate) and read all
+// their data live from Convex, so the server can never prove an instant navigation into them.
+// Opt the area out of Next's dev-only instant-navigation validation instead of reporting a dropped segment.
+export const instant = false;
+
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>

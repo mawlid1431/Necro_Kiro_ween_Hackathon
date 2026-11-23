@@ -19,6 +19,7 @@ import {
   Rss,
   Settings,
   Stethoscope,
+  Users,
   X,
 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
@@ -30,7 +31,7 @@ type Icon = ComponentType<{ className?: string; strokeWidth?: number; "aria-hidd
 type Sub = { href: string; label: string; hint: string; icon: Icon };
 type Item = { key: string; label: string; href: string; icon: Icon; children?: Sub[]; badge?: "omens" | "due" };
 
-// Four places plus Settings: related pages share a small menu, so the bar stays short and calm.
+// Five places plus Settings: related pages share a small menu, so the bar stays short and calm.
 const ITEMS: Item[] = [
   { key: "dashboard", label: nav.home, href: "/dashboard", icon: LayoutDashboard },
   {
@@ -45,6 +46,7 @@ const ITEMS: Item[] = [
     ],
   },
   { key: "crypt", label: nav.crypt, href: "/crypt", icon: BookOpen },
+  { key: "circle", label: nav.circle, href: "/circle", icon: Users },
   {
     key: "omens",
     label: nav.omens,
@@ -74,6 +76,7 @@ const ITEMS: Item[] = [
 function activeKey(path: string): string | null {
   if (path.startsWith("/dashboard")) return "dashboard";
   if (path.startsWith("/crypt")) return "crypt";
+  if (path.startsWith("/circle")) return "circle";
   if (path.startsWith("/graveyard") || path.startsWith("/discover")) return "graveyard";
   if (path.startsWith("/omens")) return "omens";
   if (path.startsWith("/calendar")) return "calendar";

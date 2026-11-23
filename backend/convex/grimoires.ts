@@ -23,7 +23,7 @@ export const get = query({
   handler: async (ctx, { grimoireId }) => {
     const user = await requireUser(ctx);
     const g = await requireOwned(ctx, user._id, grimoireId);
-    return { _id: g._id, weekOf: g.weekOf, title: g.title, markdown: g.markdown, ghost: g.model.startsWith("ghost:"), updatedAt: g.updatedAt };
+    return { _id: g._id, weekOf: g.weekOf, title: g.title, markdown: g.markdown, ghost: g.model.startsWith("ghost:"), model: g.model, updatedAt: g.updatedAt };
   },
 });
 

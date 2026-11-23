@@ -7,6 +7,10 @@ import { getCurrentUser, requireOwned, requireUser } from "./lib/auth";
 import { indexItem, scheduleCluster, unindexItem } from "./kindred";
 import { scheduleOmenCheck, unmatchItem } from "./omens";
 import { feedsNamedIn } from "../lib/feeds/match";
+import { firstBodyImage, safeImageUrl } from "../lib/feeds/image";
+import { classifyTopic } from "../lib/topics";
+import { collectionTopic } from "./schema";
+import { scheduleLearn } from "./learning";
 
 const DAY = 86_400_000;
 const MAX_CONTENT = 200 * 1024;
@@ -30,6 +34,9 @@ export function itemCard(i: Doc<"items">, graveTitle?: string) {
     score: i.score,
     risenAt: i.risenAt,
     kindred: !!i.kindredId, // part of a Kindred group (same story in another feed)
+    imageUrl: i.imageUrl ?? null,
+    topic: i.topic ?? "other",
+    topicBy: i.topicBy ?? "keywords",
   };
 }
 
@@ -56,6 +63,7 @@ export const list = query({
     graveId: v.optional(v.id("graves")),
     filter: itemFilter,
     sort: v.optional(itemSort),
+    topic: v.optional(collectionTopic),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
@@ -72,11 +80,13 @@ export async function listFor(
     graveId,
     filter,
     sort = "newest",
+    topic,
     paginationOpts,
   }: {
     graveId?: Id<"graves">;
     filter: "all" | "unread" | "starred";
     sort?: "newest" | "relevance";
+    topic?: Doc<"items">["topic"];
     paginationOpts: { numItems: number; cursor: string | null };
   },
 ) {
@@ -84,7 +94,13 @@ export async function listFor(
     if (graveId) await requireOwned(ctx, uid, graveId);
 
     let q;
-    if (sort === "relevance") {
+    if (topic) {
+      // One topic: its own index, newest first; read/starred/feed narrow it further.
+      q = ctx.db.query("items").withIndex("by_user_topic", (x) => x.eq("userId", uid).eq("topic", topic)).order("desc");
+      if (graveId) q = q.filter((f) => f.eq(f.field("graveId"), graveId));
+      if (filter === "unread") q = q.filter((f) => f.eq(f.field("isRead"), false));
+      if (filter === "starred") q = q.filter((f) => f.eq(f.field("isStarred"), true));
+    } else if (sort === "relevance") {
       // Each combination has its own index, so a small feed or a few starred posts never scan everything.
       if (graveId) {
         q = ctx.db.query("items").withIndex("by_grave_score", (x) => x.eq("graveId", graveId)).order("desc");
@@ -148,6 +164,7 @@ export const get = query({
         hashtags: d.hashtags,
         status: d.status,
         ghost: d.model.startsWith("ghost:"),
+        model: d.model,
       })),
     };
   },
@@ -269,7 +286,10 @@ export async function setReadFor(ctx: MutationCtx, userId: Id<"users">, itemId: 
 
 export async function setStarredFor(ctx: MutationCtx, userId: Id<"users">, itemId: Id<"items">, value: boolean) {
   const item = await requireOwned(ctx, userId, itemId);
-  if (item.isStarred !== value) await ctx.db.patch(itemId, { isStarred: value });
+  if (item.isStarred !== value) {
+    await ctx.db.patch(itemId, { isStarred: value });
+    await scheduleLearn(ctx, userId);
+  }
 }
 
 async function markAllReadBatch(ctx: MutationCtx, userId: Id<"users">, graveId?: Id<"graves">): Promise<number> {
@@ -304,6 +324,8 @@ const normalizedItem = v.object({
   hasDate: v.optional(v.boolean()),
   contentHtml: v.string(),
   excerpt: v.string(),
+  imageUrl: v.optional(v.union(v.string(), v.null())),
+  topic: v.optional(collectionTopic),
 });
 
 /** Cap at 200 KB without cutting through a tag. */
@@ -351,6 +373,9 @@ export const ingest = internalMutation({
         publishedAt: it.publishedAt,
         contentHtml: capHtml(it.contentHtml),
         excerpt: it.excerpt.slice(0, 300),
+        imageUrl: it.imageUrl?.slice(0, 2000) || undefined,
+        topic: it.topic ?? classifyTopic({ title, excerpt: it.excerpt }),
+        topicBy: "keywords",
         isRead,
         isStarred: false,
         risenAt: now,
@@ -368,6 +393,39 @@ export const ingest = internalMutation({
       await scheduleOmenCheck(ctx, userId, fresh);
     }
     return { inserted };
+  },
+});
+
+/**
+ * One-off backfill for articles stored before images and topics existed: the lead image from the stored
+ * HTML and a keyword topic. Runs in pages of 200 and reschedules itself, so it never hits write limits.
+ */
+export const backfillMedia = internalMutation({
+  // reclassify: also re-run the keyword classifier on items whose topic came from keywords (never on AI topics).
+  args: { cursor: v.optional(v.union(v.string(), v.null())), reclassify: v.optional(v.boolean()) },
+  handler: async (ctx, { cursor, reclassify }) => {
+    const page = await ctx.db.query("items").paginate({ numItems: 200, cursor: cursor ?? null });
+    let patched = 0;
+    for (const i of page.page) {
+      const redo = reclassify && i.topicBy !== "ai";
+      if (i.topic && i.imageUrl !== undefined && !redo) continue;
+      const patch: Partial<Doc<"items">> = {};
+      if (!i.topic || redo) {
+        patch.topic = classifyTopic({ title: i.title, excerpt: i.excerpt });
+        patch.topicBy = "keywords";
+      }
+      if (i.imageUrl === undefined) {
+        const img = firstBodyImage(i.contentHtml);
+        const url = img ? safeImageUrl(img.url, i.link ?? "https://example.invalid/") : null;
+        if (url) patch.imageUrl = url;
+      }
+      if (Object.keys(patch).length) {
+        await ctx.db.patch(i._id, patch);
+        patched++;
+      }
+    }
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.items.backfillMedia, { cursor: page.continueCursor, reclassify });
+    return { patched, done: page.isDone };
   },
 });
 

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { decodeHTML } from "entities";
 import { sanitizeArticle } from "../sanitize";
+import { classifyTopic, type Topic } from "../topics";
+import { pickImage, type ImageCandidate } from "./image";
 
 export interface RawItem {
   guid?: string | null;
@@ -9,6 +11,8 @@ export interface RawItem {
   author?: string | null;
   published?: string | null;
   contentHtml?: string | null;
+  images?: ImageCandidate[]; // what the feed declares (media:content, enclosure ...), best source first
+  categories?: string[]; // the feed's own <category> / Atom category terms
 }
 
 export interface NormalizedItem {
@@ -20,6 +24,8 @@ export interface NormalizedItem {
   hasDate: boolean; // false when the feed gave no usable date
   contentHtml: string; // sanitised
   excerpt: string; // plain text, max 300 chars
+  imageUrl: string | null; // lead image, https only
+  topic: Topic; // keyword topic; a Séance by a real model may refine it later
 }
 
 export interface NormalizeContext {
@@ -56,6 +62,8 @@ export function normalizeItem(raw: RawItem, ctx: NormalizeContext): NormalizedIt
     hasDate: parsed !== null,
     contentHtml,
     excerpt: truncate(text, 300),
+    imageUrl: pickImage(raw.images ?? [], contentHtml, link ?? ctx.baseUrl),
+    topic: classifyTopic({ categories: (raw.categories ?? []).slice(0, 10), title, excerpt: text.slice(0, 600) }),
   };
 }
 

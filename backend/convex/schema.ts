@@ -10,9 +10,9 @@ import { v } from "convex/values";
 export const graveStatus = v.union(v.literal("alive"), v.literal("dormant"), v.literal("broken"));
 export const platform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"));
 export const aiTask = v.union(v.literal("seance"), v.literal("resurrect"), v.literal("doctor"), v.literal("ask"), v.literal("briefing"), v.literal("voice"), v.literal("omen"), v.literal("opinion"), v.literal("grimoire"), v.literal("caption"));
-export const COLLECTION_TOPICS = ["ai", "security", "dev", "design", "science", "business", "news", "creators", "other"] as const;
+export const COLLECTION_TOPICS = ["ai", "security", "dev", "tech", "design", "science", "business", "news", "creators", "other"] as const;
 export const collectionTopic = v.union(
-  v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("design"), v.literal("science"),
+  v.literal("ai"), v.literal("security"), v.literal("dev"), v.literal("tech"), v.literal("design"), v.literal("science"),
   v.literal("business"), v.literal("news"), v.literal("creators"), v.literal("other"),
 );
 export const socialPlatform = v.union(v.literal("linkedin"), v.literal("x"), v.literal("instagram"), v.literal("tiktok"));
@@ -34,11 +34,61 @@ export default defineSchema({
     isDemo: v.optional(v.boolean()), // demo account: AI reads from demoCache
     displayName: v.optional(v.string()), // public name on shared collections (never the email)
     privateMode: v.optional(v.boolean()), // every AI task skips providers that may train on prompts
+    // The Circle (follow people). Off by default; nothing about a user is visible to others until they turn it on.
+    profilePublic: v.optional(v.boolean()),
+    bio: v.optional(v.string()), // up to 160 chars, shown on the public profile
+    followerCount: v.optional(v.number()), // kept in step by circle.follow / unfollow
+    followingCount: v.optional(v.number()),
+    sharedCount: v.optional(v.number()), // published posts recorded in sharedPosts
+    lastSharedAt: v.optional(v.number()),
+    // Learning memory (convex/learning.ts): a profile learned from the user's own actions, sent to the AI as context.
+    learned: v.optional(v.object({
+      topics: v.array(v.object({ topic: collectionTopic, share: v.number() })),
+      terms: v.array(v.string()),
+      feeds: v.array(v.string()),
+      signals: v.number(),
+      updatedAt: v.number(),
+    })),
+    learningOff: v.optional(v.boolean()),
+    learnedResetAt: v.optional(v.number()), // actions before this are ignored
+    learnQueuedAt: v.optional(v.number()), // debounce for scheduleLearn
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_clerk", ["clerkId"])
     .index("by_email", ["email"])
-    .index("by_publicSlug", ["publicSlug"]),
+    .index("by_publicSlug", ["publicSlug"])
+    .index("by_profilePublic", ["profilePublic", "lastSharedAt"]),
+
+  // The Circle: who follows whom. One row per pair; both directions are indexed.
+  follows: defineTable({
+    followerId: v.id("users"),
+    followeeId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_follower", ["followerId", "createdAt"])
+    .index("by_followee", ["followeeId", "createdAt"])
+    .index("by_pair", ["followerId", "followeeId"]),
+
+  // The Circle: posts a user already published to a social network through Necro (status "posted").
+  // Written once, in the same mutation that marks the publish as posted. Shown to others only while the
+  // author's profilePublic is on (checked at read time). Never holds drafts, reading history or the email.
+  sharedPosts: defineTable({
+    userId: v.id("users"),
+    publishId: v.id("publishes"),
+    platform: socialPlatform,
+    text: v.string(), // the post body, max 600 chars
+    url: v.optional(v.string()), // the live post on the network, when the network returned one
+    itemTitle: v.optional(v.string()),
+    itemLink: v.optional(v.string()), // the article
+    imageUrl: v.optional(v.string()), // the article's lead image
+    feedTitle: v.optional(v.string()),
+    feedUrl: v.optional(v.string()), // the article's RSS feed (only plain public URLs, never ones with tokens)
+    topic: collectionTopic,
+    postedAt: v.number(),
+  })
+    .index("by_user_posted", ["userId", "postedAt"])
+    .index("by_topic_posted", ["topic", "postedAt"])
+    .index("by_publish", ["publishId"]),
 
   graves: defineTable({
     userId: v.id("users"),
@@ -90,6 +140,9 @@ export default defineSchema({
     exhumedAt: v.optional(v.number()),
     kindredId: v.optional(v.string()), // same story reported by several feeds
     embedding: v.optional(v.array(v.float64())),
+    imageUrl: v.optional(v.string()), // lead image from the feed, https only (lib/feeds/image.ts)
+    topic: v.optional(collectionTopic), // lib/topics.ts at ingest; a real model's Séance may refine it
+    topicBy: v.optional(v.union(v.literal("keywords"), v.literal("ai"))),
   })
     .index("by_grave_guid", ["graveId", "guid"])
     .index("by_grave_published", ["graveId", "publishedAt"])
@@ -103,6 +156,7 @@ export default defineSchema({
     .index("by_user_read_score", ["userId", "isRead", "score"])
     .index("by_user_starred_score", ["userId", "isStarred", "score"])
     .index("by_user_risen", ["userId", "risenAt"])
+    .index("by_user_topic", ["userId", "topic", "publishedAt"])
     .index("by_kindred", ["kindredId"])
     .searchIndex("search_text", { searchField: "title", filterFields: ["userId", "graveId"] })
     // 768 = Gemini embedding with a reduced output size; change with AI_EMBED_MODEL if needed.

@@ -12,6 +12,7 @@ import { fadeUp, staggerChildren } from "@/lib/motion";
 import { labels, seance as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { ScoreBadge } from "./ItemList";
+import { ModelBadge } from "@/components/ui/model-badge";
 
 type Seance = { summary: string[]; score: number; reason: string; model: string; ghost: boolean } | null;
 
@@ -73,9 +74,8 @@ export function SeanceCard({ itemId, seance }: { itemId: Id<"items">; seance: Se
           </motion.li>
         ))}
       </motion.ul>
-      <p className="mt-3 text-meta text-subtle" title={seance.model}>
-        {seance.reason}
-      </p>
+      <p className="mt-3 text-meta text-subtle">{seance.reason}</p>
+      <ModelBadge model={seance.model} className="mt-2" />
       {seance.ghost ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-meta text-subtle">{copy.ghostHint}</span>

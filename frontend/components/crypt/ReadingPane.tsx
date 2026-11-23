@@ -14,6 +14,7 @@ import { SeanceCard } from "./SeanceCard";
 import { SecondOpinion } from "./SecondOpinion";
 import { ResurrectDialog } from "./ResurrectDialog";
 import { useVoice } from "./voice-context";
+import { ArticleImage, TopicChip, bodyHasImage } from "./media";
 
 /** "Séance. One. Two. Three. Reason." without doubled full stops when bullets already end with one. */
 const spokenSeance = (summary: string[], reason: string) =>
@@ -110,6 +111,10 @@ export function ReadingPane({ itemId, onOpen }: { itemId: Id<"items">; onOpen?: 
         {item.author ? ` · ${item.author}` : ""}
       </p>
       <h2 className="mt-2 font-display text-h2 font-bold sm:text-[1.75rem] sm:leading-9">{item.title}</h2>
+      <TopicChip topic={item.topic} by={item.topicBy} className="mt-2" />
+      {!bodyHasImage(item.contentHtml, item.imageUrl) ? (
+        <ArticleImage src={item.imageUrl} className="mt-4 aspect-video w-full rounded-lg" sizes="(min-width: 1024px) 60vw, 100vw" />
+      ) : null}
 
       {item.kindred.length ? (
         <aside aria-label={kcopy.plain} className="mt-3 rounded-lg border border-line bg-surface-muted/60 px-4 py-3">

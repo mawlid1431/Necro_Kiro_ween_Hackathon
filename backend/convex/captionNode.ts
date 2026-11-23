@@ -13,7 +13,7 @@ import { CAPTION_SYSTEM, CaptionSchema, captionPrompt, tidyCaption } from "../li
 
 export const writeCaption = action({
   args: { storageId: v.id("_storage"), note: v.optional(v.string()), maxChars: v.optional(v.number()) },
-  handler: async (ctx, { storageId, note, maxChars }): Promise<{ caption: string; hashtags: string[] }> => {
+  handler: async (ctx, { storageId, note, maxChars }): Promise<{ caption: string; hashtags: string[]; model: string }> => {
     const userId = await ctx.runQuery(internal.users.currentId, {});
     const upload = await ctx.runQuery(internal.social.ownedUpload, { userId, storageId });
     if (!upload) throw new ConvexError({ code: "NOT_FOUND", message: "That image could not be found. Upload it again." });
@@ -36,7 +36,7 @@ export const writeCaption = action({
         { userId },
       );
       await ctx.runMutation(internal.aiUsage.finalize, { usageId, model: spec, inputTokens: out.inputTokens, outputTokens: out.outputTokens });
-      return tidyCaption(out.output.caption, out.output.hashtags);
+      return { ...tidyCaption(out.output.caption, out.output.hashtags), model: spec }; // the UI says which model looked at the image
     } catch (err) {
       await ctx.runMutation(internal.aiUsage.release, { usageId });
       if (err instanceof AllRungsFailed) {

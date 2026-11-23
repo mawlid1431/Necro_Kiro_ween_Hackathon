@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requireOwned } from "./lib/auth";
+import { collectionTopic } from "./schema";
+import { learnedLine, scheduleLearn } from "./learning";
 
 /** `model` is "ghost:extractive" when no AI model answered; the UI labels it "summary without AI". */
 export type SeanceView = { summary: string[]; score: number; reason: string; model: string; ghost: boolean };
@@ -17,6 +19,7 @@ export const context = internalQuery({
     return {
       item: { title: item.title, contentHtml: item.fullHtml ?? item.contentHtml, excerpt: item.excerpt },
       interests: user?.interests ?? [],
+      learned: learnedLine(user),
       language: user?.summaryLanguage,
       cached: existing
         ? ({ summary: existing.summary, score: existing.score, reason: existing.reason, model: existing.model, ghost: isGhost(existing.model) } satisfies SeanceView)
@@ -38,6 +41,7 @@ export const save = internalMutation({
     score: v.number(),
     reason: v.string(),
     model: v.string(),
+    topic: v.optional(collectionTopic), // only from a real model; Ghost keeps the keyword topic
     inputTokens: v.number(),
     outputTokens: v.number(),
   },
@@ -57,7 +61,8 @@ export const save = internalMutation({
     } else {
       await ctx.db.insert("seances", { userId: a.userId, itemId: a.itemId, summary: a.summary, score: a.score, reason: a.reason, model: a.model });
     }
-    await ctx.db.patch(a.itemId, { score: a.score });
+    await scheduleLearn(ctx, a.userId);
+    await ctx.db.patch(a.itemId, { score: a.score, ...(a.topic && !isGhost(a.model) ? { topic: a.topic, topicBy: "ai" as const } : {}) });
     return view;
   },
 });

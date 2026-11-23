@@ -17,6 +17,7 @@ import { ItemList, type ItemCard } from "./ItemList";
 import { ReadingPane } from "./ReadingPane";
 import { VoiceCommandButton } from "./VoiceCommandButton";
 import { VoiceProvider } from "./voice-context";
+import { TOPICS, TOPIC_LABELS, type Topic } from "@backend/lib/topics";
 
 type Filter = "all" | "unread" | "starred";
 
@@ -30,6 +31,7 @@ export function Crypt() {
 
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<"newest" | "relevance">("newest");
+  const [topic, setTopic] = useState<Topic | "">("");
   const [term, setTerm] = useState("");
 
   const graves = useQuery(api.graves.list, {});
@@ -46,7 +48,7 @@ export function Crypt() {
     await layToRest({ graveId: selectedGrave._id });
     go({ grave: null, item: null });
   }
-  const page = usePaginatedQuery(api.items.list, { graveId, filter, sort }, { initialNumItems: 30 });
+  const page = usePaginatedQuery(api.items.list, { graveId, filter, sort, topic: topic || undefined }, { initialNumItems: 30 });
   const results = useQuery(api.items.search, term.trim().length >= 2 ? { query: term, graveId } : "skip");
 
   const go = useCallback(
@@ -145,6 +147,21 @@ export function Crypt() {
               >
                 <option value="newest">{copy.sortNewest}</option>
                 <option value="relevance">{copy.sortRelevance}</option>
+              </select>
+              <select
+                aria-label={copy.topicFilter}
+                value={topic}
+                onChange={(e) => setTopic(e.target.value as Topic | "")}
+                className="h-8 rounded-md border border-line bg-surface px-2 text-meta text-ink"
+                title={topic ? copy.topicNewestOnly : undefined}
+              >
+                <option value="">{copy.allTopics}</option>
+                {TOPICS.filter((t) => t !== "other").map((t) => (
+                  <option key={t} value={t}>
+                    {TOPIC_LABELS[t]}
+                  </option>
+                ))}
+                <option value="other">{TOPIC_LABELS.other}</option>
               </select>
               <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void markAll({ graveId })}>
                 {copy.markAllRead}

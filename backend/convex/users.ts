@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireUser } from "./lib/auth";
 import { removeCollection } from "./covens";
 import { deleteItemCascade } from "./items";
+import { removeFollow } from "./circle";
 
 async function upsertCaller(ctx: MutationCtx): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
@@ -185,7 +186,19 @@ export const deleteBatch = internalMutation({
       return;
     }
 
+    // The Circle: follow rows in both directions (keeping the other person's counters right) and shared posts.
+    const follows = [
+      ...(await ctx.db.query("follows").withIndex("by_follower", (q) => q.eq("followerId", userId)).take(BATCH)),
+      ...(await ctx.db.query("follows").withIndex("by_followee", (q) => q.eq("followeeId", userId)).take(BATCH)),
+    ];
+    for (const f of follows) if (await ctx.db.get(f._id)) await removeFollow(ctx, f);
+    if (follows.length) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteBatch, { userId });
+      return;
+    }
+
     const small = [
+      await ctx.db.query("sharedPosts").withIndex("by_user_posted", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("aiUsage").withIndex("by_user_day_task", (q) => q.eq("userId", userId)).take(BATCH),

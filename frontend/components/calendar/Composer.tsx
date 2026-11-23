@@ -15,6 +15,7 @@ import { composer as copy, connectors as names } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { POST_LIMITS, postLength, SOCIAL_PLATFORMS, type SocialPlatform } from "@/lib/post";
 import { cn } from "@/lib/utils";
+import { ModelBadge } from "@/components/ui/model-badge";
 
 type Upload = { storageId: Id<"_storage">; url: string; contentType: string; name: string };
 
@@ -39,6 +40,7 @@ export function Composer({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [note, setNote] = useState("");
   const [caption, setCaption] = useState("");
   const [writing, setWriting] = useState(false);
+  const [captionModel, setCaptionModel] = useState<string | null>(null); // which model wrote the caption, shown under it
   const [chosen, setChosen] = useState<SocialPlatform[]>([]);
   const [later, setLater] = useState(false);
   const [when, setWhen] = useState(() => toLocalInput(suggestedTime()));
@@ -85,6 +87,7 @@ export function Composer({ open, onOpenChange }: { open: boolean; onOpenChange: 
       const limit = chosen.length ? Math.min(...chosen.map((p) => POST_LIMITS[p])) - 120 : 1000;
       const r = await writeCaption({ storageId: upload.storageId, note: note || undefined, maxChars: Math.max(limit, 120) });
       setCaption(r.hashtags.length ? `${r.caption}\n\n${r.hashtags.join(" ")}` : r.caption);
+      setCaptionModel(r.model);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -207,6 +210,12 @@ export function Composer({ open, onOpenChange }: { open: boolean; onOpenChange: 
             </div>
             {!upload ? <p className="text-meta text-subtle">{copy.aiNeedsImage}</p> : null}
             <Textarea aria-label={copy.captionLabel} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder={copy.captionPlaceholder} className="min-h-36" />
+            {captionModel && upload ? (
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <ModelBadge model={captionModel} />
+                <span className="text-[0.75rem] text-subtle">{copy.aiCheckImage}</span>
+              </p>
+            ) : null}
             {chosen.length ? (
               <p className="flex flex-wrap gap-3 text-meta">
                 {chosen.map((p) => {
