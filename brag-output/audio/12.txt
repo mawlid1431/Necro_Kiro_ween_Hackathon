@@ -1,0 +1,1 @@
+Built with Kiro. Steering rules that keep the agent on our stack and brand, hooks that test as I code, specs with testable requirements, and over two hundred and sixty tests that keep it honest.

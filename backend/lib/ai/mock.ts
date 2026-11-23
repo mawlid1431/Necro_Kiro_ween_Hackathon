@@ -11,6 +11,7 @@ const OUTPUTS: Record<string, unknown> = {
     ],
     score: 72,
     reason: "Close to the reader's stated interests.",
+    topic: "other",
   },
   resurrect: {
     linkedin: "A short, useful read on this topic. The key point: keep it simple. Worth a look.",

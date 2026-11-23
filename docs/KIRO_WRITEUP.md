@@ -13,7 +13,8 @@ server**, so Kiro can read your feeds and draft from them.
 
 Honest note: later work was built with **Claude Code**: Connectors (direct posting to LinkedIn, X, Instagram and
 TikTok), Witching Hour (calendar, scheduling, reminders, the image composer with AI captions), the Home dashboard,
-duplicate-post protection and the landing-page mockups. It follows the same steering rules and conventions, and passes
+duplicate-post protection, the landing-page mockups, and the last quality pass (article images and topics, honest
+AI model labels, the Circle, learning memory, the new navigation and large-screen scaling). It follows the same steering rules and conventions, and passes
 the same Kiro pre-submit hook. See `docs/KIRO_LOG.md`.
 
 ## Steering docs — `.kiro/steering/`
@@ -41,7 +42,8 @@ agent from generating Next.js 15 / Clerk 6 APIs.
 | Accessibility check | on save of `frontend/components/**/*.tsx` | Reviews the component for labels, contrast, keyboard and reduced motion |
 | Pre-submit check | manual | Lint, typecheck, all tests, `.kiro` not ignored, MIT licence, no committed `.env`, `.env.example` present |
 
-The pre-submit hook was run at the end of the build: **all 7 items pass** (180 tests).
+The pre-submit hook was run at the end of the build: **all 7 items pass** (180 tests at the time). After the last
+quality pass the backend suite is **261 tests in 30 files**, all passing.
 
 ## Custom agents — `.kiro/agents/`
 
@@ -53,7 +55,8 @@ The pre-submit hook was run at the end of the build: **all 7 items pass** (180 t
 ## Spec-driven development — `.kiro/specs/`
 
 Each spec has `requirements.md` (user stories + **EARS** acceptance criteria), `design.md` and `tasks.md`:
-`covens`, `omens`, `grimoire`, `kindred`, `second-opinion`, `privacy-trust`, `connectors`.
+`covens`, `omens`, `grimoire`, `kindred`, `second-opinion`, `privacy-trust`, `connectors`, and for the last pass
+`media-topics`, `circle` and `learning` (EARS requirements; only `circle` also has a design and task list).
 
 Example (Covens, criterion 4): *"THE SYSTEM SHALL show a curator's display name …, never their email, read state,
 stars, Séances, drafts, voice profile or Omens."* That one sentence became the shape of the public query and an

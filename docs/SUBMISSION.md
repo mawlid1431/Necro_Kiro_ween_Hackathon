@@ -64,6 +64,12 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 - **Feed Doctor**: explains broken or moved feeds in plain words and suggests a fix.
 - **Covens, Omens, Grimoire, Kindred, Second Opinion**: shared feed collections, topic alerts, a weekly newsletter,
   the same story grouped across sources, and a second AI view on an article.
+- **The Circle**: follow people. With an opt-in public profile, the posts you actually published through Necro appear
+  for your followers, live, each with its RSS source one click from your Graveyard. Never drafts, reading or your email.
+- **Images and topics**: each article keeps its lead image and gets one topic you can filter the Crypt by.
+- **Honest AI labels**: every AI answer says which model and provider wrote it, or "Written without AI".
+- **Learning memory**: Necro learns you from what you post, draft, star and summarise, adds it to the AI as context,
+  and shows exactly what it learned in Settings, with off and reset.
 
 ## How we built it
 
@@ -94,7 +100,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## Accomplishments that we're proud of
 
 - The whole loop works on the live site: follow → rise live → read → summary → posts in your voice → share.
-- **180 automated tests**, including property-based tests and per-user isolation tests.
+- **261 automated backend tests** in 30 files, including property-based tests and per-user isolation tests.
 - An **MCP server**, so any AI assistant (including Kiro) can work with your own reading list.
 - Privacy by design: hashed API keys, encrypted social tokens, no tracking, and voice samples kept away from
   providers that train on prompts.
@@ -126,6 +132,8 @@ Meta and TikTok app reviews so everyone can post directly, scheduled posts, and 
    minutes. Watch it appear in the calendar and on **Home** (click the Necro logo) without reloading; at that time a
    reminder turns "Time to post" with a badge in the nav.
 8. Try to schedule the same post again: Necro refuses it ("Already scheduled…"). Cancel it and you can schedule it again.
+9. **Circle** → **People**: follow a demo person (names end in "(demo)") and open **Following**. In Settings you can turn
+   on your own public profile; **What Necro learned** shows what Necro picked up from your stars and posts.
 
 ## Pre-existing code and assets (disclosure)
 

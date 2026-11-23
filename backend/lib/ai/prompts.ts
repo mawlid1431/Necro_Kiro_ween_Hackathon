@@ -8,8 +8,8 @@ export const SeanceSchema = z.object({
   summary: z.array(z.string().min(10).max(220)).length(3),
   score: z.number().int().min(0).max(100),
   reason: z.string().max(160),
-  // Optional so a model that leaves it out still passes; the keyword topic then stays.
-  topic: z.enum(TOPICS).optional(),
+  // Required: strict structured output (Groq json_schema) rejects optional fields. "other" when nothing fits.
+  topic: z.enum(TOPICS),
 });
 
 export const ResurrectSchema = z.object({

@@ -774,10 +774,10 @@ Last run: **261 tests passing in 30 files** (unit, property-based and convex-tes
 
 | Suite | What it proves |
 |---|---|
-| `tests/unit/media-topics.test.ts` | Lead-image picking order and URL rejection rules; topic classification on real-looking headlines |
-| `tests/unit/learn.test.ts` | Signal weights, 30-day decay, recurring subjects, nothing sent below 3 actions |
-| `tests/convex/circle.test.ts` | Opt-in visibility, exactly-once shared posts, follow limits, public-only feed URLs, account deletion |
-| `tests/convex/learning.test.ts` | Profile refresh from real actions, on/off, reset |
+| `tests/unit/media-topics.test.ts` | Lead-image picking order and URL rejection rules; images and categories kept by every feed format; topic classification on real-looking headlines; readable model labels |
+| `tests/unit/learn.test.ts` | Posting weighs more than starring and summarising, recent more than old; only recurring subjects; no profile below 3 actions |
+| `tests/convex/circle.test.ts` | Private until turned on (and needs a display name); a published post recorded exactly once and shown to followers; failed posts and token feed URLs never shared; account deletion cleans up both sides |
+| `tests/convex/learning.test.ts` | Learns from stars, feeds the Séance context, respects off and reset |
 
 | Suite | What it proves |
 |---|---|

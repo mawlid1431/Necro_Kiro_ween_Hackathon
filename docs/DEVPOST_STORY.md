@@ -18,6 +18,10 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 - **Talk to the Dead**: an MCP server, so Kiro or any AI assistant can list, read, summarise and draft from your feeds.
 - **Feed Doctor**: explains broken or moved feeds in plain words and suggests a fix.
 - **Covens, Omens, Grimoire, Kindred, Second Opinion**: shared feed collections, topic alerts, a weekly newsletter, the same story grouped across sources, and a second AI view on an article.
+- **The Circle**: follow people. With an opt-in public profile, the posts you actually published through Necro appear for your followers, live, each with its RSS source one click from your Graveyard. Never drafts, reading or your email.
+- **Images and topics**: each article keeps its lead image and gets one topic (AI, Security, Web & dev, and so on) you can filter the Crypt by.
+- **Honest AI labels**: every AI answer says which model and provider wrote it, or "Written without AI" when Necro fell back to its own template.
+- **Learning memory**: Necro cannot retrain the models, so it learns you from what you post, draft, star and summarise, and adds that as context to the AI. Settings shows exactly what it learned and the line the AI receives, with off and reset.
 
 ## How we built it
 
@@ -36,7 +40,8 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## Accomplishments that we're proud of
 
 - The whole loop works on the live site: follow → rise live → read → summary → posts in your voice → share.
-- 180 automated tests, including property-based tests and per-user isolation tests.
+- 261 automated backend tests in 30 files, including property-based tests and per-user isolation tests.
+- Layouts checked with no horizontal overflow from 320 px phones to 7680 px (8K) screens.
 - An MCP server, so your AI assistant can work with your own reading list.
 - Privacy by design: hashed API keys, sanitised article HTML, prompt-injection delimiting, no tracking.
 

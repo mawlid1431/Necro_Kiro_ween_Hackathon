@@ -61,3 +61,11 @@ CLAUDE.local.md
 
 # Temporary local visual-check pages (never deployed)
 frontend/app/zz-*/
+
+# /brag video work: heavy media stays local (plan, composition and share copy are kept)
+brag-output/**/*.mp4
+brag-output/**/*.webm
+brag-output/**/*.wav
+brag-output/**/*.jpg
+brag-output/recordings/
+brag-output/composition/node_modules/
