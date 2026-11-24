@@ -33,10 +33,11 @@ export const authenticate = mutation({
     if (!/^[0-9a-f]{64}$/.test(hash)) return { ok: false as const, status: 401 };
     const key = await ctx.db.query("apiKeys").withIndex("by_hash", (q) => q.eq("hash", hash)).unique();
     if (!key || key.revokedAt) return { ok: false as const, status: 401 };
+    if (key.expiresAt && key.expiresAt <= Date.now()) return { ok: false as const, status: 401 };
     if (!(await hitLimit(ctx, `mcp:${key._id}`, MCP_CALLS_PER_MINUTE, 60_000))) return { ok: false as const, status: 429 };
     const now = Date.now();
     if (!key.lastUsedAt || now - key.lastUsedAt > 60_000) await ctx.db.patch(key._id, { lastUsedAt: now });
-    return { ok: true as const, userId: key.userId, prefix: key.prefix };
+    return { ok: true as const, userId: key.userId, prefix: key.prefix, keyId: key._id, scope: key.scope ?? ("read" as const) };
   },
 });
 

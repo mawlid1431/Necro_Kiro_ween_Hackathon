@@ -339,7 +339,7 @@ sequenceDiagram
     R-->>CL: 401 + WWW-Authenticate  /  429 + retry-after
   else ok
     CX-->>R: { ok: true, userId, prefix }
-    R->>R: build McpServer (11 tools) + stateless transport
+    R->>R: build McpServer (13 read tools; +3 write tools for read-and-write keys) + stateless transport
     CL->>R: tools/call e.g. search_items
     R->>CX: mcp.searchItems({ secret, userId, query, limit })
     CX->>CX: secret check · filter by userId

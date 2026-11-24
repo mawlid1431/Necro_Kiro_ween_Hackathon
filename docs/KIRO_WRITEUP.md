@@ -81,7 +81,9 @@ PBT is also used in the Omens, Grimoire, Opinion and extras unit tests.
 
 Necro ships an MCP server (`frontend/app/api/mcp`, Streamable HTTP, per-user API keys, 60 calls/min). Connected to
 Kiro, it lets the agent list what rose today, read articles, and draft posts from **your own sources**, a workflow
-that would otherwise need copy-pasting articles into the chat. Setup: `docs/MCP.md`.
+that would otherwise need copy-pasting articles into the chat. Keys are **read only** or **read and write**: a write
+key also lets the agent post or schedule to the accounts connected in Necro (same rules as the app, approved by you
+per post, expiring after 90 days). Setup: `docs/MCP.md`.
 
 ## Kiro IDE / CLI / Web / Crew, and powers
 

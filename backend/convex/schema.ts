@@ -262,10 +262,76 @@ export default defineSchema({
     prefix: v.string(), // first 8 chars after "necro_sk_", shown in Settings
     lastUsedAt: v.optional(v.number()),
     revokedAt: v.optional(v.number()),
+    // "read" (default, also every key made before scopes existed) or "write": write keys can post and schedule
+    // to the user's connected accounts through MCP. Write keys expire (expiresAt) so a forgotten key stops working.
+    scope: v.optional(v.union(v.literal("read"), v.literal("write"))),
+    expiresAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_user_revoked", ["userId", "revokedAt"])
     .index("by_hash", ["hash"]),
+
+  // ---------- OAuth 2.1 for the MCP server (ChatGPT and claude.ai connectors): see convex/mcpOAuth.ts ----------
+  // Apps that may ask for access. "dcr": registered at /oauth/register (client id made here).
+  // "cimd": the client id is an https URL to the app's own metadata document, fetched and cached.
+  mcpClients: defineTable({
+    clientId: v.string(),
+    kind: v.union(v.literal("dcr"), v.literal("cimd")),
+    name: v.string(),
+    redirectUris: v.array(v.string()),
+    createdAt: v.number(),
+    fetchedAt: v.optional(v.number()), // cimd: when the document was last fetched
+    // dcr: hash of name + redirect URIs. Identical registrations (every claude.ai user registers the same app) reuse
+    // one client id instead of adding a row per connection.
+    fingerprint: v.optional(v.string()),
+  })
+    .index("by_client_id", ["clientId"])
+    .index("by_fingerprint", ["fingerprint"])
+    .index("by_kind_created", ["kind", "createdAt"]),
+
+  // Authorization codes: single-use, 10 minutes, PKCE S256. Only the SHA-256 of the code is stored.
+  mcpCodes: defineTable({
+    userId: v.id("users"),
+    hash: v.string(),
+    clientId: v.string(),
+    redirectUri: v.string(),
+    challenge: v.string(),
+    scope: v.union(v.literal("read"), v.literal("write")),
+    resource: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    grantId: v.optional(v.id("mcpGrants")), // set when exchanged; a replayed code revokes this grant
+  })
+    .index("by_hash", ["hash"])
+    .index("by_user", ["userId"])
+    .index("by_expires", ["expiresAt"]),
+
+  // A connection the user approved: same meaning as an API key (scope read/write, expiry, revocation).
+  // Holds the hashes of the current access token and refresh token (rotated on every refresh).
+  mcpGrants: defineTable({
+    userId: v.id("users"),
+    clientId: v.string(),
+    clientName: v.string(),
+    scope: v.union(v.literal("read"), v.literal("write")),
+    resource: v.string(), // the audience: tokens work only for this MCP server URL
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    accessHash: v.string(),
+    accessExpiresAt: v.number(),
+    refreshHash: v.string(),
+    prevRefreshHash: v.optional(v.string()),
+    prevRefreshUntil: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_client", ["userId", "clientId"])
+    .index("by_client", ["clientId"])
+    .index("by_expires", ["expiresAt"])
+    .index("by_revoked", ["revokedAt"])
+    .index("by_access", ["accessHash"])
+    .index("by_refresh", ["refreshHash"])
+    .index("by_prev_refresh", ["prevRefreshHash"]),
 
   aiUsage: defineTable({
     userId: v.id("users"),
@@ -372,6 +438,9 @@ export default defineSchema({
     contentType: v.string(),
     size: v.number(),
     createdAt: v.number(),
+    // SHA-256 of the file (from Convex storage): "one post, once" compares the picture itself, so the same image
+    // uploaded twice (an AI assistant sends it on every call) is still recognised as the same post.
+    contentHash: v.optional(v.string()),
   })
     .index("by_user", ["userId", "createdAt"])
     .index("by_storage", ["storageId"]),
@@ -411,6 +480,7 @@ export default defineSchema({
     text: v.optional(v.string()), // the post body as written when scheduled (hashtags and link are added at send time)
     jobId: v.optional(v.id("_scheduled_functions")),
     contentKey: v.optional(v.string()), // one post, once: see lib/social/dedupe.ts
+    via: v.optional(v.string()), // who created it: absent = the app; "mcp:<key prefix>" = an AI assistant with a write key
     postingSince: v.optional(v.number()), // when sending started (stuck-post sweep)
   })
     .index("by_user", ["userId", "createdAt"])

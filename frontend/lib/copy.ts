@@ -654,14 +654,52 @@ export const settings = {
   keysHint: "Let Kiro or any MCP client talk to your graveyard. A key is shown once.",
   keyName: "Key name",
   createKey: "Create key",
+  keyAccess: "What can this key do?",
+  scopeRead: "Read only",
+  scopeReadHint: "Your AI assistant can read your feeds, articles, summaries and posts. It cannot post or change anything.",
+  scopeWrite: "Read and write",
+  scopeWriteHint: "Also lets your AI assistant post now or schedule to the accounts you connected, and cancel scheduled posts.",
+  scopeWriteWarning: "Anyone with this key can post as you. Your assistant asks before each post; the same post can never go out twice, and up to 10 posts an hour per key. It expires in 90 days, and you can revoke it any time.",
+  scopeReadBadge: "Read only",
+  scopeWriteBadge: "Read and write",
+  expires: (d: string) => `Expires ${d}`,
+  expired: "Expired",
   newKey: "Copy this key now. It will not be shown again.",
   revoke: "Revoke",
   revoked: "Revoked",
   lastUsed: "Last used",
   never: "never",
   config: "Client config",
+  apps: "Connected apps",
+  appsHint: "ChatGPT, Claude and other apps you approved through \"Sign in with Necro\". Disconnect one to stop it at once.",
+  appsEmpty: "No apps connected yet. In ChatGPT or Claude, add a custom connector with the URL below and sign in.",
+  connectorUrl: "Connector URL",
+  connected: (d: string) => `Connected ${d}`,
+  disconnect: "Disconnect",
+  disconnected: "Disconnected",
   usage: "Today's usage",
   export: "Export OPML",
+} as const;
+
+/** The "Sign in with Necro" consent page an AI app (ChatGPT, Claude) sends the user to. */
+export const consent = {
+  title: (app: string) => `Connect ${app} to Necro`,
+  intro: (app: string) => `${app} wants to use your Necro graveyard through Talk to the Dead (MCP).`,
+  verifiedBy: (host: string) => `App details published by ${host}`,
+  returnsTo: (host: string) => `After you choose, you go back to ${host}.`,
+  unverified: (app: string, host: string) =>
+    `"${app}" named itself; Necro cannot confirm who made it. Only allow it if you just added Necro in an app you trust that lives at ${host}.`,
+  signedInAs: (who: string) => `Signed in as ${who}`,
+  access: "What can it do?",
+  writeWarning:
+    "It can post as you. Your assistant should ask before each post; the same post can never go out twice, and up to 10 posts an hour per connection. The connection ends after 90 days, and you can disconnect it any time in Settings.",
+  readNote: "Read-only connections end after a year. Disconnect any time in Settings.",
+  allow: "Allow",
+  deny: "Cancel",
+  signIn: "Sign in to continue",
+  signInHint: "Sign in to your Necro account, then you come straight back here.",
+  errorTitle: "This connection link does not work",
+  errorHint: "Go back to the app and try connecting again. If it keeps happening, remove the connector and add it again.",
 } as const;
 
 export const privacy = {

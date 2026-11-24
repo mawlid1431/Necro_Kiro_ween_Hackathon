@@ -3,6 +3,7 @@ import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ApiKeys } from "@/components/settings/ApiKeys";
+import { ConnectedApps } from "@/components/settings/ConnectedApps";
 import { PrivacyCard, YourDataCard } from "@/components/settings/PrivacyCard";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { UsageAndExport } from "@/components/settings/UsageAndExport";
@@ -17,9 +18,9 @@ export default function SettingsPage() {
     <main className="flex-1 py-8 sm:py-12">
       <Container className="flex flex-col gap-8">
         <PageTitle label="settings" />
-        <div className="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
           {/* Section list: a sticky sidebar on large screens, a scrollable row of chips on phones. */}
-          <nav aria-label="Settings sections" className="lg:sticky lg:top-24 lg:self-start">
+          <nav aria-label="Settings sections" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
             <ul className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:px-0">
               {settingsNav.map((s) => (
                 <li key={s.id} className="shrink-0">
@@ -42,7 +43,7 @@ export default function SettingsPage() {
             <div id="voice" className="scroll-mt-24"><VoiceForm /></div>
             <div id="learning" className="scroll-mt-24"><LearningCard /></div>
             <div id="privacy" className="scroll-mt-24"><PrivacyCard /></div>
-            <div id="keys" className="scroll-mt-24"><ApiKeys /></div>
+            <div id="keys" className="flex scroll-mt-24 flex-col gap-6"><ConnectedApps /><ApiKeys /></div>
             <div id="usage" className="scroll-mt-24"><UsageAndExport /></div>
             <div id="data" className="scroll-mt-24"><YourDataCard /></div>
           </div>

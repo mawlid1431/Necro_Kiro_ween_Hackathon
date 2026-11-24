@@ -59,7 +59,7 @@ export type ConnectionView = {
   connectedAt?: number;
 };
 
-const byUserPlatform = (ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, platform: SocialPlatform) =>
+export const byUserPlatform = (ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, platform: SocialPlatform) =>
   ctx.db.query("connections").withIndex("by_user_platform", (q) => q.eq("userId", userId).eq("platform", platform)).unique();
 
 /** One row per platform, live: the Connectors page and the Resurrect dialog both read this. */
@@ -274,13 +274,13 @@ export const finishPublish = internalMutation({
 export const SCHEDULE_MIN_LEAD_MS = 60 * 1000;
 export const SCHEDULE_MAX_AHEAD_MS = 90 * 86_400_000;
 export const MAX_PENDING_SCHEDULED = 100;
-const NAMES: Record<SocialPlatform, string> = { linkedin: "LinkedIn", x: "X", instagram: "Instagram", tiktok: "TikTok" };
+export const NAMES: Record<SocialPlatform, string> = { linkedin: "LinkedIn", x: "X", instagram: "Instagram", tiktok: "TikTok" };
 
 /**
  * Auto-post needs a working direct connection. TikTok is always a reminder: its sharing rules require the
  * creator to confirm each post (privacy, disclosure, consent) at the moment it goes out.
  */
-function modeFor(platform: SocialPlatform, conn: Doc<"connections"> | null): "auto" | "reminder" {
+export function modeFor(platform: SocialPlatform, conn: Doc<"connections"> | null): "auto" | "reminder" {
   if (platform === "tiktok") return "reminder";
   return conn && conn.status === "active" && credsFor(platform) !== null ? "auto" : "reminder";
 }
@@ -344,12 +344,19 @@ export const cancelScheduled = mutation({
   args: { publishId: v.id("publishes") },
   handler: async (ctx, { publishId }) => {
     const user = await requireUser(ctx);
-    const p = await ownedPublish(ctx, user._id, publishId);
+    await cancelFor(ctx, user._id, publishId);
+  },
+});
+
+/** Cancels a scheduled post or a reminder that has not gone out yet. Shared with the MCP write tools. */
+export async function cancelFor(ctx: MutationCtx, userId: Id<"users">, publishId: Id<"publishes">) {
+  {
+    const p = await ownedPublish(ctx, userId, publishId);
     if (p.status !== "scheduled" && p.status !== "due") fail("INVALID_INPUT", "Only scheduled posts or reminders can be cancelled.");
     if (p.jobId) await ctx.scheduler.cancel(p.jobId);
     await ctx.db.patch(publishId, { status: "canceled", finishedAt: Date.now(), jobId: undefined });
-  },
-});
+  }
+}
 
 export const reschedule = mutation({
   args: { publishId: v.id("publishes"), at: v.number() },
@@ -519,7 +526,7 @@ export const registerUpload = mutation({
       fail("INVALID_INPUT", "Use a JPG or PNG image up to 8 MB.");
     }
     if (await ctx.db.query("uploads").withIndex("by_storage", (q) => q.eq("storageId", storageId)).unique()) fail("DUPLICATE", "Already uploaded.");
-    await ctx.db.insert("uploads", { userId: user._id, storageId, contentType: type, size: meta.size, createdAt: Date.now() });
+    await ctx.db.insert("uploads", { userId: user._id, storageId, contentType: type, size: meta.size, createdAt: Date.now(), contentHash: meta.sha256 });
     return { storageId, url: await ctx.storage.getUrl(storageId), contentType: type };
   },
 });
@@ -543,8 +550,24 @@ export const composePost = mutation({
     storageId: v.optional(v.id("_storage")),
     at: v.optional(v.number()),
   },
-  handler: async (ctx, { caption, platforms, storageId, at }) => {
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    return await composeFor(ctx, user, args);
+  },
+});
+
+/**
+ * One post (caption and/or image) to one or more accounts, now or at `at`. Shared by the app's composer and the MCP
+ * write tools, so an AI assistant's post goes through exactly the same checks: length, image rules, the scheduled cap,
+ * the hourly cap and "one post, once". `via` records who created it ("mcp:<key prefix>").
+ */
+export async function composeFor(
+  ctx: MutationCtx,
+  user: Doc<"users">,
+  { caption, platforms, storageId, at }: { caption: string; platforms: SocialPlatform[]; storageId?: Id<"_storage">; at?: number },
+  via?: string,
+) {
+  {
     const text = caption.trim();
     const chosen = [...new Set(platforms)];
     if (!chosen.length) fail("INVALID_INPUT", "Pick at least one account.");
@@ -568,7 +591,8 @@ export const composePost = mutation({
     await checkHourlyCap(ctx, user._id, chosen.length);
     // One post, once per account: the same caption and image cannot go to the same platform twice
     // (checked for every platform first, so nothing is created when one of them is a duplicate).
-    const keys = new Map(chosen.map((p) => [p, manualKey(p, text, upload?.storageId)] as const));
+    // The image is identified by its content (SHA-256) when known, so a re-upload of the same picture still matches.
+    const keys = new Map(chosen.map((p) => [p, manualKey(p, text, upload?.contentHash ?? upload?.storageId)] as const));
     for (const p of chosen) await refuseDuplicate(ctx, user._id, keys.get(p)!, p);
 
     const results: { platform: SocialPlatform; mode: "auto" | "reminder"; publishId: Id<"publishes"> }[] = [];
@@ -588,6 +612,7 @@ export const composePost = mutation({
         text,
         imageId: upload?.storageId,
         contentKey: keys.get(platform),
+        ...(via ? { via } : {}),
       });
       const jobId = at === undefined
         ? await ctx.scheduler.runAfter(0, internal.socialNode.runScheduled, { publishId })
@@ -596,8 +621,8 @@ export const composePost = mutation({
       results.push({ platform, mode, publishId });
     }
     return results;
-  },
-});
+  }
+}
 
 export const voiceOf = internalQuery({
   args: { userId: v.id("users") },

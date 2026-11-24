@@ -28,20 +28,25 @@ export async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export const keyScope = v.union(v.literal("read"), v.literal("write"));
+/** Write keys can post as the user, so they expire; read keys do not. */
+export const WRITE_KEY_DAYS = 90;
+
 export const create = action({
-  args: { name: v.string() },
-  handler: async (ctx, { name }): Promise<{ key: string; prefix: string }> => {
+  args: { name: v.string(), scope: v.optional(keyScope) },
+  handler: async (ctx, { name, scope = "read" }): Promise<{ key: string; prefix: string; scope: "read" | "write"; expiresAt: number | null }> => {
     const userId = await ctx.runQuery(internal.users.currentId, {});
     const clean = name.trim().slice(0, 60) || "MCP key";
     const raw = `necro_sk_${randomBase62(KEY_CHARS)}`;
     const prefix = raw.slice(0, 17); // "necro_sk_" + 8 chars
-    await ctx.runMutation(internal.apiKeys.insert, { userId, name: clean, hash: await sha256Hex(raw), prefix });
-    return { key: raw, prefix };
+    const expiresAt = scope === "write" ? Date.now() + WRITE_KEY_DAYS * 86_400_000 : undefined;
+    await ctx.runMutation(internal.apiKeys.insert, { userId, name: clean, hash: await sha256Hex(raw), prefix, scope, expiresAt });
+    return { key: raw, prefix, scope, expiresAt: expiresAt ?? null };
   },
 });
 
 export const insert = internalMutation({
-  args: { userId: v.id("users"), name: v.string(), hash: v.string(), prefix: v.string() },
+  args: { userId: v.id("users"), name: v.string(), hash: v.string(), prefix: v.string(), scope: v.optional(keyScope), expiresAt: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const active = await ctx.db.query("apiKeys").withIndex("by_user_revoked", (q) => q.eq("userId", args.userId).eq("revokedAt", undefined)).take(MAX_API_KEYS);
     if (active.length >= MAX_API_KEYS) {
@@ -65,6 +70,8 @@ export const list = query({
       prefix: k.prefix,
       lastUsedAt: k.lastUsedAt,
       revokedAt: k.revokedAt,
+      scope: k.scope ?? "read",
+      expiresAt: k.expiresAt ?? null,
     }));
   },
 });

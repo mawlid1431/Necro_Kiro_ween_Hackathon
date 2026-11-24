@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, BookOpen, CalendarClock, Check, Circle, Clock, KeyRound, Plus, Rss, Send, Sparkles, X } from "lucide-react";
@@ -10,6 +10,7 @@ import { PlatformIcon } from "@/components/brand/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { connectors as names, home as copy, witching } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { useMinute } from "@/lib/useMinute";
 
 const CHECKLIST_KEY = "necro.home.checklistHidden";
 const noSubscribe = () => () => {};
@@ -122,15 +123,6 @@ function PostRow({ p }: { p: OverviewData["upNext"][number] }) {
   );
 }
 
-/** The current minute, ticking, so time windows on the dashboard move forward while the page stays open. */
-function useMinute(): number {
-  const [m, setM] = useState(() => Math.floor(Date.now() / 60_000) * 60_000);
-  useEffect(() => {
-    const t = setInterval(() => setM(Math.floor(Date.now() / 60_000) * 60_000), 15_000);
-    return () => clearInterval(t);
-  }, []);
-  return m;
-}
 
 /** Home: your feeds, reading, posts, accounts and tools at a glance, live. */
 export function Overview() {

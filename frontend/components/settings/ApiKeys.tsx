@@ -2,13 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { Copy, KeyRound } from "lucide-react";
+import { Copy, Eye, KeyRound, PenLine } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
 import { settings as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/components/crypt/ItemList";
+import { cn } from "@/lib/utils";
+import { useMinute } from "@/lib/useMinute";
 
 /** MCP keys: create (shown once), list, revoke, plus a ready-to-paste client config. */
 export function ApiKeys() {
@@ -16,6 +18,8 @@ export function ApiKeys() {
   const create = useAction(api.apiKeys.create);
   const revoke = useMutation(api.apiKeys.revoke);
   const [name, setName] = useState("");
+  const [scope, setScope] = useState<"read" | "write">("read");
+  const now = useMinute();
   const [fresh, setFresh] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,7 +31,7 @@ export function ApiKeys() {
       mcpServers: {
         necro: {
           command: "npx",
-          args: ["mcp-remote", `${origin}/api/mcp`, "--header", "Authorization: Bearer ${NECRO_API_KEY}"],
+          args: ["-y", "mcp-remote", `${origin}/api/mcp`, "--header", "Authorization: Bearer ${NECRO_API_KEY}"],
           env: { NECRO_API_KEY: fresh ?? "necro_sk_..." },
         },
       },
@@ -41,9 +45,10 @@ export function ApiKeys() {
     setBusy(true);
     setError(null);
     try {
-      const r = await create({ name: name.trim() || "MCP key" });
+      const r = await create({ name: name.trim() || "MCP key", scope });
       setFresh(r.key);
       setName("");
+      setScope("read");
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -64,6 +69,33 @@ export function ApiKeys() {
     <Card aria-labelledby="keys-h">
       <h2 id="keys-h" className="font-display text-h3 font-bold">{copy.keys}</h2>
       <p className="mt-1 text-meta text-subtle">{copy.keysHint}</p>
+
+      <fieldset className="mt-4 min-w-0">
+        <legend className="mb-2 text-meta font-semibold text-ink">{copy.keyAccess}</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([
+            ["read", Eye, copy.scopeRead, copy.scopeReadHint],
+            ["write", PenLine, copy.scopeWrite, copy.scopeWriteHint],
+          ] as const).map(([value, Icon, label, hint]) => (
+            <label
+              key={value}
+              className={cn(
+                "flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors",
+                scope === value ? "border-ecto-dim bg-ecto/10" : "border-line hover:bg-surface-muted",
+              )}
+            >
+              <input type="radio" name="key-scope" value={value} checked={scope === value} onChange={() => setScope(value)} className="mt-1 accent-[var(--color-ecto-dim)]" />
+              <span>
+                <span className="flex items-center gap-1.5 font-semibold text-ink">
+                  <Icon aria-hidden className="size-4" strokeWidth={1.75} /> {label}
+                </span>
+                <span className="mt-0.5 block text-meta text-subtle">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {scope === "write" ? <div className="mt-2"><Notice>{copy.scopeWriteWarning}</Notice></div> : null}
+      </fieldset>
 
       <form onSubmit={onCreate} className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1">
@@ -94,6 +126,19 @@ export function ApiKeys() {
           <li key={k._id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span className="font-semibold text-ink">{k.name}</span>
             <code className="text-meta text-subtle">{k.prefix}…</code>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[0.6875rem] font-bold uppercase",
+                k.scope === "write" ? "bg-candle/20 text-ink" : "bg-surface-muted text-subtle",
+              )}
+            >
+              {k.scope === "write" ? copy.scopeWriteBadge : copy.scopeReadBadge}
+            </span>
+            {k.expiresAt && !k.revokedAt ? (
+              <span className={cn("text-meta", k.expiresAt <= now ? "font-semibold text-danger" : "text-subtle")}>
+                {k.expiresAt <= now ? copy.expired : copy.expires(new Date(k.expiresAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }))}
+              </span>
+            ) : null}
             <span className="text-meta text-subtle">
               {copy.lastUsed}: {k.lastUsedAt ? timeAgo(k.lastUsedAt) : copy.never}
             </span>

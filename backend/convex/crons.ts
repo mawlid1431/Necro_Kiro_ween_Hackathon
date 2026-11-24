@@ -8,4 +8,5 @@ crons.daily("clear old rate limits", { hourUTC: 19, minuteUTC: 30 }, internal.ra
 crons.daily("refresh learning memory", { hourUTC: 18, minuteUTC: 0 }, internal.learning.refreshAll, {}); // 2 AM in Malaysia
 crons.interval("mark stuck posts failed", { minutes: 15 }, internal.social.sweepStuck, {});
 crons.daily("refresh instagram tokens", { hourUTC: 20, minuteUTC: 0 }, internal.socialNode.refreshInstagram, {});
+crons.daily("clear old MCP sign-in codes", { hourUTC: 19, minuteUTC: 45 }, internal.mcpOAuth.cleanup, {});
 export default crons;
