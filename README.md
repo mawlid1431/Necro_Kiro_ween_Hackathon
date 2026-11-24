@@ -121,7 +121,7 @@ Each folder keeps its own `node_modules` on purpose. Vercel builds `frontend/`, 
 │  │  └─ sanitize.ts · schedule.ts · limits.ts · errors.ts · text.ts
 │  ├─ tests/                unit · pbt (fast-check) · convex (convex-test)
 │  └─ scripts/push-env.ts   bun run env:push
-├─ docs/                    MCP.md, product docs, brand guide, Kiro log
+├─ docs/                    MCP.md, Kiro write-up and log, documentation PDF, connectors setup
 └─ .kiro/                   Kiro steering, hooks, agents (committed on purpose)
 ```
 

@@ -62,12 +62,14 @@ CLAUDE.local.md
 # Temporary local visual-check pages (never deployed)
 frontend/app/zz-*/
 
-# /brag video work: heavy media stays local (plan, composition and share copy are kept)
-brag-output/**/*.mp4
-brag-output/**/*.webm
-brag-output/**/*.wav
-brag-output/**/*.jpg
-brag-output/recordings/
-brag-output/composition/node_modules/
-brag-output/composition/.hyperframes/
-brag-output/**/*.png
+# /brag video work: kept local only
+brag-output/
+
+# docs: private planning, drafts and brand files stay local.
+# Judge-facing docs stay public (Devpost and the README link to them).
+docs/*
+!docs/KIRO_WRITEUP.md
+!docs/KIRO_LOG.md
+!docs/MCP.md
+!docs/Necro_Project_Documentation.pdf
+!docs/specs/
