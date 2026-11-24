@@ -30,7 +30,7 @@ function challenge(origin: string, error?: string): Record<string, string> {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const origin = originOf(req.url);
+  const origin = originOf(req);
   const auth = req.headers.get("authorization") ?? "";
   const key = auth.match(/^Bearer\s+(necro_sk_[A-Za-z0-9]{20,64})\s*$/)?.[1];
   const access = auth.match(/^Bearer\s+(necro_at_[A-Za-z0-9_-]{43})\s*$/)?.[1];

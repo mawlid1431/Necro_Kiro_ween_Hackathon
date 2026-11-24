@@ -3,20 +3,25 @@ import "server-only";
 // Shared bits of Necro's OAuth 2.1 authorization server for MCP (see backend/convex/mcpOAuth.ts).
 // The issuer is this app's origin; the protected resource is <origin>/api/mcp.
 
-/** This app's public origin. MCP_PUBLIC_ORIGIN wins (for a tunnel in local testing); otherwise the request's own origin. */
-export function originOf(reqUrl: string): string {
+/**
+ * This app's public origin, the OAuth issuer. MCP_PUBLIC_ORIGIN wins when set; otherwise the forwarded host and protocol
+ * (set by Vercel and by tunnels like cloudflared), then the request's own Host. Route handlers and the consent page use
+ * the same rule, so the issuer, `iss` and the token audience always agree.
+ */
+export function originFromHeaders(h: Headers, fallbackUrl?: string): string {
   const override = process.env.MCP_PUBLIC_ORIGIN?.replace(/\/+$/, "");
   if (override) return override;
-  return new URL(reqUrl).origin;
+  const first = (v: string | null) => v?.split(",")[0]?.trim() || null;
+  const fallback = fallbackUrl ? new URL(fallbackUrl) : null;
+  const validHost = (v: string | null) => (v && /^([a-z0-9-]+\.)*[a-z0-9-]+(:\d{1,5})?$|^\[[0-9a-f:]+\](:\d{1,5})?$/i.test(v) ? v.toLowerCase() : null);
+  const host = validHost(first(h.get("x-forwarded-host"))) ?? validHost(first(h.get("host"))) ?? fallback?.host ?? "localhost:3000";
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host);
+  const proto = first(h.get("x-forwarded-proto")) ?? (local ? "http" : (fallback?.protocol.replace(":", "") ?? "https"));
+  return `${proto === "http" ? "http" : "https"}://${host}`;
 }
 
-/** Same as originOf, for server components (no Request object). */
-export function originFromHeaders(h: Headers): string {
-  const override = process.env.MCP_PUBLIC_ORIGIN?.replace(/\/+$/, "");
-  if (override) return override;
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
-  return `${proto.split(",")[0].trim()}://${host.split(",")[0].trim()}`;
+export function originOf(req: Request): string {
+  return originFromHeaders(req.headers, req.url);
 }
 
 export const MCP_PATH = "/api/mcp";

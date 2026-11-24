@@ -23,7 +23,7 @@ export async function POST(req: Request): Promise<Response> {
     return oauthError("invalid_client", "Necro registers public clients only: send client_id in the body, without a secret.", 401);
   }
 
-  const origin = originOf(req.url);
+  const origin = originOf(req);
   const resource = matchResource(form.get("resource"), origin);
   if (!resource) return oauthError("invalid_target", "Tokens can only be issued for this server's MCP endpoint.");
 
