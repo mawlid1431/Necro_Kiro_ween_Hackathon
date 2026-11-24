@@ -762,6 +762,22 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 
 `bun run env:push` (in `backend/`) pushes the backend set to the dev deployment. Add `-- --prod` for production. When deploying the frontend to Vercel, set the frontend variables in the Vercel project.
 
+### Deploying (one push ships both halves)
+
+A push to `main` makes Vercel run `frontend/scripts/vercel-build.ts` (`buildCommand` in `frontend/vercel.json`):
+
+| Vercel build | What happens |
+|---|---|
+| **Production**, `CONVEX_DEPLOY_KEY` set | Backend typecheck, then the backend tests. Then `convex deploy` builds the website against production Convex and, only if that build succeeds, pushes `backend/convex` to production. A red test or a broken build deploys nothing. |
+| Production, no key | Website only, with a warning in the build log (Convex production is **not** updated) |
+| Preview / development | Website only. Previews never deploy to Convex production. |
+
+One-time setup:
+1. Convex dashboard → the **production** deployment → *Settings → Deploy keys* → *Generate production deploy key*.
+2. Vercel → the project → *Settings → Environment Variables* → add `CONVEX_DEPLOY_KEY` with that value, for the **Production** environment only. Redeploy once.
+
+Convex **environment variables** (API keys, secrets) are not part of a deploy: change them with `bun run env:push -- --prod` in `backend/`. A manual production deploy is still `bun run deploy` in `backend/`.
+
 ---
 
 ## 11. Testing
@@ -800,11 +816,12 @@ Frontend: `cd frontend && bun run check` (ESLint + TypeScript) and `bun run buil
 |---|---|---|
 | frontend | `bun run dev` | Next.js dev server on :3000 |
 | frontend | `bun run build` / `start` | Production build / serve it |
+| frontend | `bun scripts/vercel-build.ts` | What Vercel runs: deploys Convex too on production builds with `CONVEX_DEPLOY_KEY` |
 | frontend | `bun run check` | ESLint + `tsc --noEmit` |
 | frontend | `bun run smoke` | Live read-only check: landing, signed-in routes, public OPML, MCP 401s (`SMOKE_URL=...` to target another host) |
 | backend | `bun run dev` | `convex dev`: watch, typecheck, deploy to dev |
 | backend | `bun run deploy:dev` | Deploy once (`convex dev --once`) |
-| backend | `bun run deploy` | Deploy to production |
+| backend | `bun run deploy` | Deploy to production by hand (normally Vercel does it, see "Deploying") |
 | backend | `bun run env:push` | Push `backend/.env.local` to Convex env |
 | backend | `bun run seed` | Optional demo data (`-- '{"email":"you@example.com"}'` for your account, `{"apiKey":true}` to print an MCP key) |
 | backend | `bun run test` / `check` | Tests / typecheck + tests |

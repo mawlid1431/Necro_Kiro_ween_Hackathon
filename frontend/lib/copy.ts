@@ -689,6 +689,10 @@ export const consent = {
   returnsTo: (host: string) => `After you choose, you go back to ${host}.`,
   unverified: (app: string, host: string) =>
     `"${app}" named itself; Necro cannot confirm who made it. Only allow it if you just added Necro in an app you trust that lives at ${host}.`,
+  // Desktop apps (Claude Code, Kiro, Cursor) receive the sign-in on this computer at localhost: that is normal.
+  returnsToLocal: (host: string) => `After you choose, your answer goes to the app running on this computer (${host}).`,
+  unverifiedLocal: (app: string) =>
+    `"${app}" is an app on your own computer, such as Claude Code or Kiro. Allow it only if you just started connecting Necro from that app yourself.`,
   signedInAs: (who: string) => `Signed in as ${who}`,
   access: "What can it do?",
   writeWarning:

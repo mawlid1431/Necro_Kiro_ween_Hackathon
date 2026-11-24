@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ConnectorsPanel } from "@/components/connectors/ConnectorsPanel";
 import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { ScrollToHash } from "@/components/layout/ScrollToHash";
 import { ApiKeys } from "@/components/settings/ApiKeys";
 import { ConnectedApps } from "@/components/settings/ConnectedApps";
 import { PrivacyCard, YourDataCard } from "@/components/settings/PrivacyCard";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
     <main className="flex-1 py-8 sm:py-12">
       <Container className="flex flex-col gap-8">
         <PageTitle label="settings" />
+        <ScrollToHash />
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
           {/* Section list: a sticky sidebar on large screens, a scrollable row of chips on phones. */}
           <nav aria-label="Settings sections" className="min-w-0 lg:sticky lg:top-24 lg:self-start">

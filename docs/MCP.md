@@ -100,7 +100,11 @@ Public clients only (PKCE S256 required, `token_endpoint_auth_method: none`), sc
 tokens last 1 hour; refresh tokens rotate on every use (the previous one works for 60 seconds, reuse after that ends
 the connection). Connections end after 90 days (write) or 365 days (read). A 401 from `/api/mcp` carries
 `WWW-Authenticate: Bearer resource_metadata="…"`. Redirect URIs must be https, or http on localhost (MCP Inspector).
-For a local test behind a tunnel, set `MCP_PUBLIC_ORIGIN` in the frontend to the tunnel's https origin.
+To test locally with a real client: `bun run build && npx next start -p 3100` in `frontend`, then
+`cloudflared tunnel --url http://localhost:3100` and use `<tunnel>/api/mcp` as the connector URL (the issuer follows the
+forwarded host and protocol; set `MCP_PUBLIC_ORIGIN` only to force one). Sign in to Necro on the tunnel domain first.
+Prefer the production build: the dev server reloads on every file change, which interrupts Clerk's sign-in on a tunnel
+(`allowedDevOrigins` already lists `*.trycloudflare.com` for `next dev`). Tested this way with MCP Inspector (Nov 2026).
 
 Safety and scale notes for OAuth:
 - **Same checks as keys.** Every MCP request re-resolves the token in Convex (revocation and expiry apply on the next

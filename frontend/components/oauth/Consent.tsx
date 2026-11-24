@@ -94,11 +94,17 @@ export function Consent(p: ConsentProps) {
             <ShieldCheck aria-hidden className="size-4" strokeWidth={1.75} /> {copy.verifiedBy(p.clientHost)}
           </li>
         ) : null}
-        <li className={p.verified ? undefined : "font-semibold text-ink"}>{copy.returnsTo(p.redirectHost)}</li>
+        <li className={p.verified ? undefined : "font-semibold text-ink"}>
+          {isLocalHost(p.redirectHost) ? copy.returnsToLocal(p.redirectHost) : copy.returnsTo(p.redirectHost)}
+        </li>
         {who ? <li>{copy.signedInAs(who)}</li> : null}
       </ul>
 
-      {p.verified ? null : <div className="mt-3"><Notice>{copy.unverified(p.app, p.redirectHost)}</Notice></div>}
+      {p.verified ? null : (
+        <div className="mt-3">
+          <Notice>{isLocalHost(p.redirectHost) ? copy.unverifiedLocal(p.app) : copy.unverified(p.app, p.redirectHost)}</Notice>
+        </div>
+      )}
 
       <fieldset className="mt-5 min-w-0">
         <legend className="mb-2 text-meta font-semibold text-ink">{copy.access}</legend>
@@ -151,4 +157,9 @@ export function ConsentError({ message, returnTo }: { message: string; returnTo?
       ) : null}
     </Card>
   );
+}
+
+/** A redirect to this computer (desktop MCP clients such as Claude Code receive the code on a local port). */
+function isLocalHost(host: string): boolean {
+  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host);
 }
