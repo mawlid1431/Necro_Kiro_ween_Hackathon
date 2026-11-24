@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // Dev only: lets a temporary cloudflared tunnel (used to test MCP OAuth with ChatGPT, Claude or MCP Inspector)
+  // load dev assets and the HMR socket. Has no effect on production builds.
+  allowedDevOrigins: ["*.trycloudflare.com"],
   // Pages merged into tabs (Nov 2026): old links keep working.
   async redirects() {
     return [
