@@ -10,7 +10,7 @@ Date: 2026-11-23 (status updated 2026-11-24). Owner: Mowlid. Status: **done, exc
 | G2 Topics | done (Crypt topic filter, Séance refinement, `items.backfillMedia` for older articles) | `backend/lib/topics.ts`, spec `.kiro/specs/media-topics` |
 | G3 Honest AI labels | done (Séance, Resurrect, Second Opinion, Grimoire, captions; captions also warn to check the image) | `backend/lib/ai/modelName.ts`, `frontend/components/ui/model-badge.tsx` |
 | G4 The Circle | done | `backend/convex/circle.ts`, `/circle`, `/circle/[slug]`, spec `.kiro/specs/circle`, `tests/convex/circle.test.ts` |
-| G5 Zero errors | done: dev-only "instant navigation" errors fixed (`export const instant = false` on the signed-in layout); typecheck and lint clean on both apps; 261 backend tests pass in 30 files | `frontend/app/(app)/layout.tsx` |
+| G5 Zero errors | done: dev-only "instant navigation" errors fixed (`export const instant = false` on the signed-in layout); typecheck and lint clean on both apps; 262 backend tests pass in 30 files | `frontend/app/(app)/layout.tsx` |
 | G6 Real time verified | done in a browser: a followed person's new post appears at the top of Following without reload; starring 3 articles in one tab updated "What Necro learned" in another; topic reclassification updated the Crypt list live | |
 | G7 Docs | done: README, project documentation (Markdown + PDF with diagrams), Devpost story, submission text, Kiro write-up | `docs/` |
 | Added: learning memory | done | `backend/lib/ai/learn.ts`, `backend/convex/learning.ts`, Settings › What Necro learned, spec `.kiro/specs/learning` |

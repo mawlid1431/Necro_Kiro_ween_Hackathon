@@ -13,14 +13,9 @@ Readers change; their typed interests do not.
 3. WHEN fewer than 3 actions exist THE SYSTEM SHALL send nothing to the AI (never an invented profile).
 4. THE SYSTEM SHALL add the learned line to the Séance prompt (relevance weighs stated interests first, learned second)
    and use the user's real published posts as voice examples when they saved fewer than 3 samples.
-5. THE SYSTEM SHALL refresh after an action (debounced to once per 10 minutes) and nightly for everyone.
+5. WHEN the user acts THE SYSTEM SHALL refresh within about 20 seconds, counting every action (quick actions share one
+   refresh), and SHALL refresh everyone nightly so old habits fade.
 6. THE SYSTEM SHALL show the profile and the exact prompt line in Settings, and let the user turn learning off or reset it.
 7. THE SYSTEM SHALL never share the profile with other users or include it in any public view.
 
-## Tasks
-- [x] `lib/ai/learn.ts`: weights, decay, terms, `learnedContext` (unit tests)
-- [x] `users.learned`, `learningOff`, `learnedResetAt`, `learnQueuedAt`
-- [x] `convex/learning.ts`: `scheduleLearn` (star, Séance, Resurrect, post), `refresh`, nightly `refreshAll`, `mine`, `setEnabled`, `reset`
-- [x] Prompts: learned line in the Séance; real published posts as Resurrect voice examples
-- [x] Settings card with bars, subjects, sources, "exactly what the AI receives", off and reset
-- [x] convex-test: learns from stars, reaches the Séance context, off and reset work, never crosses users
+Design: `design.md` · Tasks: `tasks.md`.

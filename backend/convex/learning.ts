@@ -8,17 +8,21 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./lib/auth";
 import { learnProfile, learnedContext, type Learned, type Signal } from "../lib/ai/learn";
 
-const REFRESH_EVERY_MS = 10 * 60_000; // at most one refresh per user per 10 minutes from activity
+const REFRESH_DELAY_MS = 20_000; // actions within 20 s share one refresh; every action is counted
+const STALE_QUEUE_MS = 10 * 60_000; // a queued refresh that never ran (deploy, crash) is retried after this
 const PER_KIND = 100;
 
-/** Called after an action that teaches Necro something (star, summary, draft, post). Cheap and debounced. */
+/**
+ * Called after an action that teaches Necro something (star, summary, draft, post). Coalesced: if a refresh is
+ * already queued it will see this action too (it reads the latest rows when it runs), so nothing is lost.
+ */
 export async function scheduleLearn(ctx: MutationCtx, userId: Id<"users">): Promise<void> {
   const u = await ctx.db.get(userId);
   if (!u || u.learningOff) return;
   const now = Date.now();
-  if (u.learnQueuedAt && now - u.learnQueuedAt < REFRESH_EVERY_MS) return;
+  if (u.learnQueuedAt && now - u.learnQueuedAt < STALE_QUEUE_MS) return; // one is queued and has not run yet
   await ctx.db.patch(userId, { learnQueuedAt: now });
-  await ctx.scheduler.runAfter(5_000, internal.learning.refresh, { userId });
+  await ctx.scheduler.runAfter(REFRESH_DELAY_MS, internal.learning.refresh, { userId });
 }
 
 /** The prompt line for this user, or null (learning off, or not enough activity yet). */
@@ -65,7 +69,7 @@ export const refresh = internalMutation({
     const u = await ctx.db.get(userId);
     if (!u || u.learningOff) return null;
     const learned = learnProfile(await signalsFor(ctx, u), Date.now());
-    await ctx.db.patch(userId, { learned });
+    await ctx.db.patch(userId, { learned, learnQueuedAt: undefined }); // the next action queues a fresh refresh
     return learned;
   },
 });

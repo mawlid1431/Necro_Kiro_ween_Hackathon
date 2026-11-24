@@ -12,8 +12,8 @@ Paste the sections below into the Devpost form. Fields marked **(you)** need you
 | 2 | Public GitHub repo, MIT licence visible in About | done | checked Nov 22 |
 | 3 | `/.kiro` at the root, not gitignored | done | pre-submit check passes |
 | 4 | Text description of features | done | this file |
-| 5 | Kiro write-up | done, **confirm one line** | `docs/KIRO_WRITEUP.md` (the "(you)" line about the Kiro IDE) |
-| 6 | Demo video < 3 min, public on YouTube, no third-party logos or music | **you** | `docs/VIDEO_SCRIPT.md` |
+| 5 | Kiro write-up | done (Kiro IDE checked Nov 24) | `docs/KIRO_WRITEUP.md` |
+| 6 | Demo video < 3 min, public on YouTube, no third-party logos or music | video done (2:29.5, `brag-output/brag.mp4`); **you** upload it | `brag-output/share-copy.txt` |
 | 7 | Test account + instructions in the **private** Devpost field | **you** | "Testing instructions" below |
 | 8 | Category: Resurrection; bonus categories ticked | **you** | top of this file |
 | 9 | Blog post (dev.to/Hashnode), says "Kiroween 2026 hackathon" | **you** publish | `docs/BLOG_DRAFT.md` |
@@ -54,8 +54,8 @@ Necro brings RSS back with today's technology and closes the loop from **reading
   preview that matches what each platform will show (the article's real link card, or the exact image).
 - **Connectors**: connect your own LinkedIn, X, Instagram and TikTok accounts with each platform's official sign-in,
   then post with one click and see the result live. *(Each platform switches on once its developer-app keys are set;
-  until then sharing uses copy and the platform's own composer.)* **(you: update this line to match what works on
-  submission day)**
+  until then sharing uses copy and the platform's own composer.)* On the live site today, **LinkedIn** direct posting is
+  switched on (connect your own account); X, Instagram and TikTok use Copy and the platform's own composer.
 - **Witching Hour**: a live calendar and timeline. Schedule posts for later, or press New post to upload your own image,
   let AI write the caption in your voice, pick accounts, and post now or at a time. Connected accounts post on their own;
   the others remind you, with one-tap sharing. The same post can never go out twice.
@@ -79,8 +79,12 @@ Necro brings RSS back with today's technology and closes the loop from **reading
   never sends your voice samples to providers that may train on prompts.
 - Security first: an SSRF-safe fetcher that checks IPs at socket connect, sanitised article HTML, prompt-injection
   delimiting, per-user isolation tests, hashed MCP keys, encrypted social tokens.
-- **Kiro**: steering docs, agent hooks, custom agents and specs; see the Kiro write-up. **(you: summarise honestly,
-  including where you used other tools such as Claude Code)**
+- **Kiro (IDE)**: seven steering docs, four agent hooks (tests on save, schema-to-README, accessibility review,
+  pre-submit check), two custom agents (Feed Doctor, Copy Editor), EARS specs with design and task lists, and
+  property-based tests. The core and six advanced features were built spec-first in Kiro (Nov 4-9). Later features
+  (direct posting, Witching Hour, the Dashboard, the Circle, learning memory and the last quality pass) were built with
+  Claude Code under the same steering rules; `docs/KIRO_WRITEUP.md` and `docs/KIRO_LOG.md` say which tool did what.
+  What surprised us: writing EARS criteria in Kiro surfaced gaps before any code existed.
 
 ## Challenges we ran into
 
@@ -100,7 +104,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## Accomplishments that we're proud of
 
 - The whole loop works on the live site: follow → rise live → read → summary → posts in your voice → share.
-- **261 automated backend tests** in 30 files, including property-based tests and per-user isolation tests.
+- **262 automated backend tests** in 30 files, including property-based tests and per-user isolation tests.
 - An **MCP server**, so any AI assistant (including Kiro) can work with your own reading list.
 - Privacy by design: hashed API keys, encrypted social tokens, no tracking, and voice samples kept away from
   providers that train on prompts.
@@ -127,9 +131,10 @@ Meta and TikTok app reviews so everyone can post directly, scheduled posts, and 
 3. Crypt → open an article → read the **Séance** summary.
 4. Click **Resurrect** → switch between LinkedIn, X, Instagram and TikTok and compare the previews.
 5. Settings → **MCP keys** → create a key and follow `docs/MCP.md` to connect an AI assistant.
-6. **Settings → Connected accounts** shows which platforms are connected. **(you: say which ones are live for judges)**
+6. **Settings → Connected accounts**: LinkedIn direct posting is live (connect your own LinkedIn); X, Instagram and
+   TikTok share through Copy and the platform's own composer.
 7. **Witching Hour** → **New post**: upload any photo, press **Write with AI**, tick an account, choose **Schedule** in a few
-   minutes. Watch it appear in the calendar and on **Home** (click the Necro logo) without reloading; at that time a
+   minutes. Watch it appear in the calendar and on the **Dashboard** without reloading; at that time a
    reminder turns "Time to post" with a badge in the nav.
 8. Try to schedule the same post again: Necro refuses it ("Already scheduled…"). Cancel it and you can schedule it again.
 9. **Circle** → **People**: follow a demo person (names end in "(demo)") and open **Following**. In Settings you can turn

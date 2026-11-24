@@ -69,3 +69,5 @@ brag-output/**/*.wav
 brag-output/**/*.jpg
 brag-output/recordings/
 brag-output/composition/node_modules/
+brag-output/composition/.hyperframes/
+brag-output/**/*.png

@@ -588,7 +588,7 @@ Built only from the reader's own actions inside Necro; shown in full in Settings
 cd backend && npx vitest run      # or: bun run test
 ```
 
-Last run: **261 tests passing in 30 test files**. Typecheck and lint are clean on both apps (`cd frontend && bun run check`).
+Last run: **262 tests passing in 30 test files**. Typecheck and lint are clean on both apps (`cd frontend && bun run check`).
 
 | Type | Tool | What |
 |---|---|---|
@@ -696,13 +696,13 @@ The original plan (written Nov 1; deadline Dec 5, 6:00 AM Malaysia time):
 ## 18. Submission checklist
 
 - [ ] Category selected: **Resurrection**; bonus prizes ticked: Student, Startup, Demo, Blog, Social Blitz
-- [ ] Public **GitHub** repo with all code, assets and setup instructions
-- [ ] **MIT** licence visible in the repo's About section
-- [ ] `/.kiro` at the root with specs, hooks, steering, **not gitignored**
+- [x] Public **GitHub** repo with all code, assets and setup instructions
+- [x] **MIT** licence visible in the repo's About section
+- [x] `/.kiro` at the root with specs, hooks, steering, **not gitignored**
 - [ ] Live app URL; test login in the private submission field
-- [ ] Text description of features
+- [x] Text description of features
 - [ ] Demo video **under 3 minutes**, public on YouTube, no copyrighted music, no third-party trademarks
-- [ ] Kiro write-up covering every feature in section 14
+- [x] Kiro write-up covering every feature in section 14
 - [ ] Student proof: LinkedIn, student email, year, degree, school (AIU)
 - [ ] Startup: confirm founder, LinkedIn, Barkulanhub website URL (barkulanhub.com)
 - [ ] Blog post (dev.to or Hashnode) stating it is written for the Kiroween 2026 hackathon

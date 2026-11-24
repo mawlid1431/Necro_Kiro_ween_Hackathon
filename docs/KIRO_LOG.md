@@ -7,12 +7,18 @@ Truthful, specific notes per phase. Source for `docs/KIRO_WRITEUP.md`.
 - Wrote six steering files in `.kiro/steering/`: `product`, `tech`, `structure`, `security` (always included) and `brand` + `ai-prompts` (fileMatch, so they only load for UI and AI files).
 - Created four agent hooks as `.kiro/hooks/*.kiro.hook`: run related tests on save of `*.test.ts`, sync the README data model on save of `convex/schema.ts`, accessibility review on save of `components/**/*.tsx`, and a manual "Pre-submit check".
 - Created two custom agents in `.kiro/agents/`: Feed Doctor (feed parsing debugger) and Copy Editor (brand voice).
-- These files were drafted outside the Kiro IDE. **To do:** open the project in Kiro, confirm each hook appears in the Agent Hooks panel and each agent loads, and note here anything that had to change.
+- These files were drafted outside the Kiro IDE, then checked in it: all four hooks appear in the Agent Hooks panel and both custom agents load (confirmed by the owner, Nov 24, 2026).
 - Version drift caught while reading installed docs: Next.js 16 renamed `middleware.ts` to `proxy.ts`, and Clerk 7 removed `<SignedIn>`/`<SignedOut>` in favour of `<Show when="signed-in">`. Both recorded in `tech.md` so the agent stops generating the old APIs.
 
-## Phase 1: Foundation
+## Phase 1: Foundation (Nov 4-9, 2026)
 
-- (fill in)
+From the git history:
+- Nov 4: first working code, the users table and the README architecture diagrams.
+- Nov 8: the repository split into `frontend/` and `backend/`, and the core Convex backend (feeds, items, polling).
+- Nov 9: the AI degradation ladder (circuit breakers, budgets, privacy routing, Ghost mode), the "Talk to the Dead"
+  MCP server with 11 tools, the seed script and Feed Doctor fixes.
+- Nov 9: the roadmap steering file and **six feature specs** (requirements, design, tasks) written in Kiro, then built
+  the same day: Covens, Kindred, Omens, Second Opinion, Grimoire, and Privacy (Private mode, export, delete account).
 
 ## Connectors (Nov 22, 2026) — built with Claude Code, not Kiro
 
@@ -32,3 +38,14 @@ Truthful, specific notes per phase. Source for `docs/KIRO_WRITEUP.md`.
   compact menu and 6-link nav with tabs, Privacy and Terms pages, and the landing-page phone mockups.
 - Kept to the project's conventions: steering rules (security, brand voice), the same isolation pattern
   (`requireUser` + owner checks), and tests (207 passing, including duplicate, isolation and real-time cases).
+
+## Last quality pass (Nov 23-24, 2026) — built with Claude Code, not Kiro
+
+- Built outside Kiro with **Claude Code**: article images and topics, plain AI model labels on every AI output, the
+  Circle (follow people, opt-in public profiles), the learning memory, the grouped navigation and phone menu,
+  large-screen scaling, the landing page sections, the docs and PDF diagrams, and the demo video.
+- Specs for this work (`circle`, `learning`, `media-topics`) were written with Claude Code alongside the code, in the
+  project's spec format, and completed afterwards.
+- Two bugs found in live checks and fixed: an optional field made Groq's strict structured output reject every
+  Séance (answers fell back to Ghost mode), and the learning refresh could skip recent actions. Both have tests.
+- Tests: 262 passing in 30 files; typecheck and lint clean.

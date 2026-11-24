@@ -770,7 +770,7 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 cd backend && bun run test
 ```
 
-Last run: **261 tests passing in 30 files** (unit, property-based and convex-test suites). Typecheck and lint are clean on both apps. The table lists the main suites; newer ones include:
+Last run: **262 tests passing in 30 files** (unit, property-based and convex-test suites). Typecheck and lint are clean on both apps. The table lists the main suites; newer ones include:
 
 | Suite | What it proves |
 |---|---|

@@ -43,7 +43,7 @@ agent from generating Next.js 15 / Clerk 6 APIs.
 | Pre-submit check | manual | Lint, typecheck, all tests, `.kiro` not ignored, MIT licence, no committed `.env`, `.env.example` present |
 
 The pre-submit hook was run at the end of the build: **all 7 items pass** (180 tests at the time). After the last
-quality pass the backend suite is **261 tests in 30 files**, all passing.
+quality pass the backend suite is **262 tests in 30 files**, all passing.
 
 ## Custom agents — `.kiro/agents/`
 
@@ -56,7 +56,8 @@ quality pass the backend suite is **261 tests in 30 files**, all passing.
 
 Each spec has `requirements.md` (user stories + **EARS** acceptance criteria), `design.md` and `tasks.md`:
 `covens`, `omens`, `grimoire`, `kindred`, `second-opinion`, `privacy-trust`, `connectors`, and for the last pass
-`media-topics`, `circle` and `learning` (EARS requirements; only `circle` also has a design and task list).
+`media-topics`, `circle` and `learning`. The last three were written with Claude Code alongside the code and completed
+afterwards (their `design.md` says so), so every spec in the folder has requirements, a design and a task list.
 
 Example (Covens, criterion 4): *"THE SYSTEM SHALL show a curator's display name …, never their email, read state,
 stars, Séances, drafts, voice profile or Omens."* That one sentence became the shape of the public query and an
@@ -84,10 +85,16 @@ that would otherwise need copy-pasting articles into the chat. Setup: `docs/MCP.
 
 ## Kiro IDE / CLI / Web / Crew, and powers
 
-The steering, hooks and agents were drafted first as files (see `docs/KIRO_LOG.md`, Step 0).
-**(you: before submitting, open the project in the Kiro IDE, confirm each hook shows in the Agent Hooks panel and
-each agent loads, then replace this line with what you saw and which Kiro app(s) you used.)**
-No Kiro powers or Kiro Crew app were used.
+We used the **Kiro IDE**. The steering, hooks and agents were drafted first as files (see `docs/KIRO_LOG.md`, Step 0);
+opened in the Kiro IDE, all four hooks appear in the Agent Hooks panel and both custom agents (Feed Doctor, Copy
+Editor) load. The Kiro CLI, Kiro on the web, Kiro powers and the Kiro Crew app were not used.
+
+## What surprised us
+
+The specs. Writing EARS acceptance criteria in Kiro surfaced gaps before any code existed: rules we had not thought
+to state until the "WHEN ... THE SYSTEM SHALL" format asked for them. The clearest example is Covens criterion 4 above:
+saying exactly what a public collection must never reveal turned a vague "keep it private" into the shape of the
+public query and an isolation test.
 
 ## What we would do differently
 

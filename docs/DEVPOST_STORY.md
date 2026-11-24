@@ -28,7 +28,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 - **Next.js 16** (App Router, TypeScript), **Tailwind v4**, **shadcn/ui** and **Motion**, hosted on **Vercel**.
 - **Convex** for the database, realtime updates (tombstones rise live), scheduled feed polling and server actions.
 - **Clerk** for sign-in. **Vercel AI SDK** with a provider "ladder" (Groq, Gemini, OpenRouter), budgets and a circuit breaker, plus a privacy filter that never sends your voice samples to providers that may train on prompts.
-- **Kiro**: steering docs (product, tech, structure, security, brand, AI prompts), agent hooks (run related tests, sync the data model to the README, accessibility review, pre-submit check), two custom agents (Feed Doctor, Copy Editor), EARS-style specs for the advanced features, and property-based tests. We also used Claude Code for the later features (direct posting, Witching Hour, the composer, Home); the repository's `docs/KIRO_WRITEUP.md` and `docs/KIRO_LOG.md` say what was built with which tool.
+- **Kiro (IDE)**: steering docs (product, tech, structure, security, brand, AI prompts), four agent hooks (run related tests, sync the data model to the README, accessibility review, pre-submit check), two custom agents (Feed Doctor, Copy Editor), EARS specs for the advanced features, and property-based tests. We also used Claude Code for the later features (direct posting, Witching Hour, the composer, the Dashboard, the Circle, learning memory and the last quality pass); `docs/KIRO_WRITEUP.md` and `docs/KIRO_LOG.md` say what was built with which tool.
 
 ## Challenges we ran into
 
@@ -40,7 +40,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## Accomplishments that we're proud of
 
 - The whole loop works on the live site: follow → rise live → read → summary → posts in your voice → share.
-- 261 automated backend tests in 30 files, including property-based tests and per-user isolation tests.
+- 262 automated backend tests in 30 files, including property-based tests and per-user isolation tests.
 - Layouts checked with no horizontal overflow from 320 px phones to 7680 px (8K) screens.
 - An MCP server, so your AI assistant can work with your own reading list.
 - Privacy by design: hashed API keys, sanitised article HTML, prompt-injection delimiting, no tracking.
@@ -48,7 +48,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## What we learned
 
 - Writing rules down once (steering) beats repeating them in prompts.
-- EARS acceptance criteria ("WHEN … THE SYSTEM SHALL …") turn straight into tests.
+- EARS acceptance criteria ("WHEN … THE SYSTEM SHALL …") turn straight into tests. What surprised us most: writing them in Kiro surfaced gaps before any code existed, rules we had not thought to state (like exactly what a public collection must never reveal).
 - Property-based testing finds the inputs you would never write by hand.
 
 ## What's next for Necro
