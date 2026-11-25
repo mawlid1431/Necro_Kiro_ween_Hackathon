@@ -18,6 +18,7 @@ designed with it.
 | | Read only | Read and write |
 |---|---|---|
 | Read feeds, articles, summaries, stats, your posts and connected accounts | yes | yes |
+| See your Home overview (`get_dashboard`) and live pictures of it (`get_page_image`) | yes | yes |
 | Add a feed (`add_grave`) | no | yes |
 | Post and schedule (`upload_post_image`, `create_post`, `get_post`, `update_post`, `cancel_post`, `publish_post_now`) | no | yes |
 | Expires | never (revoke any time) | after 90 days (revoke any time) |
@@ -158,9 +159,11 @@ Try:
 | `list_kindred` | any | `limit` 1–20 (10) | Stories reported by more than one feed |
 | `get_omens` | any | `limit` 1–30 (10) | Watched topics (Omens) and recent matches, each with a reason and "ai" or "keyword" |
 | `list_connections` | any | none | Per platform: connected, account name, and delivery `auto` (posts on its own) or `reminder` |
+| `get_page_image` | any | `page`: `dashboard` (default), `posts`, `feeds` | An MCP image block (PNG, 1200 px wide) drawn from live data, plus a short text summary |
+| `get_dashboard` | any | none | Home overview, live: feeds, new today, post counts, next scheduled and recently posted (with links), read next, connections, setup |
 | `list_posts` | any | `limit` 1–50 (20) | Posts from the last 30 days and next 90: status, time, text, image, live link, created by app or assistant |
 | `add_grave` | write | `url`, `folder?` | Same Summon as the app: safe fetch, discovery, dedupe, 300-feed cap |
-| `upload_post_image` | write | `imageBase64` + `mimeType` (`image/png`, `image/jpeg`), or `imageUrl` | `{ imageId, previewUrl, contentType, bytes }` |
+| `upload_post_image` | write | nothing (→ `{ uploadUrl }` to POST raw bytes to), then `storageId`; or `imageUrl`; or `imageBase64` + `mimeType` (`image/png`, `image/jpeg`) | `{ imageId, previewUrl, contentType, bytes }` |
 | `create_post` | write | `text`, `platforms[]` (`linkedin`, `x`, `instagram`, `tiktok`), `imageId?`, `scheduleAt?` (omit = now), `sourceItemId?`, `idempotencyKey` | `{ postId, status, scheduledFor: { utc, singapore, label }, perPlatform: [{ platform, publishId, delivery, status }], duplicate }` |
 | `get_post` | write | `postId` | text, image, status overall and per platform, `liveUrl`, `error`, times in UTC and Singapore |
 | `update_post` | write | `postId`, any of `text`, `imageId`, `platforms`, `scheduleAt` | The updated post (same shape as `get_post`) |
@@ -169,6 +172,30 @@ Try:
 
 `list_posts` rows also carry `postId`, the id the posting tools take. A post to several platforms is one `postId` with
 one `publishId` per platform.
+
+### How a picture of your Necro gets to your assistant
+
+`get_page_image` reads the same live data as the app (`mcp.getDashboard`, `mcpWrite.posts`, `mcp.listGraves`), draws it on
+Necro's server with `next/og` (no browser, no cookies), and returns it as an MCP `image` content block (base64 PNG).
+The chat app shows it like any image. It works with read-only access and is fresh on every call.
+
+### How a poster made in your assistant gets into Necro
+
+MCP tool calls are JSON text, so an image travels one of three ways:
+
+| Where the poster is | Route | Why |
+|---|---|---|
+| A file the assistant can read (Kiro, Claude Code, Cursor, a code tool) | `upload_post_image {}` → `curl -X POST -H 'Content-Type: image/png' --data-binary @poster.png '<uploadUrl>'` → `upload_post_image { storageId }` | Raw bytes over HTTPS, straight into Necro's storage: fast, no token cost |
+| At a public link (an image tool's output URL, a site, a CDN) | `upload_post_image { imageUrl }` | Necro downloads it itself through the SSRF-safe fetcher |
+| A small image the assistant holds as data | `upload_post_image { imageBase64, mimeType }` | Works anywhere, but base64 is about 1.3 bytes per byte and costs tokens |
+
+An image you paste into a chat app (claude.ai, ChatGPT) is shown to the model as a picture, not as a file it can
+send on, so the assistant cannot forward it. Use a link, or upload it in Necro's composer. Whatever the route, Necro
+checks the file's own bytes (PNG or JPEG, up to 5 MB) before it can be posted, and the returned `previewUrl` lets the
+assistant show you the exact image before you approve the post.
+
+**Which accounts:** when you name a platform ("post this to LinkedIn"), only that one is used. When you say "my
+accounts", the assistant uses the connected ones from `list_connections` and asks before adding reminder-only ones.
 
 ### Example calls
 
@@ -204,7 +231,7 @@ instructions. Errors return `isError: true` with a short code (`NOT_FOUND`, `LIM
    (+ `mcpOAuthNode.ts` to fetch client metadata) and `frontend/app/oauth/*`; codes and tokens are stored only as SHA-256. That mutation resolves the key to a user, its type and expiry, and enforces the rate limit, so
    a bad, revoked or expired key or a flood is answered with 401 or 429 before any MCP work.
 2. A fresh MCP server is built for the request (`frontend/app/api/mcp/tools.ts`) with the read tools, plus the write
-   tools only for a "read and write" key.
+   tools only for a key or app with posts:write. `get_page_image` is drawn in `frontend/app/api/mcp/pageImage.ts`.
 3. Read tools call `backend/convex/mcp.ts`; posting tools call `backend/convex/mcpWrite.ts` (and
    `mcpWriteNode.ts` for images). Every function re-checks `MCP_SERVER_SECRET`; write functions also re-check the key
    itself. Posting runs the app's own composer (`social.composeFor`), so it follows exactly the same rules.

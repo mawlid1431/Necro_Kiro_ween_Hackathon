@@ -23,13 +23,41 @@ export const storeImage = action({
     imageUrl: v.optional(v.string()),
     imageBase64: v.optional(v.string()),
     mimeType: v.optional(v.string()),
+    uploadedStorageId: v.optional(v.string()), // the storageId returned by POSTing bytes to request_image_upload's URL
   },
   handler: async (
     ctx,
-    { secret, userId, keyId, imageUrl, imageBase64, mimeType },
+    { secret, userId, keyId, imageUrl, imageBase64, mimeType, uploadedStorageId },
   ): Promise<{ storageId: Id<"_storage">; imageId: Id<"_storage">; previewUrl: string | null; contentType: string; bytes: number }> => {
     const { keyLabel } = await ctx.runMutation(api.mcpWrite.startImageUpload, { secret, userId, keyId });
-    if (!imageUrl === !imageBase64) throw bad("Give either imageUrl or imageBase64 (with mimeType), not both.");
+    if ([imageUrl, imageBase64, uploadedStorageId].filter(Boolean).length !== 1) {
+      throw bad("Give exactly one of: storageId (from request_image_upload), imageUrl, or imageBase64 with mimeType.");
+    }
+
+    // Raw bytes already uploaded straight to Necro's storage: check the file itself, then register it.
+    if (uploadedStorageId) {
+      const info = await ctx.runQuery(internal.mcpWrite.storageInfo, { userId, storageId: uploadedStorageId });
+      if (!info || info.claimedBy === "other") throw bad("No uploaded file with that storageId. Call request_image_upload and upload again.", "NOT_FOUND");
+      if (info.claimedBy === "me") {
+        const head = await ctx.storage.get(info.id);
+        return { storageId: info.id, imageId: info.id, previewUrl: await ctx.storage.getUrl(info.id), contentType: info.contentType ?? "", bytes: head?.size ?? info.size };
+      }
+      const blob = await ctx.storage.get(info.id);
+      const raw = blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+      const sniffed = raw ? sniffImage(raw) : null;
+      if (!raw || raw.length > MCP_IMAGE_MAX_BYTES || !sniffed) {
+        await ctx.storage.delete(info.id);
+        throw bad(raw && raw.length > MCP_IMAGE_MAX_BYTES ? "The image is over 5 MB." : "Only PNG or JPEG images can be posted.");
+      }
+      let id = info.id;
+      if (info.contentType?.toLowerCase() !== sniffed) {
+        // The upload's Content-Type header was missing or wrong: keep the bytes under the type they really are.
+        id = await ctx.storage.store(new Blob([raw], { type: sniffed }));
+        await ctx.storage.delete(info.id);
+      }
+      await ctx.runMutation(internal.mcpWrite.registerImage, { userId, storageId: id, keyId, keyLabel });
+      return { storageId: id, imageId: id, previewUrl: await ctx.storage.getUrl(id), contentType: sniffed, bytes: raw.length };
+    }
     const declared = mimeType?.trim().toLowerCase().replace("image/jpg", "image/jpeg");
     if (declared !== undefined && !(MCP_IMAGE_TYPES as readonly string[]).includes(declared)) {
       throw bad(`Only PNG or JPEG images can be posted (got ${declared.slice(0, 40)}). LinkedIn and Instagram do not accept WebP.`);

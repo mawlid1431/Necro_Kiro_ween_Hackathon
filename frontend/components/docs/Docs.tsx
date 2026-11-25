@@ -220,6 +220,66 @@ export function Docs() {
           </ul>
         </Section>
 
+        <Section id="access" title={copy.access.title} icon={Eye} lead={copy.access.lead}>
+          <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-[var(--card-shadow)]">
+            <table className="w-full text-left text-meta">
+              <thead className="border-b border-line bg-surface-muted/60">
+                <tr>
+                  {copy.access.head.map((h, i) => (
+                    <th key={h || i} scope="col" className={cn("py-2.5 font-semibold text-ink", i === 0 ? "pr-3 pl-4" : "px-3 text-center")}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {copy.access.rows.map(([what, read, full]) => (
+                  <tr key={what}>
+                    <td className="py-2.5 pr-3 pl-4 text-copy">{what}</td>
+                    <td className="px-3 py-2.5 text-center text-copy">{read}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-ink">{full}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+
+        <Section id="posting" title={copy.posting.title} icon={PenLine} lead={copy.posting.lead}>
+          <ol className="grid gap-3 md:grid-cols-2">
+            {copy.posting.steps.map((s, i) => (
+              <li key={s.title} className={card}>
+                <span className="grid size-7 place-items-center rounded-full bg-ecto text-meta font-bold text-on-ecto">{i + 1}</span>
+                <h3 className="mt-3 text-body font-semibold">{s.title}</h3>
+                <p className="mt-1 text-meta text-copy">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+          <h3 className="mt-8 text-body font-semibold text-ink">{copy.posting.routesTitle}</h3>
+          <dl className="mt-3 flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface shadow-[var(--card-shadow)]">
+            {copy.posting.routes.map(([where, how]) => (
+              <div key={where} className="grid gap-1 px-4 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-4">
+                <dt className="text-meta font-semibold text-ink">{where}</dt>
+                <dd className="text-meta text-copy">{how}</dd>
+              </div>
+            ))}
+          </dl>
+          <h3 className="mt-8 text-body font-semibold text-ink">{copy.posting.platformsTitle}</h3>
+          <p className="mt-2 max-w-2xl text-meta text-copy">{copy.posting.platforms}</p>
+        </Section>
+
+        <Section id="pictures" title={copy.pictures.title} icon={Eye} lead={copy.pictures.lead}>
+          <ul className="grid gap-3 md:grid-cols-3">
+            {copy.pictures.items.map(([page, what]) => (
+              <li key={page} className={card}>
+                <code className="font-mono text-meta font-semibold text-ink">get_page_image {`{ page: "${page}" }`}</code>
+                <p className="mt-2 text-meta text-copy">{what}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 max-w-2xl text-meta text-subtle">{copy.pictures.note}</p>
+        </Section>
+
         <Section id="tools" title={copy.tools.title} icon={Wrench} lead={copy.tools.lead}>
           <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--card-shadow)]">
             <table className="w-full text-left text-meta">

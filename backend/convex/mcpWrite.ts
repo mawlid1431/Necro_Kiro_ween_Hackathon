@@ -6,7 +6,7 @@
 // the scheduled cap, the hourly cap and "one post, once". Every successful write is audited in the same transaction.
 
 import { v } from "convex/values";
-import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertSecret, fail, getCurrentUser } from "./lib/auth";
 import { hitLimit } from "./rateLimits";
@@ -21,6 +21,7 @@ import {
   publishNowFor,
   IMAGE_TYPES,
   MAX_IMAGE_BYTES,
+  MAX_UPLOADS_PER_DAY,
 } from "./social";
 import { socialPlatform } from "./schema";
 import { POST_LIMITS, postLength, SOCIAL_PLATFORMS, type SocialPlatform } from "../lib/social/post";
@@ -325,6 +326,36 @@ export const startImageUpload = mutation({
   handler: async (ctx, { secret, userId, keyId }) => {
     const key = await writeKey(ctx, secret, userId, keyId);
     return { keyLabel: key.prefix };
+  },
+});
+
+/**
+ * request_image_upload: a one-time Convex storage URL the assistant POSTs the raw image bytes to (no base64 in the
+ * conversation). The upload returns { storageId }, which upload_post_image then checks and registers.
+ */
+export const uploadUrl = mutation({
+  args: keyed,
+  handler: async (ctx, { secret, userId, keyId }) => {
+    const key = await writeKey(ctx, secret, userId, keyId);
+    const today = await ctx.db
+      .query("uploads")
+      .withIndex("by_user", (q) => q.eq("userId", userId).gt("createdAt", Date.now() - 86_400_000))
+      .take(MAX_UPLOADS_PER_DAY);
+    if (today.length >= MAX_UPLOADS_PER_DAY) fail("LIMIT", `You can upload up to ${MAX_UPLOADS_PER_DAY} images a day.`);
+    await audit(ctx, { userId, keyId, keyLabel: key.prefix, tool: "upload_post_image", status: "ok", message: "upload link issued" });
+    return { uploadUrl: await ctx.storage.generateUploadUrl() };
+  },
+});
+
+/** For upload_post_image with a storageId: does the file exist, and is it still unclaimed or this user's? */
+export const storageInfo = internalQuery({
+  args: { userId: v.id("users"), storageId: v.string() },
+  handler: async (ctx, { userId, storageId }) => {
+    const id = ctx.db.system.normalizeId("_storage", storageId);
+    const meta = id ? await ctx.db.system.get(id) : null;
+    if (!id || !meta) return null;
+    const owner = await ctx.db.query("uploads").withIndex("by_storage", (q) => q.eq("storageId", id)).unique();
+    return { id, size: meta.size, contentType: meta.contentType ?? null, claimedBy: owner ? (owner.userId === userId ? "me" : "other") : null };
   },
 });
 

@@ -1,3 +1,4 @@
+// @vitest-environment node
 // The MCP server itself (frontend/app/api/mcp/tools.ts), driven by a real MCP client over an in-memory transport.
 // Its Convex client is a thin bridge to convex-test, so every tool call runs the real Convex functions.
 // Checks: the 13 read tools are listed for every key; the 6 posting tools only with posts:write; a full
@@ -17,7 +18,7 @@ const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwA
 
 const READ_TOOLS = [
   "get_stats", "get_briefing", "get_omens", "get_seance", "get_item", "get_grave", "list_items",
-  "list_graves", "list_kindred", "list_posts", "list_connections", "search_items", "ask_crypt",
+  "list_graves", "list_kindred", "list_posts", "list_connections", "search_items", "ask_crypt", "get_dashboard", "get_page_image",
 ];
 const POSTING_TOOLS = ["upload_post_image", "create_post", "get_post", "update_post", "cancel_post", "publish_post_now"];
 
@@ -74,7 +75,7 @@ async function connect(scope: "read" | "write") {
 const sgt = (fromNow: number) => zoned(Math.ceil((Date.now() + fromNow) / 60_000) * 60_000).singapore;
 
 describe("MCP server: tool list", () => {
-  it("a read-only key sees exactly the 13 read tools; a posts:write key also sees the posting tools", async () => {
+  it("a read-only key sees exactly the 13 original read tools plus get_dashboard and get_page_image; a posts:write key also sees the posting tools", async () => {
     const read = await connect("read");
     expect((await read.client.listTools()).tools.map((x) => x.name).sort()).toEqual([...READ_TOOLS].sort());
 
@@ -92,6 +93,10 @@ describe("MCP server: tool list", () => {
     const { call } = await connect("read");
     expect((await call("get_stats")).data).toMatchObject({ feeds: 0, unread: 0 });
     expect((await call("list_posts")).data).toEqual([]);
+    const home = (await call("get_dashboard")).data;
+    expect(home).toMatchObject({ feeds: { total: 0 }, posts: { scheduled: 0 }, upNext: [] });
+    expect(home.asOf.singapore).toMatch(/[+]08:00$/);
+    expect(home.connections).toHaveLength(4);
     expect((await call("list_connections")).data.map((c: { platform: string }) => c.platform)).toEqual(["linkedin", "x", "instagram", "tiktok"]);
     const refused = await call("create_post", { text: "Hi", platforms: ["linkedin"], idempotencyKey: "x" });
     expect(refused.isError).toBe(true);
@@ -99,9 +104,33 @@ describe("MCP server: tool list", () => {
   });
 });
 
+describe("MCP server: pictures of Necro sections", () => {
+  it("returns a live PNG of the dashboard, posts and feeds as an MCP image block, for a read-only key too", async () => {
+    const { client } = await connect("read");
+    for (const page of ["dashboard", "posts", "feeds"]) {
+      const r = (await client.callTool({ name: "get_page_image", arguments: { page } })) as {
+        isError?: boolean;
+        content: ({ type: "image"; data: string; mimeType: string } | { type: "text"; text: string })[];
+      };
+      expect(r.isError).toBeFalsy();
+      const img = r.content.find((x) => x.type === "image") as { data: string; mimeType: string };
+      expect(img.mimeType).toBe("image/png");
+      const bytes = Uint8Array.from(atob(img.data), (ch) => ch.charCodeAt(0));
+      expect([...bytes.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]); // a real PNG
+      expect(bytes.length).toBeGreaterThan(5_000);
+      const meta = JSON.parse((r.content.find((x) => x.type === "text") as { text: string }).text);
+      expect(meta).toMatchObject({ page, size: expect.stringMatching(/^1200x/) });
+    }
+  });
+});
+
 describe("MCP server: posting end to end", () => {
   it("upload → create (scheduled) → get → update → cancel, with readable errors and an audit trail", async () => {
     const { alice, call } = await connect("write");
+    // Route 1 (a file): no arguments → a one-time link to send raw bytes to.
+    const link = await call("upload_post_image");
+    expect(link.isError).toBe(false);
+    expect(link.data.uploadUrl).toMatch(/^https?:\/\//);
     const img = await call("upload_post_image", { imageBase64: PNG, mimeType: "image/png" });
     expect(img.isError).toBe(false);
     expect(img.data.imageId).toBeTruthy();
@@ -111,6 +140,10 @@ describe("MCP server: posting end to end", () => {
     expect(created.isError).toBe(false);
     expect(created.data).toMatchObject({ status: "scheduled", scheduledFor: { singapore: at } });
     expect(created.data.perPlatform.map((p: { delivery: string }) => p.delivery)).toEqual(["reminder", "reminder"]);
+    // get_dashboard reads Home's own overview: the new post is there straight away.
+    const home = (await call("get_dashboard")).data;
+    expect(home.posts.scheduled).toBe(2);
+    expect(home.upNext[0]).toMatchObject({ status: "scheduled", title: "Necro v1 is here." });
 
     const again = await call("create_post", { text: "Necro v1 is here.", platforms: ["linkedin", "x"], imageId: img.data.imageId, scheduleAt: at, idempotencyKey: "e2e-1" });
     expect(again.data).toMatchObject({ duplicate: true, postId: created.data.postId });
@@ -133,7 +166,7 @@ describe("MCP server: posting end to end", () => {
 
     const log = await alice.query(api.mcpWrite.auditLog, {});
     expect(log.map((r) => `${r.tool}:${r.status}`).reverse()).toEqual([
-      "upload_post_image:ok", "create_post:ok", "update_post:refused", "update_post:ok", "cancel_post:ok", "cancel_post:refused",
+      "upload_post_image:ok", "upload_post_image:ok", "create_post:ok", "update_post:refused", "update_post:ok", "cancel_post:ok", "cancel_post:refused",
     ]);
   });
 

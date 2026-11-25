@@ -2,8 +2,8 @@
 // Everything is read through indexes that start with the user's id, with caps, so it stays fast for big accounts.
 
 import { v } from "convex/values";
-import { query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { query, type QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUser } from "./lib/auth";
 import { MAX_GRAVES_PER_USER } from "../lib/limits";
 import type { SocialPlatform } from "../lib/social/post";
@@ -35,9 +35,15 @@ export const overview = query({
   handler: async (ctx, args): Promise<Overview | null> => {
     const user = await getCurrentUser(ctx);
     if (!user) return null;
-    const uid = user._id;
     const server = Date.now();
-    const now = args.now !== undefined && Math.abs(args.now - server) < 10 * 60_000 ? args.now : server;
+    return await overviewFor(ctx, user, args.now !== undefined && Math.abs(args.now - server) < 10 * 60_000 ? args.now : server);
+  },
+});
+
+/** Home's overview for one user. Shared with the MCP get_dashboard tool, so an assistant sees exactly what Home shows. */
+export async function overviewFor(ctx: QueryCtx, user: Doc<"users">, now: number): Promise<Overview> {
+  {
+    const uid = user._id;
 
     // Feeds
     const graves = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", uid)).take(MAX_GRAVES_PER_USER);
@@ -99,8 +105,8 @@ export const overview = query({
         mcpKey: !!key,
       },
     };
-  },
-});
+  }
+}
 
 export type Activity = {
   /** UTC days, oldest first ("YYYY-MM-DD"). */

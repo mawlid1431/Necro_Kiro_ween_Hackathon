@@ -16,6 +16,10 @@ import { htmlToPlain } from "../lib/text";
 import { MCP_CALLS_PER_MINUTE } from "../lib/limits";
 import type { SeanceView } from "./seances";
 import type { AskResult } from "./askNode";
+import { overviewFor } from "./dashboard";
+import { byUserPlatform, modeFor } from "./social";
+import { SOCIAL_PLATFORMS } from "../lib/social/post";
+import { zoned } from "../lib/social/time";
 
 const guard = { secret: v.string(), userId: v.id("users") };
 const UNTRUSTED = "untrusted web content";
@@ -181,6 +185,36 @@ export const listKindred = query({
       if (out.length >= Math.min(limit, 20)) break;
     }
     return out;
+  },
+});
+
+/** get_dashboard: the user's Home overview, live (same function as the Home page), with times in UTC and Singapore. */
+export const getDashboard = query({
+  args: guard,
+  handler: async (ctx, { secret, userId }) => {
+    await checkUser(ctx, secret, userId);
+    const user = (await ctx.db.get(userId))!;
+    const now = Date.now();
+    const o = await overviewFor(ctx, user, now);
+    const post = (p: (typeof o.upNext)[number]) => ({
+      publishId: p._id, platform: p.platform, status: p.status, delivery: p.mode, title: p.title, liveUrl: p.url ?? null, at: zoned(p.at),
+    });
+    const connected = [];
+    for (const platform of SOCIAL_PLATFORMS) {
+      const c = await byUserPlatform(ctx, userId, platform);
+      connected.push({ platform, connected: !!c && c.status === "active", delivery: modeFor(platform, c) });
+    }
+    return {
+      asOf: zoned(now),
+      feeds: o.feeds,
+      newArticlesToday: o.risenToday,
+      posts: o.posts,
+      upNext: o.upNext.map(post),
+      recentlyPosted: o.recent.map(post),
+      readNext: o.readNext.map((i) => ({ id: i._id, title: i.title, feed: i.source, score: i.score, publishedAt: new Date(i.publishedAt).toISOString(), source: UNTRUSTED })),
+      connections: connected,
+      setup: o.checklist,
+    };
   },
 });
 

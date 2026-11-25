@@ -351,7 +351,7 @@ sequenceDiagram
   end
 ```
 
-Tools: 13 read (`list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 7 write for keys and connected apps with **`posts:write`** (`add_grave` · `upload_post_image` · `create_post` · `get_post` · `update_post` · `cancel_post` · `publish_post_now`). Posting tools run the app's own composer and scheduler (`social.composeFor`, `socialNode.runScheduled`), so an assistant's post is the same queue, delivery rules (auto or reminder) and history as **New post**, and appears live in the dashboard. `scheduleAt` is ISO 8601 with a time zone, to the minute; times come back in UTC and Singapore time; `idempotencyKey` stops duplicates. Turn posting on per key or app in Settings → MCP keys (**Allow posting**); every posting call is audited there. The full table and example calls are in [`docs/MCP.md`](docs/MCP.md); the design is in [`docs/specs/mcp-posting.md`](docs/specs/mcp-posting.md).
+Tools: 15 read (`get_dashboard`: the live Home overview · `get_page_image`: a live PNG of the dashboard, posts or feeds, drawn on the server with `next/og` and returned as an MCP image block · `list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 7 write for keys and connected apps with **`posts:write`** (`add_grave` · `upload_post_image` · `create_post` · `get_post` · `update_post` · `cancel_post` · `publish_post_now`). Posting tools run the app's own composer and scheduler (`social.composeFor`, `socialNode.runScheduled`), so an assistant's post is the same queue, delivery rules (auto or reminder) and history as **New post**, and appears live in the dashboard. `scheduleAt` is ISO 8601 with a time zone, to the minute; times come back in UTC and Singapore time; `idempotencyKey` stops duplicates. Turn posting on per key or app in Settings → MCP keys (**Allow posting**); every posting call is audited there. The full table and example calls are in [`docs/MCP.md`](docs/MCP.md); the design is in [`docs/specs/mcp-posting.md`](docs/specs/mcp-posting.md).
 
 Example (Claude, with posting on): *"Create a LinkedIn post announcing Necro v1 with this image, and schedule it for tomorrow at 9:00 AM Singapore time."* Claude calls `upload_post_image`, then `create_post` with `scheduleAt: "<tomorrow>T09:00:00+08:00"`, and later `get_post` returns `posted` and the LinkedIn link.
 
@@ -638,9 +638,9 @@ erDiagram
 | `voice` | Writing voice for Resurrect | by_user |
 | `connections` | Connected social accounts; tokens sealed (AES-256-GCM) | by_user_platform, by_platform |
 | `oauthStates` | Single-use OAuth state + PKCE verifier (15 min) | by_state, by_user |
-| `publishes` | Every post, scheduled post and reminder with its live status and content key | by_user, by_user_key, by_user_at, by_user_status, by_status_since, by_item |
-| `uploads` | Images uploaded in the composer (owner-checked) | by_user, by_storage |
-| `apiKeys` | MCP keys (hashed), scope, expiry, last use | by_user, by_hash, by_user_revoked |
+| `publishes` | Every post, scheduled post and reminder (one row per platform) with its live status and content key; `via` = who made it (app or `mcp:<key>`); `groupId` = the post's id shared by its platform rows; `idemKey` = the MCP idempotency key | by_user, by_user_key, by_user_at, by_user_status, by_status_since, by_item, by_user_group, by_user_idem |
+| `uploads` | Images uploaded in the composer or by an assistant through MCP (owner-checked, SHA-256 for "one post, once") | by_user, by_storage |
+| `apiKeys` | MCP keys (hashed), scope (`read`, or `write` = posts:write, switchable in Settings), expiry, last use | by_user, by_hash, by_user_revoked |
 | `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
 | `mcpAudit` | Every MCP posting call: key label, tool, post id, ok/refused, reason, time (Settings → MCP keys) | by_user_at, by_key_at |
 | `mcpClients` | OAuth apps that connect over MCP (ChatGPT, Claude): metadata-document or self-registered clients | by_client_id, by_fingerprint, by_kind_created |
@@ -860,7 +860,9 @@ Specs, steering, hooks and custom agents live in [`.kiro/`](.kiro) and are commi
 
 ### 2026-11-25: MCP posting and scheduling
 
-- New MCP tools for keys and connected apps with `posts:write`: `upload_post_image`, `get_post`, `update_post`,
+- New read tools for every key: `get_dashboard` (the live Home overview, same function as Home) and `get_page_image`
+  (a live PNG of the dashboard, posts or feeds, sent back to the assistant as an MCP image). New MCP tools for keys and connected apps with
+  `posts:write`: `upload_post_image` (with no arguments it returns a one-time link to send the raw file to; or a link; or base64), `get_post`, `update_post`,
   `publish_post_now`; `create_post` now takes `imageId`, `scheduleAt` (ISO 8601 with a time zone, to the minute),
   `sourceItemId` and a required `idempotencyKey`, and returns one `postId` per post with delivery per platform;
   `cancel_post` cancels every platform of a post. `list_posts` rows gain `postId`. The 13 read tools are unchanged.

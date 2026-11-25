@@ -140,6 +140,41 @@ describe("validation before saving", () => {
   });
 });
 
+describe("raw image upload (upload link → bytes → upload_post_image with storageId)", () => {
+  const pngBytes = () => Uint8Array.from(atob(PNG), (ch) => ch.charCodeAt(0));
+
+  it("gives write keys a one-time URL, checks the uploaded bytes, and registers the image once", async () => {
+    const { t, aliceId, bobId, key } = await setup();
+    const k = await key(aliceId, "a");
+    const r = await key(aliceId, "b", "read");
+    expect((await t.mutation(api.mcpWrite.uploadUrl, k)).uploadUrl).toMatch(/^https?:\/\//);
+    await expect(t.mutation(api.mcpWrite.uploadUrl, r)).rejects.toThrow(/read-only/);
+
+    // What the assistant's POST to the URL does: the bytes land in storage (here with no Content-Type header).
+    const sid = await t.run((ctx) => ctx.storage.store(new Blob([pngBytes()])));
+    const img = await t.action(api.mcpWriteNode.storeImage, { ...k, uploadedStorageId: sid });
+    expect(img).toMatchObject({ contentType: "image/png", bytes: pngBytes().length });
+    expect(img.previewUrl).toMatch(/^https?:\/\//);
+    // Usable straight away in a post.
+    const p = await t.mutation(api.mcpWrite.compose, { ...k, text: "Poster day", platforms: ["linkedin"], imageId: img.imageId, atIso: sgt(HOUR), idempotencyKey: "up-1" });
+    expect(p.image?.imageId).toBe(img.imageId);
+    // Calling again with the same id is harmless; another user can never claim it.
+    expect((await t.action(api.mcpWriteNode.storeImage, { ...k, uploadedStorageId: img.imageId })).imageId).toBe(img.imageId);
+    const kb = await key(bobId, "c");
+    await expect(t.action(api.mcpWriteNode.storeImage, { ...kb, uploadedStorageId: img.imageId })).rejects.toThrow(/No uploaded file/);
+  });
+
+  it("deletes an uploaded file that is not a PNG or JPEG", async () => {
+    const { t, aliceId, key } = await setup();
+    const k = await key(aliceId, "d");
+    const sid = await t.run((ctx) => ctx.storage.store(new Blob([new TextEncoder().encode("<svg onload=alert(1)>")], { type: "image/png" })));
+    await expect(t.action(api.mcpWriteNode.storeImage, { ...k, uploadedStorageId: sid })).rejects.toThrow(/PNG or JPEG/);
+    expect(await t.run((ctx) => ctx.storage.get(sid))).toBeNull();
+    await expect(t.action(api.mcpWriteNode.storeImage, { ...k, uploadedStorageId: "nope" })).rejects.toThrow(/No uploaded file/);
+    await expect(t.action(api.mcpWriteNode.storeImage, { ...k, uploadedStorageId: sid, imageUrl: "https://example.com/a.png" })).rejects.toThrow(/exactly one/);
+  });
+});
+
 describe("idempotency", () => {
   it("the same idempotencyKey returns the existing post and never creates a second one", async () => {
     const { t, aliceId, key } = await setup();

@@ -6,6 +6,8 @@ import type { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
 import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
+import { zoned } from "@backend/lib/social/time";
+import { PAGES, renderPage } from "./pageImage";
 
 // Talk to the Dead: tools over the user's graveyard. Every tool calls a secret-guarded Convex function
 // (backend/convex/mcp.ts, mcpWrite.ts), scoped to the user the API key resolved to. Read-only keys get the read
@@ -187,6 +189,61 @@ export function buildServer(ctx: ToolContext): McpServer {
     ({ limit }) => run("get_omens", ctx, () => c.query(api.mcp.getOmens, { ...g, limit })),
   );
 
+  server.registerTool(
+    "get_dashboard",
+    {
+      title: "Necro Home overview (live)",
+      description:
+        "What the user's Necro Home page shows right now, read live: feeds (alive, sleeping, broken, unread), new articles " +
+        "today, posts (posted in 30 days, scheduled, due reminders, failed), the next scheduled posts, recently posted ones " +
+        "with live links, the best articles to read next, connected accounts and setup steps. Times in UTC and Singapore.",
+      inputSchema: {},
+      annotations: readOnly,
+    },
+    () => run("get_dashboard", ctx, () => c.query(api.mcp.getDashboard, g)),
+  );
+
+  server.registerTool(
+    "get_page_image",
+    {
+      title: "Picture of a Necro section (live)",
+      description:
+        "Returns a PNG image of one Necro section, drawn right now on Necro's server from the user's live data, so you can SHOW " +
+        "the user their account: 'dashboard' (Home overview: stats, up next, recently posted, read next, accounts), 'posts' " +
+        "(scheduled and recent posts with status) or 'feeds' (feeds with status and unread). Use it when the user asks to see, " +
+        "show or send a picture of their Necro. A short text summary comes with the image. It is a rendering of the data, not a " +
+        "browser screenshot.",
+      inputSchema: { page: z.enum(PAGES).default("dashboard").describe("Which section to draw") },
+      annotations: readOnly,
+    },
+    async ({ page }): Promise<CallToolResult> => {
+      const started = Date.now();
+      try {
+        const asOf = zoned(Date.now()).label;
+        const data =
+          page === "dashboard"
+            ? await c.query(api.mcp.getDashboard, g)
+            : page === "posts"
+              ? await c.query(api.mcpWrite.posts, { ...k, limit: 50 })
+              : await c.query(api.mcp.listGraves, g);
+        const img = await renderPage(page, data, asOf);
+        const count = Array.isArray(data) ? `${data.length} rows` : "overview";
+        log("get_page_image", ctx, started, "ok");
+        return {
+          content: [
+            { type: "image", data: img.data, mimeType: img.mimeType },
+            { type: "text", text: JSON.stringify({ page, asOf, size: `${img.width}x${img.height}`, shows: count, note: "Live rendering of Necro data. Show the image to the user." }) },
+          ],
+        };
+      } catch (e) {
+        const { code, message } = safeError(e);
+        if (code === "ERROR") console.error(JSON.stringify({ ev: "mcp", tool: "get_page_image", error: String(e).slice(0, 300) })); // server log only
+        log("get_page_image", ctx, started, code);
+        return { isError: true, content: [{ type: "text", text: JSON.stringify({ error: code, message }) }] };
+      }
+    },
+  );
+
   // ---------- social posting (read: any key; write: "read and write" keys only) ----------
   const k = { ...g, keyId: ctx.keyId };
   const platforms = z.enum(["linkedin", "x", "instagram", "tiktok"]);
@@ -247,26 +304,37 @@ export function buildServer(ctx: ToolContext): McpServer {
     server.registerTool(
       "upload_post_image",
       {
-        title: "Upload an image for a post",
+        title: "Add an image for a post",
         description:
-          "Stores one image (PNG or JPEG, up to 5 MB) for a later create_post or update_post, and returns its imageId and a preview URL. " +
-          "Give imageBase64 with mimeType, or a public http(s) imageUrl. Nothing is posted by this call. WebP and GIF are not accepted.",
+          "Gets an image into Necro and returns its imageId (for create_post / update_post) and a previewUrl to show the user. " +
+          "PNG or JPEG, up to 5 MB. Nothing is posted by this call. Pick the route that fits where the image is:\n" +
+          "1. A FILE you can read (Kiro, Claude Code, Cursor, a code tool): call with no arguments to get a one-time uploadUrl, " +
+          "send the raw bytes (curl -s -X POST -H 'Content-Type: image/png' --data-binary @poster.png '<uploadUrl>'), " +
+          "then call again with the storageId it answers.\n" +
+          "2. A public http(s) link: give imageUrl.\n" +
+          "3. A small image as data: give imageBase64 with mimeType (base64 costs many tokens).\n" +
+          "An image the user pasted into the chat cannot be forwarded by you: ask them for a link or a file.",
         inputSchema: {
+          storageId: z.string().min(1).max(64).optional().describe("Route 1, second call: the storageId the uploadUrl answered"),
+          imageUrl: z.string().url().max(2000).optional().describe("A public http or https URL of a PNG or JPEG"),
           imageBase64: z.string().max(7_000_000).optional().describe("The image as base64 (a data: URL prefix is fine)"),
           mimeType: z.enum(["image/png", "image/jpeg"]).optional().describe("Required with imageBase64"),
-          imageUrl: z.string().url().max(2000).optional().describe("A public http or https URL of a PNG or JPEG, instead of imageBase64"),
         },
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       },
-      ({ imageBase64, mimeType, imageUrl }) =>
+      ({ storageId, imageBase64, mimeType, imageUrl }) =>
         run(
           "upload_post_image",
           ctx,
           async () => {
+            if (!storageId && !imageUrl && !imageBase64) {
+              const { uploadUrl } = await c.mutation(api.mcpWrite.uploadUrl, k);
+              return { uploadUrl, next: "POST the raw file bytes to uploadUrl, then call upload_post_image with the storageId it answers." };
+            }
             if (imageBase64 && !mimeType) {
               throw new ConvexError({ code: "INVALID_INPUT", message: "Give mimeType (image/png or image/jpeg) with imageBase64." });
             }
-            const r = await c.action(api.mcpWriteNode.storeImage, { ...k, imageBase64, imageUrl, mimeType });
+            const r = await c.action(api.mcpWriteNode.storeImage, { ...k, imageBase64, imageUrl, mimeType, uploadedStorageId: storageId });
             return { imageId: r.imageId, previewUrl: r.previewUrl, contentType: r.contentType, bytes: r.bytes };
           },
           refused("upload_post_image"),
@@ -279,6 +347,9 @@ export function buildServer(ctx: ToolContext): McpServer {
         title: "Publish or schedule a social post",
         description:
           `${REAL} Creates one post for one or more platforms, published now (leave out scheduleAt) or at an exact date and minute. ` +
+          "Which platforms: if the user names one or more (\"post to LinkedIn\"), use ONLY those. If they say \"my accounts\" or " +
+          "\"everywhere\", call list_connections and use the connected ones (delivery 'auto'); ask before adding reminder-only platforms. " +
+          "For an image: call upload_post_image first, then pass its imageId. " +
           "It goes through the same queue, scheduler and history as the New post button in Necro. Delivery per platform: connected " +
           "accounts are 'auto' (Necro posts it), others and TikTok are 'reminder' (the user is reminded to share it); check " +
           "list_connections first and tell the user which applies. Limits: LinkedIn 3,000 characters, X 280, Instagram 2,200, " +
