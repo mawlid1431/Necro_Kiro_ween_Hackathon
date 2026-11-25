@@ -12,6 +12,7 @@ import { draftFor, finalPost, POST_LIMITS, postLength, SOCIAL_PLATFORMS, type So
 import { internal } from "./_generated/api";
 import { articleKey, duplicateMessage, isBlocking, manualKey } from "../lib/social/dedupe";
 import { recordShared } from "./circle";
+import { editableError } from "../lib/social/postStatus";
 
 const STATE_TTL_MS = 15 * 60 * 1000;
 export const PUBLISHES_PER_HOUR_PER_USER = 30;
@@ -566,6 +567,9 @@ export async function composeFor(
   user: Doc<"users">,
   { caption, platforms, storageId, at }: { caption: string; platforms: SocialPlatform[]; storageId?: Id<"_storage">; at?: number },
   via?: string,
+  // MCP posting: join an existing post (update_post adding a platform), carry the idempotency key, and say which
+  // Necro article the post is about. The app's composer passes none of these.
+  extra: { groupId?: string; idemKey?: string; itemId?: Id<"items"> } = {},
 ) {
   {
     const text = caption.trim();
@@ -596,6 +600,7 @@ export async function composeFor(
     for (const p of chosen) await refuseDuplicate(ctx, user._id, keys.get(p)!, p);
 
     const results: { platform: SocialPlatform; mode: "auto" | "reminder"; publishId: Id<"publishes"> }[] = [];
+    let groupId = extra.groupId;
     for (const platform of chosen) {
       let mode = modeFor(platform, await byUserPlatform(ctx, user._id, platform));
       // Instagram only takes JPEG photos: a PNG becomes a reminder you share from your phone.
@@ -613,15 +618,102 @@ export async function composeFor(
         imageId: upload?.storageId,
         contentKey: keys.get(platform),
         ...(via ? { via } : {}),
+        ...(extra.idemKey ? { idemKey: extra.idemKey } : {}),
+        ...(extra.itemId ? { itemId: extra.itemId } : {}),
       });
+      groupId ??= publishId; // the rows of one call share the first row's id: the post's id in the MCP tools
       const jobId = at === undefined
         ? await ctx.scheduler.runAfter(0, internal.socialNode.runScheduled, { publishId })
         : await ctx.scheduler.runAt(at, internal.socialNode.runScheduled, { publishId });
-      await ctx.db.patch(publishId, { jobId });
+      await ctx.db.patch(publishId, { jobId, groupId });
       results.push({ platform, mode, publishId });
     }
     return results;
   }
+}
+
+// ---------- posts as a whole (MCP posting): the rows of one compose call, addressed by their shared groupId ----------
+
+/**
+ * All rows of one post. `postId` is the group id (the first row's id); a per-platform row id also works, and so does
+ * the id of a row created before groups existed (it is its own post).
+ */
+export async function groupRows(ctx: { db: import("./_generated/server").QueryCtx["db"] }, userId: Id<"users">, postId: string): Promise<Doc<"publishes">[]> {
+  const rows = await ctx.db.query("publishes").withIndex("by_user_group", (q) => q.eq("userId", userId).eq("groupId", postId)).take(20);
+  if (rows.length) return rows;
+  const id = ctx.db.normalizeId("publishes", postId);
+  const one = id ? await ctx.db.get(id) : null;
+  if (!one || one.userId !== userId) fail("NOT_FOUND", "No post with that id. Get ids from list_posts or create_post.");
+  if (one.groupId && one.groupId !== postId) return await groupRows(ctx, userId, one.groupId);
+  return [one];
+}
+
+const statusesOf = (rows: Doc<"publishes">[]) => rows.map((r) => r.status);
+
+/**
+ * Edit a post that has not gone out. Own-image posts (composer, MCP) are rebuilt through composeFor, so the new text,
+ * image, accounts and time pass exactly the same checks as a new post; the old rows never went out and are removed,
+ * and the post keeps its id. Posts scheduled from an article draft can only be moved in time here.
+ */
+export async function editScheduledFor(
+  ctx: MutationCtx,
+  user: Doc<"users">,
+  rows: Doc<"publishes">[],
+  changes: { text?: string; storageId?: Id<"_storage">; platforms?: SocialPlatform[]; at?: number },
+  via?: string,
+) {
+  const blocked = editableError(statusesOf(rows), "edit");
+  if (blocked) fail("INVALID_INPUT", blocked);
+  const live = rows.filter((r) => r.status !== "canceled");
+  const first = live[0];
+  const groupId = first.groupId ?? first._id;
+
+  if (live.some((r) => r.kind !== "manual")) {
+    if (changes.text !== undefined || changes.storageId !== undefined || changes.platforms !== undefined) {
+      fail("INVALID_INPUT", "This post was scheduled from an article draft. Only its time can be changed here; edit the text in Witching Hour.");
+    }
+    if (changes.at === undefined) fail("INVALID_INPUT", "Nothing to change.");
+    checkTime(changes.at, Date.now());
+    for (const r of live) {
+      if (r.jobId) await ctx.scheduler.cancel(r.jobId);
+      const jobId = await ctx.scheduler.runAt(changes.at, internal.socialNode.runScheduled, { publishId: r._id });
+      await ctx.db.patch(r._id, { at: changes.at, jobId, error: undefined });
+    }
+    return;
+  }
+
+  const next = {
+    caption: changes.text ?? first.text ?? "",
+    storageId: changes.storageId ?? first.imageId,
+    platforms: changes.platforms ?? live.map((r) => r.platform),
+    at: changes.at ?? first.at ?? Date.now(),
+  };
+  for (const r of live) {
+    if (r.jobId) await ctx.scheduler.cancel(r.jobId);
+    await ctx.db.delete(r._id); // never went out (all scheduled); if composeFor refuses, this whole edit rolls back
+  }
+  await composeFor(ctx, user, next, via ?? first.via, { groupId, idemKey: first.idemKey, itemId: first.itemId });
+}
+
+/** Send a scheduled post now: each row's job is moved to "right away"; the scheduler then posts it or makes it due. */
+export async function publishNowFor(ctx: MutationCtx, rows: Doc<"publishes">[]) {
+  const live = rows.filter((r) => r.status !== "canceled");
+  if (!live.length) fail("INVALID_INPUT", "This post was cancelled.");
+  const notScheduled = live.find((r) => r.status !== "scheduled");
+  if (notScheduled) fail("INVALID_INPUT", `This post is already ${notScheduled.status}. Only scheduled posts can be sent now.`);
+  const now = Date.now();
+  for (const r of live) {
+    if (r.jobId) await ctx.scheduler.cancel(r.jobId);
+    const jobId = await ctx.scheduler.runAfter(0, internal.socialNode.runScheduled, { publishId: r._id });
+    await ctx.db.patch(r._id, { at: now, jobId, error: undefined });
+  }
+}
+
+/** Cancel every account of a post that has not gone out yet. */
+export async function cancelGroupFor(ctx: MutationCtx, userId: Id<"users">, rows: Doc<"publishes">[]) {
+  const blocked = editableError(statusesOf(rows), "cancel");
+  if (blocked) fail("INVALID_INPUT", blocked);
+  for (const r of rows) if (r.status === "scheduled" || r.status === "due") await cancelFor(ctx, userId, r._id);
 }
 
 export const voiceOf = internalQuery({

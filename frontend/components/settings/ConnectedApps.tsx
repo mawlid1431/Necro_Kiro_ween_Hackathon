@@ -18,6 +18,7 @@ const day = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: "n
 export function ConnectedApps() {
   const grants = useQuery(api.mcpOAuth.list);
   const revoke = useMutation(api.mcpOAuth.revoke);
+  const setScope = useMutation(api.mcpOAuth.setScope);
   const now = useMinute();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -76,14 +77,26 @@ export function ConnectedApps() {
               {g.revokedAt ? (
                 <span className="ml-auto text-meta font-semibold text-danger">{copy.disconnected}</span>
               ) : expired ? null : (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => void revoke({ grantId: g._id }).catch((e) => setError(errorMessage(e)))}
-                >
-                  {copy.disconnect}
-                </Button>
+                <span className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const next = g.scope === "write" ? "read" : "write";
+                      if (next === "write" && !window.confirm(copy.allowPostingConfirm(g.clientName))) return;
+                      void setScope({ grantId: g._id, scope: next }).catch((e) => setError(errorMessage(e)));
+                    }}
+                  >
+                    {g.scope === "write" ? copy.stopPosting : copy.allowPosting}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void revoke({ grantId: g._id }).catch((e) => setError(errorMessage(e)))}
+                  >
+                    {copy.disconnect}
+                  </Button>
+                </span>
               )}
             </li>
           );

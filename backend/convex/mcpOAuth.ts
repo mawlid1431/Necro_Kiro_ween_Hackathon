@@ -351,6 +351,17 @@ export const revoke = mutation({
   },
 });
 
+/** Turn posting (posts:write) on or off for a connected app, from Settings. Takes effect on its next request. */
+export const setScope = mutation({
+  args: { grantId: v.id("mcpGrants"), scope: v.union(v.literal("read"), v.literal("write")) },
+  handler: async (ctx, { grantId, scope }) => {
+    const user = await requireUser(ctx);
+    const grant = await requireOwned(ctx, user._id, grantId);
+    if (grant.revokedAt || grant.expiresAt <= Date.now()) fail("INVALID_INPUT", "This connection has ended. Connect the app again.");
+    if (grant.scope !== scope) await ctx.db.patch(grantId, { scope });
+  },
+});
+
 /** RFC 7009 token revocation (/oauth/revoke): an app disconnecting itself ends the whole connection. */
 export const revokeByToken = internalMutation({
   args: { hash: v.string(), clientId: v.optional(v.string()) },

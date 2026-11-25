@@ -12,7 +12,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "vite/client"],
-    "paths": { "@/*": ["./*"] }
+    "paths": { "@/*": ["./*"], "@backend/*": ["./*"] }
   },
   "include": ["lib/**/*", "tests/**/*", "scripts/**/*", "vitest.config.mts"],
   "exclude": ["node_modules", "convex"]

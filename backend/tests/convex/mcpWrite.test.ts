@@ -75,7 +75,7 @@ describe("MCP write tools: posting", () => {
     const k = { secret: SECRET, userId: aliceId, keyId: who.keyId };
 
     const now = await t.mutation(api.mcpWrite.compose, { ...k, text: "Necro is live. RSS is back.", platforms: ["linkedin", "x"] });
-    expect(now.map((r) => [r.platform, r.delivery])).toEqual([["linkedin", "reminder"], ["x", "reminder"]]); // nothing connected
+    expect(now.perPlatform.map((r) => [r.platform, r.delivery])).toEqual([["linkedin", "reminder"], ["x", "reminder"]]); // nothing connected
     const rows = await t.run((ctx) => ctx.db.query("publishes").collect());
     expect(rows.every((r) => r.via === "mcp:necro_sk_eeeeeeee" && r.kind === "manual")).toBe(true);
 
@@ -84,16 +84,18 @@ describe("MCP write tools: posting", () => {
 
     // Instagram needs an image; a bad time is refused with a clear message.
     await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Photo time", platforms: ["instagram"] })).rejects.toThrow(/needs an image/);
-    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Later", platforms: ["linkedin"], atIso: "tomorrow" })).rejects.toThrow(/ISO date/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Later", platforms: ["linkedin"], atIso: "tomorrow" })).rejects.toThrow(/ISO 8601/);
 
     const at = new Date(Date.now() + 2 * 3_600_000).toISOString();
-    const [scheduled] = await t.mutation(api.mcpWrite.compose, { ...k, text: "See you at the webinar.", platforms: ["linkedin"], atIso: at });
-    expect(scheduled).toMatchObject({ status: "scheduled", at });
+    const scheduled = await t.mutation(api.mcpWrite.compose, { ...k, text: "See you at the webinar.", platforms: ["linkedin"], atIso: at });
+    expect(scheduled).toMatchObject({ status: "scheduled", when: "scheduled" });
+    expect(scheduled.scheduledFor.utc).toBe(at);
+    const publishId = scheduled.perPlatform[0].publishId;
     const listed = await t.query(api.mcpWrite.posts, k);
-    expect(listed.find((p) => p.id === scheduled.id)).toMatchObject({ status: "scheduled", createdBy: "ai-assistant" });
+    expect(listed.find((p) => p.id === publishId)).toMatchObject({ status: "scheduled", createdBy: "ai-assistant", postId: scheduled.postId });
 
-    await t.mutation(api.mcpWrite.cancel, { ...k, postId: scheduled.id });
-    expect((await t.run((ctx) => ctx.db.get(scheduled.id)))?.status).toBe("canceled");
+    await t.mutation(api.mcpWrite.cancel, { ...k, postId: scheduled.postId });
+    expect((await t.run((ctx) => ctx.db.get(publishId)))?.status).toBe("canceled");
   });
 
   it(`limits one key to ${MCP_POSTS_PER_HOUR_PER_KEY} posts an hour`, async () => {

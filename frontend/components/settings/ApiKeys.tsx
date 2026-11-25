@@ -18,6 +18,17 @@ export function ApiKeys() {
   const create = useAction(api.apiKeys.create);
   const revoke = useMutation(api.apiKeys.revoke);
   const remove = useMutation(api.apiKeys.remove);
+  const setKeyScope = useMutation(api.apiKeys.setScope);
+
+  async function changeScope(keyId: NonNullable<typeof keys>[number]["_id"], keyName: string, next: "read" | "write") {
+    if (next === "write" && !window.confirm(copy.allowPostingConfirm(keyName))) return;
+    setError(null);
+    try {
+      await setKeyScope({ keyId, scope: next });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
   const revokedIds = (keys ?? []).filter((k) => k.revokedAt).map((k) => k._id);
 
   async function removeKeys(ids: typeof revokedIds) {
@@ -168,9 +179,14 @@ export function ApiKeys() {
                 </Button>
               </span>
             ) : (
-              <Button variant="destructive" size="sm" className="ml-auto" onClick={() => void revoke({ keyId: k._id })}>
-                {copy.revoke}
-              </Button>
+              <span className="ml-auto flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => void changeScope(k._id, k.name, k.scope === "write" ? "read" : "write")}>
+                  {k.scope === "write" ? copy.stopPosting : copy.allowPosting}
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => void revoke({ keyId: k._id })}>
+                  {copy.revoke}
+                </Button>
+              </span>
             )}
           </li>
         ))}
@@ -199,6 +215,41 @@ export function ApiKeys() {
         </div>
         <pre className="overflow-x-auto rounded-lg bg-surface-muted p-3 text-meta">{config}</pre>
       </div>
+
+      <PostingAudit />
     </Card>
+  );
+}
+
+/** The MCP posting audit log (live): every write call, refused ones included, plus the limits in force. */
+function PostingAudit() {
+  const rows = useQuery(api.mcpWrite.auditLog, { limit: 30 });
+  const limits = useQuery(api.mcpWrite.limits);
+  return (
+    <section aria-labelledby="audit-h" className="mt-6 border-t border-line pt-4">
+      <h3 id="audit-h" className="font-semibold text-ink">{copy.audit}</h3>
+      <p className="mt-1 text-meta text-subtle">{copy.auditHint}</p>
+      {limits ? <p className="mt-1 text-meta text-subtle">{copy.limitsLine(limits)}</p> : null}
+      {rows && rows.length === 0 ? <p className="mt-3 text-meta text-subtle">{copy.auditEmpty}</p> : null}
+      <ul className="mt-2 divide-y divide-line">
+        {rows?.map((r) => (
+          <li key={r._id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-meta">
+            <code className="text-ink">{r.tool}</code>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[0.6875rem] font-bold uppercase",
+                r.status === "ok" ? "bg-surface-muted text-subtle" : "bg-danger/15 text-danger",
+              )}
+            >
+              {r.status === "ok" ? copy.auditOk : copy.auditRefused}
+            </span>
+            <code className="text-subtle">{r.keyLabel}</code>
+            {r.postId ? <code className="text-subtle">{r.postId}</code> : null}
+            {r.message ? <span className="min-w-0 break-words text-subtle">{r.message}</span> : null}
+            <span className="ml-auto text-subtle" title={new Date(r.at).toLocaleString()}>{timeAgo(r.at)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

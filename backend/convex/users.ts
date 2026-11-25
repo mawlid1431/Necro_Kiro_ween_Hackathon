@@ -202,6 +202,7 @@ export const deleteBatch = internalMutation({
       await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("apiKeys").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("mcpUsage").withIndex("by_user_day", (q) => q.eq("userId", userId)).take(BATCH),
+      await ctx.db.query("mcpAudit").withIndex("by_user_at", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("mcpGrants").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("mcpCodes").withIndex("by_user", (q) => q.eq("userId", userId)).take(BATCH),
       await ctx.db.query("aiUsage").withIndex("by_user_day_task", (q) => q.eq("userId", userId)).take(BATCH),

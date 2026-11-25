@@ -76,6 +76,21 @@ export const list = query({
   },
 });
 
+/**
+ * Turn posting (posts:write) on or off for an existing key. Keys stay read-only until the owner turns this on.
+ * Turning it on starts the same 90-day expiry a new write key gets; turning it off keeps the key and its expiry.
+ */
+export const setScope = mutation({
+  args: { keyId: v.id("apiKeys"), scope: keyScope },
+  handler: async (ctx, { keyId, scope }) => {
+    const user = await requireUser(ctx);
+    const key = await requireOwned(ctx, user._id, keyId);
+    if (key.revokedAt) fail("INVALID_INPUT", "This key is revoked. Create a new one.");
+    if ((key.scope ?? "read") === scope) return;
+    await ctx.db.patch(keyId, scope === "write" ? { scope, expiresAt: Date.now() + WRITE_KEY_DAYS * 86_400_000 } : { scope });
+  },
+});
+
 export const revoke = mutation({
   args: { keyId: v.id("apiKeys") },
   handler: async (ctx, { keyId }) => {

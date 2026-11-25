@@ -351,7 +351,9 @@ sequenceDiagram
   end
 ```
 
-Tools: 13 read (`list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 3 write for read-and-write access (`add_grave` · `create_post` · `cancel_post`). The full table is in [`docs/MCP.md`](docs/MCP.md).
+Tools: 13 read (`list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 7 write for keys and connected apps with **`posts:write`** (`add_grave` · `upload_post_image` · `create_post` · `get_post` · `update_post` · `cancel_post` · `publish_post_now`). Posting tools run the app's own composer and scheduler (`social.composeFor`, `socialNode.runScheduled`), so an assistant's post is the same queue, delivery rules (auto or reminder) and history as **New post**, and appears live in the dashboard. `scheduleAt` is ISO 8601 with a time zone, to the minute; times come back in UTC and Singapore time; `idempotencyKey` stops duplicates. Turn posting on per key or app in Settings → MCP keys (**Allow posting**); every posting call is audited there. The full table and example calls are in [`docs/MCP.md`](docs/MCP.md); the design is in [`docs/specs/mcp-posting.md`](docs/specs/mcp-posting.md).
+
+Example (Claude, with posting on): *"Create a LinkedIn post announcing Necro v1 with this image, and schedule it for tomorrow at 9:00 AM Singapore time."* Claude calls `upload_post_image`, then `create_post` with `scheduleAt: "<tomorrow>T09:00:00+08:00"`, and later `get_post` returns `posted` and the LinkedIn link.
 
 **Connecting a client** is documented for users on the public **Docs** page (`/docs`): personal key for Kiro, Claude Code, Cursor and VS Code; "Sign in with Necro" (OAuth) for ChatGPT and Claude. Every snippet, plus a prompt users paste into their coding agent so it sets the connection up itself, uses the live endpoint `https://necro.malitos.tech/api/mcp` (`MCP_URL` in `frontend/lib/copy.ts`), never the address the page happens to be opened on.
 
@@ -640,6 +642,7 @@ erDiagram
 | `uploads` | Images uploaded in the composer (owner-checked) | by_user, by_storage |
 | `apiKeys` | MCP keys (hashed), scope, expiry, last use | by_user, by_hash, by_user_revoked |
 | `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
+| `mcpAudit` | Every MCP posting call: key label, tool, post id, ok/refused, reason, time (Settings → MCP keys) | by_user_at, by_key_at |
 | `mcpClients` | OAuth apps that connect over MCP (ChatGPT, Claude): metadata-document or self-registered clients | by_client_id, by_fingerprint, by_kind_created |
 | `mcpCodes` | Single-use OAuth authorization codes (hashed, PKCE, short-lived) | by_hash, by_user, by_expires |
 | `mcpGrants` | "Sign in with Necro" connections: scope, expiry, hashed access and rotating refresh tokens | by_user, by_user_client, by_client, by_expires, by_revoked, by_access, by_refresh, by_prev_refresh |
@@ -852,6 +855,22 @@ Frontend: `cd frontend && bun run check` (ESLint + TypeScript) and `bun run buil
 ## 13. Kiro
 
 Specs, steering, hooks and custom agents live in [`.kiro/`](.kiro) and are committed on purpose, as the hackathon requires. Steering files keep the agent on the project rules (Bun only, `safeFetch` only, user isolation, the AI ladder). Hooks run related tests on save, sync the data-model table on schema changes, review accessibility on component saves, and run a manual pre-submit check.
+
+## Changelog
+
+### 2026-11-25: MCP posting and scheduling
+
+- New MCP tools for keys and connected apps with `posts:write`: `upload_post_image`, `get_post`, `update_post`,
+  `publish_post_now`; `create_post` now takes `imageId`, `scheduleAt` (ISO 8601 with a time zone, to the minute),
+  `sourceItemId` and a required `idempotencyKey`, and returns one `postId` per post with delivery per platform;
+  `cancel_post` cancels every platform of a post. `list_posts` rows gain `postId`. The 13 read tools are unchanged.
+- Same pipeline as the dashboard's **New post**: same rows, scheduler, auto/reminder rules and history; live in the dashboard.
+- Times stored in UTC, returned in UTC and Singapore time. Clear errors with character counts (LinkedIn 3,000, X 280).
+- Security: **Allow posting / Make read-only** per key and connected app; per-key limits (20 posts a day, 10 an hour,
+  60 posting calls an hour, configurable with `MCP_POSTS_PER_DAY`, `MCP_WRITE_CALLS_PER_HOUR`); an audit log of every
+  posting call under **Posting activity** in Settings; MCP images capped at 5 MB (PNG or JPEG).
+- Tests: `tests/unit/mcpPosting.test.ts`, `tests/convex/mcpPosting.test.ts` (mock LinkedIn), `tests/convex/mcpTools.test.ts`
+  (the MCP server through a real MCP client).
 
 ## License
 

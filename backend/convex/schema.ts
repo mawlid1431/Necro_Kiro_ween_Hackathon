@@ -352,6 +352,21 @@ export default defineSchema({
     .index("by_user_day", ["userId", "day"])
     .index("by_key_day", ["keyId", "day"]),
 
+  // Every MCP write call: which key, which tool, which post, when, and whether it went through. Never arguments
+  // or post text (that stays in publishes), never tokens.
+  mcpAudit: defineTable({
+    userId: v.id("users"),
+    keyId: v.union(v.id("apiKeys"), v.id("mcpGrants")),
+    keyLabel: v.string(), // the key prefix or the OAuth app label, as shown in Settings
+    tool: v.string(),
+    postId: v.optional(v.string()),
+    status: v.union(v.literal("ok"), v.literal("refused")),
+    message: v.optional(v.string()), // the short, safe reason when refused
+    at: v.number(),
+  })
+    .index("by_user_at", ["userId", "at"])
+    .index("by_key_at", ["keyId", "at"]),
+
   rateLimits: defineTable({
     key: v.string(), // e.g. "mcp:<apiKeyId>" or "summon:<userId>"
     windowStart: v.number(),
@@ -492,8 +507,14 @@ export default defineSchema({
     contentKey: v.optional(v.string()), // one post, once: see lib/social/dedupe.ts
     via: v.optional(v.string()), // who created it: absent = the app; "mcp:<key prefix>" = an AI assistant with a write key
     postingSince: v.optional(v.number()), // when sending started (stuck-post sweep)
+    // MCP posting: the rows of one create_post call share groupId (the first row's id) = the "postId" tools use;
+    // idemKey is the caller's idempotency key, so a retried call returns the same post instead of a new one.
+    groupId: v.optional(v.string()),
+    idemKey: v.optional(v.string()),
   })
     .index("by_user", ["userId", "createdAt"])
+    .index("by_user_group", ["userId", "groupId"])
+    .index("by_user_idem", ["userId", "idemKey"])
     .index("by_user_key", ["userId", "contentKey"])
     .index("by_status_since", ["status", "postingSince"])
     .index("by_item", ["itemId", "platform"])

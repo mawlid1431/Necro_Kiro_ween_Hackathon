@@ -9,8 +9,9 @@ designed with it.
 - **User guide:** [necro.malitos.tech/docs](https://necro.malitos.tech/docs), step by step for Kiro, Claude Code, Claude,
   Cursor, ChatGPT and VS Code, with copyable configs and a prompt that lets a coding agent set itself up
 - **Keys:** revoke any time; a revoked key can then be deleted for good (with its usage counts) in Settings → MCP keys
-- **Limits:** 60 requests a minute per key; up to 10 posts an hour per key; Séance, Ask and Summon also count against
-  the app's daily limits
+- **Limits:** 60 requests a minute per key; per key with posting on: 20 posts a day and 10 an hour (one per account a
+  post goes to) and 60 posting calls an hour (Convex env vars `MCP_POSTS_PER_DAY`, `MCP_WRITE_CALLS_PER_HOUR`);
+  Séance, Ask and Summon also count against the app's daily limits
 
 ## Two kinds of key
 
@@ -18,12 +19,17 @@ designed with it.
 |---|---|---|
 | Read feeds, articles, summaries, stats, your posts and connected accounts | yes | yes |
 | Add a feed (`add_grave`) | no | yes |
-| Post now or schedule (`create_post`), cancel (`cancel_post`) | no | yes |
+| Post and schedule (`upload_post_image`, `create_post`, `get_post`, `update_post`, `cancel_post`, `publish_post_now`) | no | yes |
 | Expires | never (revoke any time) | after 90 days (revoke any time) |
 
-Keys made before key types existed are **read only**. A read-only key does not even see the write tools, and every
-write call is checked again on the server (the key's owner, type, revocation and expiry), so a client cannot get
-around it.
+"Read and write" is the **`posts:write`** scope (stored as `"write"`). Keys made before key types existed are
+**read only**. Turn posting on or off for an existing key or connected app with **Allow posting / Make read-only** in
+Settings → MCP keys (turning it on for a key starts its 90-day expiry), then reconnect the app so it loads the new
+tool list. A read-only key does not even see the write tools, and every write call is checked again on the server
+(the key's owner, scope, revocation and expiry), so a client cannot get around it.
+
+Every posting call, successful or refused, is written to an audit log (key, tool, post id, time, and the reason when
+refused), shown under **Posting activity** in Settings → MCP keys. It never stores tokens or post text.
 
 ## Safety rules for posting
 
@@ -35,9 +41,17 @@ around it.
   picture is recognised by its content, so sending the same image again still counts as the same post.
 - **Connected accounts only.** An account that is not connected (and TikTok, always) gets a reminder in the Witching
   Hour to share it yourself, instead of posting on its own. `list_connections` tells the assistant which is which.
-- **Images:** an `https` URL or base64 data, PNG or JPG only, decided from the file's own bytes. URLs up to 8 MB are
-  downloaded by the server through the same safe fetcher as feeds (private and internal addresses are blocked);
-  base64 up to about 5 MB.
+- **Images:** `upload_post_image` takes an http(s) URL or base64 data with `mimeType`, PNG or JPEG only (LinkedIn and
+  Instagram refuse WebP), up to 5 MB, decided from the file's own bytes. URLs are downloaded by the server through the
+  same safe fetcher as feeds (private and internal addresses are blocked, the size cap applies while downloading).
+- **Same pipeline as New post.** A post made through MCP is the same `publishes` rows, scheduler job and history as one
+  made in the app, so it appears live in Witching Hour and on Home without a refresh.
+- **Times:** `scheduleAt` must be ISO 8601 with a time zone (e.g. `2026-11-26T09:00:00+08:00`), to the minute, at
+  least a minute ahead and at most 90 days. Times are stored in UTC and returned in UTC and Singapore time.
+- **Idempotency:** `create_post` needs an `idempotencyKey`; calling again with the same key returns the first post
+  (`duplicate: true`) and never creates a second one.
+- **Edits:** `update_post` only while the post is scheduled; `cancel_post` also cancels a reminder that is due but not
+  shared yet. Nothing that went out can be edited or cancelled.
 - **Audit:** every post an assistant creates records which key made it and shows as `createdBy: "ai-assistant"`.
 - Tokens, passwords and other users' data are never readable through MCP.
 
@@ -90,7 +104,7 @@ with your app's address):
    Registration.
 3. You are sent to Necro's **Connect ChatGPT to Necro** page (sign in first if needed). Choose **Read only** or
    **Read and write** (same meaning as the key types above; read only is preselected), then **Allow**.
-4. The app now lists the tools. A read-only connection never sees `add_grave`, `create_post` or `cancel_post`.
+4. The app now lists the tools. A read-only connection never sees `add_grave` or the posting tools.
 
 Connected apps appear in *Settings → Connected apps* with their access, expiry and last use; **Disconnect** stops one
 at once. Reconnecting the same app replaces its old connection. Up to 10 connected apps per user.
@@ -146,8 +160,29 @@ Try:
 | `list_connections` | any | none | Per platform: connected, account name, and delivery `auto` (posts on its own) or `reminder` |
 | `list_posts` | any | `limit` 1–50 (20) | Posts from the last 30 days and next 90: status, time, text, image, live link, created by app or assistant |
 | `add_grave` | write | `url`, `folder?` | Same Summon as the app: safe fetch, discovery, dedupe, 300-feed cap |
-| `create_post` | write | `text`, `platforms[]`, `schedule_at?` (ISO with timezone; omit to post now), `image_url?` or `image_base64?` | One row per account: id, delivery, status, time |
-| `cancel_post` | write | `post_id` | The cancelled post |
+| `upload_post_image` | write | `imageBase64` + `mimeType` (`image/png`, `image/jpeg`), or `imageUrl` | `{ imageId, previewUrl, contentType, bytes }` |
+| `create_post` | write | `text`, `platforms[]` (`linkedin`, `x`, `instagram`, `tiktok`), `imageId?`, `scheduleAt?` (omit = now), `sourceItemId?`, `idempotencyKey` | `{ postId, status, scheduledFor: { utc, singapore, label }, perPlatform: [{ platform, publishId, delivery, status }], duplicate }` |
+| `get_post` | write | `postId` | text, image, status overall and per platform, `liveUrl`, `error`, times in UTC and Singapore |
+| `update_post` | write | `postId`, any of `text`, `imageId`, `platforms`, `scheduleAt` | The updated post (same shape as `get_post`) |
+| `cancel_post` | write | `postId` (`post_id` still accepted) | `{ postId, status: "canceled", perPlatform }` |
+| `publish_post_now` | write | `postId` | The post; call `get_post` a few seconds later for `posted` and the live link |
+
+`list_posts` rows also carry `postId`, the id the posting tools take. A post to several platforms is one `postId` with
+one `publishId` per platform.
+
+### Example calls
+
+```json
+{ "name": "upload_post_image", "arguments": { "imageUrl": "https://example.com/necro-v1.png" } }
+{ "name": "create_post", "arguments": {
+    "text": "Necro v1 is live: RSS, resurrected with AI.",
+    "platforms": ["linkedin", "x"],
+    "imageId": "<imageId from upload_post_image>",
+    "scheduleAt": "2026-11-26T09:00:00+08:00",
+    "idempotencyKey": "necro-v1-launch" } }
+{ "name": "update_post", "arguments": { "postId": "<postId>", "scheduleAt": "2026-11-26T09:30:00+08:00" } }
+{ "name": "get_post", "arguments": { "postId": "<postId>" } }
+```
 
 Text that came from websites carries `"source": "untrusted web content"` so the calling model treats it as data, not
 instructions. Errors return `isError: true` with a short code (`NOT_FOUND`, `LIMIT`, `DUPLICATE`, `NOT_A_FEED`,

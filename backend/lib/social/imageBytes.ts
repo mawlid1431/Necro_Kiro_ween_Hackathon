@@ -2,7 +2,10 @@
 // file's own first bytes (magic numbers), never from a header or a file name, so nothing else passes as an image.
 // Pure: no Node APIs, so tests and Convex queries can import it.
 
-export const MCP_IMAGE_MAX_BYTES = 8 * 1024 * 1024; // the same 8 MB cap as uploads in the app
+export const MCP_IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB for images sent by an AI assistant (the app's own uploads allow 8 MB)
+
+/** Types an assistant may send: the ones every auto-posting platform accepts (LinkedIn and Instagram refuse WebP). */
+export const MCP_IMAGE_TYPES = ["image/png", "image/jpeg"] as const;
 
 export type ImageType = "image/png" | "image/jpeg";
 
