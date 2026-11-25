@@ -17,9 +17,9 @@ Paste the sections below into the Devpost form. Fields marked **(you)** need you
 | 7 | Test account + instructions in the **private** Devpost field | **you** | "Testing instructions" below |
 | 8 | Category: Resurrection; bonus categories ticked | **you** | top of this file |
 | 9 | Blog post (dev.to/Hashnode), says "Kiroween 2026 hackathon" | **you** publish | `docs/BLOG_DRAFT.md` |
-| 10 | Social post starting with `#KiroweenHackathon26` | **you** post on LinkedIn as barkulanhub (in your own words), send the link | `docs/SOCIAL_POST.md` (prize ticked on Devpost) |
+| 10 | Social post starting with `#KiroweenHackathon26` | **you** post on your own LinkedIn (in your own words), send the link | `docs/SOCIAL_POST.md` (prize ticked on Devpost) |
 | 11 | Student proof: LinkedIn, student email, year, degree, school | **you** send details (prize ticked on Devpost) | Devpost form |
-| 12 | Startup proof: founder confirmation, website, LinkedIn | done on Devpost (Barkulanhub, barkulanhub.com, linkedin.com/company/barkulanhub); **add your personal LinkedIn** | Devpost form |
+| 12 | Startup bonus | **you** decide: only enter it for Necro itself (no other company). If not, untick it on Devpost and clear the startup field | Devpost form |
 | 13 | Kiro credits request (optional) | **you** | by **Dec 1, 12:00 PM PT** |
 | 14 | Only describe/show what works on submission day (e.g. Connectors needs platform keys) | **you** | "What it does" below |
 
@@ -130,7 +130,9 @@ Meta and TikTok app reviews so everyone can post directly, scheduled posts, and 
 2. Graveyard → **Summon feed** → paste `https://github.blog/feed/` (or any blog). The tombstone fills with posts.
 3. Crypt → open an article → read the **Séance** summary.
 4. Click **Resurrect** → switch between LinkedIn, X, Instagram and TikTok and compare the previews.
-5. Settings → **MCP keys** → create a key and follow `docs/MCP.md` to connect an AI assistant.
+5. Settings → **MCP keys** → create a key, then open **Docs** (top navigation, https://necro.malitos.tech/docs) and
+   copy the setup for your assistant (Kiro, Claude Code, Claude, Cursor, ChatGPT or VS Code). The Dashboard's
+   **MCP keys & usage** card counts the calls. The moon button in the header switches to dark mode.
 6. **Settings → Connected accounts**: LinkedIn direct posting is live (connect your own LinkedIn); X, Instagram and
    TikTok share through Copy and the platform's own composer.
 7. **Witching Hour** → **New post**: upload any photo, press **Write with AI**, tick an account, choose **Schedule** in a few

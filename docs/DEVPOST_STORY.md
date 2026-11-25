@@ -12,9 +12,10 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 - **The Graveyard**: every feed is a tombstone that **rises**, live, when something new is published.
 - **The Crypt**: a calm, chronological reader with read/unread, stars, search and read-aloud.
 - **Séance**: a three-point AI summary and a 0–100 relevance score for each article, based on your interests.
-- **Resurrect**: turns an article into posts for LinkedIn, X and Instagram **in your own writing voice**. Share by copying, or open the platform's own composer with the text ready.
+- **Resurrect**: turns an article into posts for LinkedIn, X, Instagram and TikTok **in your own writing voice**, with a preview that matches the real post. Post straight to a connected account, copy, or open the platform's own composer with the text ready.
 - **Witching Hour**: a live calendar and timeline of your posts. Schedule for later, or upload your own image, let AI write the caption in your voice, pick accounts, and post now or at a time. Connected accounts post on their own; the rest remind you when it's time, with one-tap sharing. Each post goes out once, never twice.
-- **Home**: one live overview of your feeds, unread and risen posts, your posts, connected accounts and the tools you used today, with a getting-started checklist.
+- **Home**: one live overview of your feeds, unread and risen posts, your posts, connected accounts and the tools you used today, a 14-day activity chart, your MCP keys and their usage, and a getting-started checklist.
+- **Docs**: a public page that connects Kiro, Claude, Cursor, ChatGPT or VS Code to Necro in about a minute, with copyable configs. Light and dark mode on every page.
 - **Talk to the Dead**: an MCP server, so Kiro or any AI assistant can list, read, summarise and draft from your feeds.
 - **Feed Doctor**: explains broken or moved feeds in plain words and suggests a fix.
 - **Covens, Omens, Grimoire, Kindred, Second Opinion**: shared feed collections, topic alerts, a weekly newsletter, the same story grouped across sources, and a second AI view on an article.
@@ -28,7 +29,7 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 - **Next.js 16** (App Router, TypeScript), **Tailwind v4**, **shadcn/ui** and **Motion**, hosted on **Vercel**.
 - **Convex** for the database, realtime updates (tombstones rise live), scheduled feed polling and server actions.
 - **Clerk** for sign-in. **Vercel AI SDK** with a provider "ladder" (Groq, Gemini, OpenRouter), budgets and a circuit breaker, plus a privacy filter that never sends your voice samples to providers that may train on prompts.
-- **Kiro (IDE)**: steering docs (product, tech, structure, security, brand, AI prompts), four agent hooks (run related tests, sync the data model to the README, accessibility review, pre-submit check), two custom agents (Feed Doctor, Copy Editor), EARS specs for the advanced features, and property-based tests. We also used Claude Code for the later features (direct posting, Witching Hour, the composer, the Dashboard, the Circle, learning memory and the last quality pass); `docs/KIRO_WRITEUP.md` and `docs/KIRO_LOG.md` say what was built with which tool.
+- **Kiro (IDE)**: steering docs (product, tech, structure, security, brand, AI prompts), four agent hooks (run related tests, sync the data model to the README, accessibility review, pre-submit check), two custom agents (Feed Doctor, Copy Editor), EARS specs for the advanced features, and property-based tests. We also used Claude Code for the later features (direct posting, Witching Hour, the composer, the Dashboard and its charts, the Circle, learning memory, the Docs page, dark mode and the last quality pass); `docs/KIRO_WRITEUP.md` and `docs/KIRO_LOG.md` say what was built with which tool.
 
 ## Challenges we ran into
 
@@ -40,9 +41,9 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 ## Accomplishments that we're proud of
 
 - The whole loop works on the live site: follow → rise live → read → summary → posts in your voice → share.
-- 262 automated backend tests in 30 files, including property-based tests and per-user isolation tests.
+- 302 automated backend tests in 33 files, including property-based tests and per-user isolation tests.
 - Layouts checked with no horizontal overflow from 320 px phones to 7680 px (8K) screens.
-- An MCP server, so your AI assistant can work with your own reading list.
+- An MCP server, so your AI assistant can work with your own reading list, and a public Docs page that connects Kiro, Claude, Cursor or ChatGPT in about a minute (with a prompt your coding agent can follow to set itself up).
 - Privacy by design: hashed API keys, sanitised article HTML, prompt-injection delimiting, no tracking.
 
 ## What we learned
@@ -53,4 +54,4 @@ Necro brings RSS back with today's technology and closes the loop from **reading
 
 ## What's next for Necro
 
-Next for Necro: posting directly to your connected social accounts (built, waiting for the platforms' app approvals), scheduled posts, and a daily "What rose last night" digest.
+Next for Necro: wider direct posting once each platform approves the app (posting and scheduling are built; accounts that are not approved yet get a one-tap reminder), MCP usage counts for ChatGPT and Claude connections, and a daily "What rose last night" digest.

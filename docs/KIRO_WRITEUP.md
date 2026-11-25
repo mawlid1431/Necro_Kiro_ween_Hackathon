@@ -14,7 +14,8 @@ server**, so Kiro can read your feeds and draft from them.
 Honest note: later work was built with **Claude Code**: Connectors (direct posting to LinkedIn, X, Instagram and
 TikTok), Witching Hour (calendar, scheduling, reminders, the image composer with AI captions), the Home dashboard,
 duplicate-post protection, the landing-page mockups, and the last quality pass (article images and topics, honest
-AI model labels, the Circle, learning memory, the new navigation and large-screen scaling). It follows the same steering rules and conventions, and passes
+AI model labels, the Circle, learning memory, the new navigation and large-screen scaling), and on Nov 25 the
+dashboard charts, the public Docs page for connecting AI assistants, and light/dark mode. It follows the same steering rules and conventions, and passes
 the same Kiro pre-submit hook. See `docs/KIRO_LOG.md`.
 
 ## Steering docs — `.kiro/steering/`

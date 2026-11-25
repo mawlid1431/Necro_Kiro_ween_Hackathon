@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <LegalPage title="Privacy Policy" updated="November 25, 2026">
       <p>
         Necro (necro.malitos.tech) is an RSS reader that summarises articles with AI and helps you share them. It is made
-        by Mowlid Haibe and Arsikin Samaeng of <a href="https://barkulanhub.com">Barkulanhub</a>. This page explains
+        by Mowlid Haibe and Arsikin Samaeng. This page explains
         what we store, why, and how you can delete it. We do not sell your data and we show no ads.
       </p>
 
@@ -86,8 +86,8 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions or requests: contact us through <a href="https://barkulanhub.com">barkulanhub.com</a> or open an issue
-        on <a href="https://github.com/mawlid1431/Necro_Kiro_ween_Hackathon">GitHub</a>.
+        Questions or requests: open an issue on{" "}
+        <a href="https://github.com/mawlid1431/Necro_Kiro_ween_Hackathon/issues">GitHub</a>.
       </p>
     </LegalPage>
   );

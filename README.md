@@ -1,6 +1,6 @@
 # Necro
 
-**RSS, resurrected with AI.** A Kiroween 2026 project (category: **Resurrection**) by Mowlid Haibe ([@mawlid1431](https://github.com/mawlid1431)) and Arsikin Samaeng ([@ArsiKinS](https://github.com/arsikins)), from [Barkulanhub](https://barkulanhub.com).
+**RSS, resurrected with AI.** A Kiroween 2026 project (category: **Resurrection**) by Mowlid Haibe ([@mawlid1431](https://github.com/mawlid1431)) and Arsikin Samaeng ([@ArsiKinS](https://github.com/arsikins)).
 
 **Live app:** [necro.malitos.tech](https://necro.malitos.tech) · **MCP endpoint:** `https://necro.malitos.tech/api/mcp` ([setup](docs/MCP.md))
 

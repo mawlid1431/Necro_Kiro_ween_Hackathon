@@ -10,8 +10,8 @@ export default function TermsPage() {
   return (
     <LegalPage title="Terms of Service" updated="November 25, 2026">
       <p>
-        These terms apply to Necro at necro.malitos.tech, made by Mowlid Haibe and Arsikin Samaeng of{" "}
-        <a href="https://barkulanhub.com">Barkulanhub</a>. By using Necro you agree to them. Our{" "}
+        These terms apply to Necro at necro.malitos.tech, made by Mowlid Haibe and Arsikin Samaeng. By using
+        Necro you agree to them. Our{" "}
         <a href="/privacy">Privacy Policy</a> explains how we handle your data.
       </p>
 
@@ -79,8 +79,8 @@ export default function TermsPage() {
 
       <h2>Changes and contact</h2>
       <p>
-        We may update these terms and will change the date above when we do. Questions: contact us through{" "}
-        <a href="https://barkulanhub.com">barkulanhub.com</a>.
+        We may update these terms and will change the date above when we do. Questions: open an issue on{" "}
+        <a href="https://github.com/mawlid1431/Necro_Kiro_ween_Hackathon/issues">GitHub</a>.
       </p>
     </LegalPage>
   );

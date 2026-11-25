@@ -49,3 +49,18 @@ From the git history:
 - Two bugs found in live checks and fixed: an optional field made Groq's strict structured output reject every
   Séance (answers fell back to Ghost mode), and the learning refresh could skip recent actions. Both have tests.
 - Tests: 262 passing in 30 files; typecheck and lint clean.
+
+## Dashboard, Docs and dark mode (Nov 25, 2026) — built with Claude Code, not Kiro
+
+- Built outside Kiro with **Claude Code**: the Home activity chart (one metric at a time, 14 days, change vs last
+  week) and the "MCP keys & usage" card with per-day MCP call counts (new `mcpUsage` table); deleting revoked MCP
+  keys; the public **Docs** page (`/docs`) with copyable setup for Kiro, Claude Code, Claude, Cursor, ChatGPT and
+  VS Code plus a prompt that lets a coding agent set itself up; light and dark mode with a header toggle; the UI set
+  10% smaller; an updated FAQ, How it works, Privacy and Terms; `robots.txt` and `sitemap.xml`.
+- Live checks found and fixed: the activity query read full article rows and failed on production (now counts small
+  `kindredIndex` rows); a re-render loop on the dashboard; link previews pointing at localhost; class merging that
+  dropped text colours next to the custom type scale. Production Convex had not been deployed by the Vercel build
+  (no `CONVEX_DEPLOY_KEY`), so the backend was deployed by hand.
+- Kept to the project's conventions: steering rules (brand voice, security), copy in `lib/copy.ts`, the isolation
+  pattern, and the `schema-to-readme` hook's README section. Tests: 302 passing in 33 files; typecheck, lint and the
+  production build clean.

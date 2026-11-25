@@ -704,7 +704,7 @@ The original plan (written Nov 1; deadline Dec 5, 6:00 AM Malaysia time):
 - [ ] Demo video **under 3 minutes**, public on YouTube, no copyrighted music, no third-party trademarks
 - [x] Kiro write-up covering every feature in section 14
 - [ ] Student proof: LinkedIn, student email, year, degree, school (AIU)
-- [ ] Startup: confirm founder, LinkedIn, Barkulanhub website URL (barkulanhub.com)
+- [ ] Startup bonus: only if Necro itself is entered as a startup (founder confirmation, LinkedIn, website)
 - [ ] Blog post (dev.to or Hashnode) stating it is written for the Kiroween 2026 hackathon
 - [ ] Social post starting with **#KiroweenHackathon26**
 - [ ] All code written between Oct 30 and Dec 4, 2026
