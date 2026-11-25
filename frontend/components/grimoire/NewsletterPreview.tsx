@@ -51,5 +51,5 @@ export function NewsletterPreview({ markdown }: { markdown: string }) {
     else blocks.push(<p key={i} className="my-3 leading-7 text-copy">{inline(line, `p-${i}`)}</p>);
   });
   flush(-1);
-  return <div className="mx-auto max-w-2xl rounded-lg border border-line bg-white px-6 py-8 shadow-sm sm:px-10">{blocks}</div>;
+  return <div className="mx-auto max-w-2xl rounded-lg border border-line bg-surface px-6 py-8 shadow-sm sm:px-10">{blocks}</div>;
 }

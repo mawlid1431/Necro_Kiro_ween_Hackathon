@@ -24,7 +24,7 @@ function greeting(d = new Date()) {
 
 function Card({ title, action, children, className }: { title: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5", className)}>
+    <section className={cn("flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-[var(--card-shadow)]", className)}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-h3 font-bold">{title}</h2>
         {action}
@@ -47,7 +47,7 @@ function Stat({ label, value, href, tone, hint, trend, color }: { label: string;
     <Link
       href={href}
       className={cn(
-        "flex flex-col gap-1 rounded-2xl border bg-surface p-4 transition-colors hover:bg-surface-muted",
+        "flex flex-col gap-1 rounded-2xl border bg-surface p-4 shadow-[var(--card-shadow)] transition-colors hover:bg-surface-muted",
         tone === "warn" ? "border-candle" : "border-line",
       )}
     >
@@ -148,7 +148,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
   const change = lastWeek ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : thisWeek ? 100 : 0;
   return (
     <ChartCard title={copy.activityTitle} description={copy.activityDesc}>
-      <div role="tablist" aria-label={copy.activityTitle} className="grid grid-cols-2 gap-1 rounded-xl bg-white/[0.05] p-1 sm:grid-cols-4">
+      <div role="tablist" aria-label={copy.activityTitle} className="grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1 sm:grid-cols-4">
         {METRICS.map((x) => (
           <button
             key={x.key}
@@ -158,7 +158,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
             onClick={() => setMetric(x.key)}
             className={cn(
               "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-              metric === x.key ? "bg-white/[0.12] text-white shadow-sm" : "text-white/60 hover:text-white",
+              metric === x.key ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-subtle hover:text-ink",
             )}
           >
             <span className="size-2 rounded-full" style={{ background: x.color }} aria-hidden />
@@ -172,7 +172,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
           <span
             className={cn(
               "mb-0.5 rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums",
-              change > 0 ? "bg-[#6BC34E]/15 text-[#8DDB72]" : change < 0 ? "bg-[#F87171]/15 text-[#FCA5A5]" : "bg-white/10 text-white/70",
+              change > 0 ? "bg-ecto/20 text-ecto-ink" : change < 0 ? "bg-danger/10 text-danger" : "bg-surface-muted text-subtle",
             )}
           >
             {change > 0 ? "↑" : change < 0 ? "↓" : ""} {Math.abs(change)}% {copy.vsLastWeek}
@@ -183,7 +183,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
         {activity ? (
           <LineChart key={metric} ariaLabel={`${m.label}, ${copy.activityDesc}`} labels={labels} height={220} legend={false} series={[{ key: m.key, label: m.label, color: m.color, values }]} />
         ) : (
-          <div className="h-[220px] animate-pulse rounded-lg bg-white/5" />
+          <div className="h-[220px] animate-pulse rounded-lg bg-surface-muted" />
         )}
       </div>
     </ChartCard>
@@ -203,7 +203,7 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
       title={copy.keysTitle}
       description={copy.keysDesc(total)}
       action={
-        <Link href="/settings#keys" className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[#6BC34E] hover:underline">
+        <Link href="/settings#keys" className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-ecto-ink hover:underline">
           {copy.manage} <ArrowRight aria-hidden className="size-3.5" />
         </Link>
       }
@@ -211,7 +211,7 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
       {activity ? (
         <BarChart ariaLabel={copy.keysChartLabel} labels={activity.days.map(dayLabel)} series={[{ key: "mcp", label: copy.seriesMcp, color: CHART_COLORS.blue, values: calls }]} height={120} />
       ) : (
-        <div className="h-[120px] animate-pulse rounded-lg bg-white/5" />
+        <div className="h-[120px] animate-pulse rounded-lg bg-surface-muted" />
       )}
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         {([
@@ -219,38 +219,38 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
           [copy.keysWrite, live.filter((k) => k.scope === "write").length],
           [copy.keysOff, off],
         ] as const).map(([l, n]) => (
-          <div key={l} className="rounded-lg bg-white/[0.04] px-2 py-2">
+          <div key={l} className="rounded-lg bg-surface-muted px-2 py-2">
             <p className="text-[18px] font-[650] tabular-nums">{n}</p>
-            <p className="text-[11px] leading-tight text-white/60">{l}</p>
+            <p className="text-[11px] leading-tight text-subtle">{l}</p>
           </div>
         ))}
       </div>
       {live.length ? (
-        <ul className="mt-3 flex flex-col divide-y divide-white/[0.06]">
+        <ul className="mt-3 flex flex-col divide-y divide-line">
           {live.slice(0, 4).map((k) => (
             <li key={k._id} className="flex items-center gap-2.5 py-2 text-[13px]">
-              <KeyRound aria-hidden className="size-3.5 shrink-0 text-white/50" />
+              <KeyRound aria-hidden className="size-3.5 shrink-0 text-subtle" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{k.name}</p>
-                <p className="truncate text-[11px] text-white/55">
+                <p className="truncate text-[11px] text-subtle">
                   {k.lastUsedAt ? copy.keyUsed(timeAgo(k.lastUsedAt)) : copy.keyNeverUsed}
                   {k.expiresAt ? ` · ${copy.keyExpires(new Date(k.expiresAt))}` : ""}
                 </p>
               </div>
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", k.scope === "write" ? "bg-[#F59E0B]/20 text-[#F59E0B]" : "bg-white/10 text-white/70")}>
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", k.scope === "write" ? "bg-candle/20 text-ink" : "bg-surface-muted text-subtle")}>
                 {k.scope === "write" ? copy.scopeWrite : copy.scopeRead}
               </span>
               <span className="w-12 text-right leading-tight" title={copy.keyCallsTitle}>
                 <span className="block text-[13px] font-semibold tabular-nums">{(byKey.get(k._id) ?? 0).toLocaleString()}</span>
-                <span className="block text-[10px] text-white/50">{copy.calls}</span>
+                <span className="block text-[10px] text-subtle">{copy.calls}</span>
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-[13px] text-white/60">
+        <p className="mt-4 text-[13px] text-subtle">
           {copy.mcpNone}.{" "}
-          <Link href="/settings#keys" className="font-semibold text-[#6BC34E] hover:underline">
+          <Link href="/settings#keys" className="font-semibold text-ecto-ink hover:underline">
             {copy.keysCreate}
           </Link>
         </p>

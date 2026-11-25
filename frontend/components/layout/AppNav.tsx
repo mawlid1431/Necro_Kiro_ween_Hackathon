@@ -104,7 +104,7 @@ function Badge({ n, tone }: { n: number; tone: "omens" | "due" }) {
   return (
     <span
       aria-label={tone === "due" ? `${n} due` : `${n} new`}
-      className={cn("ml-1 rounded-full px-1.5 py-px text-[0.6875rem] leading-4 font-bold", tone === "due" ? "bg-amber-400 text-amber-950" : "bg-ecto text-ink")}
+      className={cn("ml-1 rounded-full px-1.5 py-px text-[0.6875rem] leading-4 font-bold", tone === "due" ? "bg-amber-400 text-amber-950" : "bg-ecto text-on-ecto")}
     >
       {n >= 99 ? "99+" : n}
     </span>

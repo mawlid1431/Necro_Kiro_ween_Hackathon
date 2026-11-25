@@ -15,14 +15,14 @@ export function ChartCard({ title, description, action, children, className }: {
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#161616] p-[18px] text-white shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_14px_40px_rgba(0,0,0,0.26)] motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface p-5 text-ink shadow-[var(--card-shadow)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[var(--card-shadow-hover)] motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         className,
       )}
     >
       <div className="mb-3.5 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="m-0 font-sans text-[16px] leading-[1.15] font-[650] tracking-[-0.02em] text-white">{title}</h2>
-          {description ? <p className="mt-[5px] text-[13px] leading-[1.35] text-white/75">{description}</p> : null}
+          <h2 className="m-0 font-sans text-[16px] leading-[1.15] font-[650] tracking-[-0.02em] text-ink">{title}</h2>
+          {description ? <p className="mt-[5px] text-[13px] leading-[1.35] text-subtle">{description}</p> : null}
         </div>
         {action}
       </div>
@@ -107,7 +107,7 @@ function Legend({ series, hidden, onToggle }: { series: Series[]; hidden: Set<st
             type="button"
             onClick={() => onToggle(s.key)}
             aria-pressed={!hidden.has(s.key)}
-            className={cn("flex items-center gap-1.5 text-[13px] font-medium text-white/85 transition-opacity hover:text-white", hidden.has(s.key) && "opacity-40")}
+            className={cn("flex items-center gap-1.5 text-[13px] font-medium text-copy transition-opacity hover:text-ink", hidden.has(s.key) && "opacity-40")}
           >
             <span className="size-2.5 rounded-full" style={{ background: s.color }} aria-hidden />
             {s.label}
@@ -167,15 +167,15 @@ export function LineChart({ labels, series, height = 240, format = String, legen
             </defs>
             {ticks.map((t) => (
               <g key={t}>
-                <line x1={pad.l} x2={width - pad.r} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,0.07)" strokeDasharray={t === 0 ? undefined : "3 5"} />
-                <text x={pad.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize={11} fill="rgba(255,255,255,0.5)" className="tabular-nums">
+                <line x1={pad.l} x2={width - pad.r} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" strokeDasharray={t === 0 ? undefined : "3 5"} />
+                <text x={pad.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize={11} fill="var(--chart-label)" className="tabular-nums">
                   {format(Math.round(t))}
                 </text>
               </g>
             ))}
             {labels.map((l, i) =>
               showTick(i, step, labels.length) ? (
-                <text key={i} x={x(i)} y={height - 6} textAnchor={i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="rgba(255,255,255,0.5)">
+                <text key={i} x={x(i)} y={height - 6} textAnchor={i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--chart-label)">
                   {l}
                 </text>
               ) : null,
@@ -198,11 +198,11 @@ export function LineChart({ labels, series, height = 240, format = String, legen
             ))}
             {hover !== null ? (
               <g pointerEvents="none">
-                <line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={pad.t + ih} stroke="rgba(255,255,255,0.18)" />
+                <line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={pad.t + ih} stroke="var(--chart-cursor)" />
                 {shown.map((s) => (
                   <g key={s.key}>
                     <circle cx={x(hover)} cy={y(s.values[hover] ?? 0)} r={9} fill={s.color} opacity={0.18} />
-                    <circle cx={x(hover)} cy={y(s.values[hover] ?? 0)} r={4} fill={s.color} stroke="#161616" strokeWidth={2} />
+                    <circle cx={x(hover)} cy={y(s.values[hover] ?? 0)} r={4} fill={s.color} stroke="var(--color-surface)" strokeWidth={2} />
                   </g>
                 ))}
               </g>
@@ -233,7 +233,7 @@ export function BarChart({ labels, series, height = 140, format = String, ariaLa
     <div ref={ref} className="relative min-w-0" style={{ height }}>
       {width > 0 && s ? (
         <svg width={width} height={height} role="img" aria-label={ariaLabel} onPointerLeave={() => setHover(null)} className="block">
-          <line x1={pad.l} x2={width - pad.r} y1={pad.t + ih} y2={pad.t + ih} stroke="rgba(255,255,255,0.08)" />
+          <line x1={pad.l} x2={width - pad.r} y1={pad.t + ih} y2={pad.t + ih} stroke="var(--chart-grid)" />
           {s.values.map((v, i) => {
             const h = v > 0 ? Math.max(3, (v / max) * ih) : 0;
             const cx = pad.l + slot * i + slot / 2;
@@ -254,7 +254,7 @@ export function BarChart({ labels, series, height = 140, format = String, ariaLa
                   />
                 ) : null}
                 {showTick(i, step, labels.length) ? (
-                  <text x={i === 0 ? cx - bw / 2 : i === labels.length - 1 ? cx + bw / 2 : cx} y={height - 4} textAnchor={i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="rgba(255,255,255,0.5)">
+                  <text x={i === 0 ? cx - bw / 2 : i === labels.length - 1 ? cx + bw / 2 : cx} y={height - 4} textAnchor={i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--chart-label)">
                     {labels[i]}
                   </text>
                 ) : null}
@@ -274,15 +274,15 @@ function Tooltip({ left, width, title, rows }: { left: number; width: number; ti
   const flip = left > width - 170;
   return (
     <div
-      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-white/10 bg-[#0f0f0f]/95 px-3 py-2 text-[12px] shadow-lg backdrop-blur"
+      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[12px] shadow-[var(--card-shadow-hover)] backdrop-blur"
       style={flip ? { right: width - left + 12 } : { left: left + 12 }}
     >
-      <p className="mb-1 font-semibold text-white">{title}</p>
+      <p className="mb-1 font-semibold text-ink">{title}</p>
       {rows.map((r) => (
-        <p key={r.label} className="flex items-center gap-2 text-white/70">
+        <p key={r.label} className="flex items-center gap-2 text-subtle">
           <span className="size-2 rounded-full" style={{ background: r.color }} aria-hidden />
           <span className="flex-1">{r.label}</span>
-          <span className="font-semibold text-white tabular-nums">{r.value}</span>
+          <span className="font-semibold text-ink tabular-nums">{r.value}</span>
         </p>
       ))}
     </div>

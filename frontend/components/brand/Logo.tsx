@@ -2,8 +2,8 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 const variants = {
-  horizontal: { src: "/brand/logo-horizontal-light.svg", width: 375, height: 100 },
-  symbol: { src: "/brand/symbol-light.svg", width: 80, height: 100 },
+  horizontal: { light: "/brand/logo-horizontal-light.svg", dark: "/brand/logo-horizontal-dark.svg", width: 375, height: 100 },
+  symbol: { light: "/brand/symbol-light.svg", dark: "/brand/symbol-dark.svg", width: 80, height: 100 },
 } as const;
 
 type LogoProps = {
@@ -12,17 +12,13 @@ type LogoProps = {
   priority?: boolean;
 };
 
-/** Brand logo files are used as-is: never recoloured, stretched or shadowed. */
+/** Brand logo files are used as-is: never recoloured, stretched or shadowed. The dark theme uses the dark files. */
 export function Logo({ variant = "horizontal", className, priority }: LogoProps) {
-  const { src, width, height } = variants[variant];
+  const { light, dark, width, height } = variants[variant];
   return (
-    <Image
-      src={src}
-      width={width}
-      height={height}
-      alt="Necro"
-      priority={priority}
-      className={cn("h-auto", className)}
-    />
+    <>
+      <Image src={light} width={width} height={height} alt="Necro" priority={priority} className={cn("h-auto dark:hidden", className)} />
+      <Image src={dark} width={width} height={height} alt="Necro" priority={priority} className={cn("hidden h-auto dark:block", className)} />
+    </>
   );
 }

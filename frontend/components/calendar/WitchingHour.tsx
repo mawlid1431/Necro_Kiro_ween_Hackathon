@@ -276,7 +276,7 @@ export function WitchingHour() {
                   <span
                     className={cn(
                       "grid size-6 place-items-center rounded-full text-[0.75rem] font-semibold",
-                      isToday ? "bg-ecto text-ink" : "",
+                      isToday ? "bg-ecto text-on-ecto" : "",
                       due && !isToday ? "bg-amber-200 text-amber-950" : "",
                     )}
                   >

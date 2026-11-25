@@ -2,6 +2,7 @@ import { Logo } from "@/components/brand/Logo";
 import { Container } from "@/components/layout/Container";
 import { HeaderAuth } from "@/components/layout/HeaderAuth";
 import { HomeLink } from "@/components/layout/HomeLink";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function SiteHeader() {
   return (
@@ -12,6 +13,7 @@ export function SiteHeader() {
         </HomeLink>
         <nav aria-label="Main" className="flex items-center gap-2 sm:gap-3">
           <HeaderAuth />
+          <ThemeToggle />
         </nav>
       </Container>
     </header>

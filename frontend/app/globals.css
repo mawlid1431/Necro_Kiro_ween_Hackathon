@@ -32,6 +32,8 @@
   --color-ecto-ink: #2f7346;
   --color-highlight: #f5a524;
   --color-danger: #c8343a;
+  /* Text on the bright ecto green stays dark in both themes. */
+  --color-on-ecto: #0d0a14;
 
   --text-hero: 4rem;
   --text-hero--line-height: 4.5rem;
@@ -107,7 +109,7 @@
   }
 }
 
-/* shadcn semantic variables, mapped onto the brand palette (dark-only theme). */
+/* shadcn semantic variables, mapped onto the brand palette (light and dark). */
 @theme inline {
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
   --font-display: var(--font-cinzel), Georgia, serif;
@@ -146,7 +148,7 @@
   --popover: var(--color-surface);
   --popover-foreground: var(--color-copy);
   --primary: var(--color-ecto);
-  --primary-foreground: var(--color-ink);
+  --primary-foreground: var(--color-on-ecto);
   --secondary: transparent;
   --secondary-foreground: var(--color-ink);
   --muted: var(--color-surface-muted);
@@ -158,6 +160,33 @@
   --input: var(--color-line);
   --ring: var(--color-ecto-dim);
   --radius: 10px;
+  /* Charts */
+  --chart-grid: rgb(13 10 20 / 0.08);
+  --chart-label: #6b6480;
+  --chart-cursor: rgb(13 10 20 / 0.18);
+  --card-shadow: 0 1px 2px rgb(13 10 20 / 0.04), 0 8px 24px rgb(13 10 20 / 0.06);
+  --card-shadow-hover: 0 2px 4px rgb(13 10 20 / 0.05), 0 14px 36px rgb(13 10 20 / 0.1);
+}
+
+/* Dark theme: a deep page with clearly lighter cards, light text that passes WCAG AA,
+   and brighter ink accents. Turned on by the `dark` class on <html> (ThemeToggle). */
+.dark {
+  color-scheme: dark;
+  --color-page: #0b0910;
+  --color-surface: #17131f;
+  --color-surface-muted: #221c2d;
+  --color-line: #322a42;
+  --color-ink: #f5f2fa;
+  --color-copy: #e1dbea;
+  --color-subtle: #a9a1bb;
+  --color-ecto-ink: #7cf29a;
+  --color-highlight: #f5a524;
+  --color-danger: #ff6b70;
+  --chart-grid: rgb(255 255 255 / 0.08);
+  --chart-label: #a9a1bb;
+  --chart-cursor: rgb(255 255 255 / 0.22);
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.35);
+  --card-shadow-hover: 0 2px 4px rgb(0 0 0 / 0.35), 0 14px 40px rgb(0 0 0 / 0.45);
 }
 
 @layer base {

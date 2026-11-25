@@ -12,6 +12,9 @@ import { VoiceForm } from "@/components/settings/VoiceForm";
 import { LearningCard } from "@/components/settings/LearningCard";
 import { labels, settingsNav } from "@/lib/copy";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 export const metadata: Metadata = { title: labels.settings.themed };
 
 export default function SettingsPage() {

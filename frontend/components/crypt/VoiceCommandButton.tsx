@@ -149,7 +149,7 @@ export function VoiceCommandButton({
                 <span
                   className={cn(
                     "relative grid size-11 place-items-center rounded-full",
-                    panel.kind === "error" ? "bg-danger/10 text-danger" : panel.kind === "done" ? "bg-ecto/30 text-ecto-ink" : "bg-ecto text-ink",
+                    panel.kind === "error" ? "bg-danger/10 text-danger" : panel.kind === "done" ? "bg-ecto/30 text-ecto-ink" : "bg-ecto text-on-ecto",
                   )}
                 >
                   {panel.kind === "done" ? <Check aria-hidden className="size-5" /> : panel.kind === "error" ? <MicOff aria-hidden className="size-5" strokeWidth={1.75} /> : <Mic aria-hidden className="size-5" strokeWidth={1.75} />}

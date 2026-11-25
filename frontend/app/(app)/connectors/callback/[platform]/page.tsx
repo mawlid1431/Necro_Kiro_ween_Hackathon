@@ -4,6 +4,9 @@ import { Container } from "@/components/layout/Container";
 import { ConnectCallback } from "@/components/connectors/ConnectCallback";
 import { SOCIAL_PLATFORMS, type SocialPlatform } from "@/lib/post";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 // OAuth redirect URI for each platform: /connectors/callback/linkedin | x | instagram | tiktok
 export const metadata: Metadata = { title: "Connecting…", robots: { index: false } };
 

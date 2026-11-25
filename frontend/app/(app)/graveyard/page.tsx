@@ -12,6 +12,9 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
 import { graveyard, labels, tabs } from "@/lib/copy";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 export const metadata: Metadata = { title: labels.graveyard.themed };
 
 export default function GraveyardPage() {

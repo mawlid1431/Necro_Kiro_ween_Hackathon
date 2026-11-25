@@ -25,7 +25,7 @@ export function HowItWorks() {
             return (
               <li key={s.key} className="relative rounded-2xl border border-line bg-surface p-6 lg:p-8">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-9 place-items-center rounded-full bg-ecto font-display text-body font-bold text-ink">{i + 1}</span>
+                  <span className="grid size-9 place-items-center rounded-full bg-ecto font-display text-body font-bold text-on-ecto">{i + 1}</span>
                   <Icon aria-hidden className="size-5 text-ecto-ink" strokeWidth={1.75} />
                 </div>
                 <h3 className="mt-4 text-h3 font-semibold">{s.title}</h3>

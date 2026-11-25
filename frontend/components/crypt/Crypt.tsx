@@ -132,7 +132,7 @@ export function Crypt() {
                     onClick={() => setFilter(f)}
                     className={cn(
                       "rounded px-3 py-1 text-meta font-semibold",
-                      filter === f ? "bg-ecto text-ink" : "text-subtle hover:text-ink",
+                      filter === f ? "bg-ecto text-on-ecto" : "text-subtle hover:text-ink",
                     )}
                   >
                     {copy.filters[f]}

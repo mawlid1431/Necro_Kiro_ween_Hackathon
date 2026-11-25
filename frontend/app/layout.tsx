@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import { site } from "@/lib/copy";
+import { themeScript } from "@/components/layout/ThemeToggle";
 import { cinzel, jakarta } from "./fonts";
 import "./globals.css";
 
@@ -17,12 +18,16 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${cinzel.variable} ${jakarta.variable} h-full`}>
+    <html lang="en" className={`${cinzel.variable} ${jakarta.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Fixed string, no user input: applies the saved theme before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ClerkProvider appearance={clerkAppearance}>
           <ConvexClientProvider>{children}</ConvexClientProvider>

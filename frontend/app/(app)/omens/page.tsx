@@ -6,6 +6,9 @@ import { PageTabs } from "@/components/layout/PageTabs";
 import { Omens } from "@/components/omens/Omens";
 import { labels, tabs } from "@/lib/copy";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 export const metadata: Metadata = { title: labels.omens.themed };
 
 export default function OmensPage() {

@@ -5,6 +5,9 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { FollowingTab, MyProfileCard, PeopleTab, TopicsTab } from "@/components/circle/Circle";
 import { labels, tabs } from "@/lib/copy";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 export const metadata: Metadata = { title: labels.circle.themed };
 
 export default function CirclePage() {

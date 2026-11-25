@@ -8,7 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-ecto text-ink hover:shadow-glow active:bg-ecto-dim",
+        default: "bg-ecto text-on-ecto hover:shadow-glow active:bg-ecto-dim",
         outline:
           "border-[1.5px] border-line bg-transparent text-ink hover:bg-surface-muted",
         secondary:

@@ -4,6 +4,9 @@ import { Container } from "@/components/layout/Container";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { labels } from "@/lib/copy";
 
+// Live, client-gated data (see app/(app)/layout.tsx): opt out of dev-only instant-navigation validation.
+export const instant = false;
+
 export const metadata: Metadata = { title: labels.calendar.themed };
 
 export default function CalendarPage() {

@@ -67,7 +67,7 @@ export function CryptScreen() {
         </ul>
       </div>
       <div className="mx-3 mt-auto mb-3 flex gap-1.5">
-        <span className="flex-1 rounded-md bg-ecto py-1.5 text-center text-[0.625rem] font-bold text-ink">Resurrect</span>
+        <span className="flex-1 rounded-md bg-ecto py-1.5 text-center text-[0.625rem] font-bold text-on-ecto">Resurrect</span>
         <span className="flex-1 rounded-md border border-line py-1.5 text-center text-[0.625rem] font-semibold text-ink">Listen</span>
       </div>
     </>
@@ -86,7 +86,7 @@ export function ResurrectScreen() {
           </span>
         ))}
       </div>
-      <div className="mx-3 mt-2 rounded-lg border border-line bg-white p-2">
+      <div className="mx-3 mt-2 rounded-lg border border-line bg-surface p-2">
         <div className="flex items-center gap-1.5">
           <span className="size-5 rounded-full bg-ecto/50" />
           <div>
@@ -101,7 +101,7 @@ export function ResurrectScreen() {
         </div>
       </div>
       <div className="mx-3 mt-auto mb-3 flex flex-col gap-1.5">
-        <span className="rounded-md bg-ecto py-1.5 text-center text-[0.625rem] font-bold text-ink">Post now to LinkedIn</span>
+        <span className="rounded-md bg-ecto py-1.5 text-center text-[0.625rem] font-bold text-on-ecto">Post now to LinkedIn</span>
         <span className="rounded-md border border-line py-1.5 text-center text-[0.625rem] font-semibold text-ink">Schedule for later</span>
       </div>
     </>
