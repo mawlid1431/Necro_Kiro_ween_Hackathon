@@ -21,8 +21,8 @@ export function ChartCard({ title, description, action, children, className }: {
     >
       <div className="mb-3.5 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="m-0 font-sans text[1rem] leading-[1.15] font-[650] tracking-[-0.02em] text-ink">{title}</h2>
-          {description ? <p className="mt[0.3125rem] text[0.8125rem] leading-[1.35] text-subtle">{description}</p> : null}
+          <h2 className="m-0 font-sans text-[1rem] leading-[1.15] font-[650] tracking-[-0.02em] text-ink">{title}</h2>
+          {description ? <p className="mt-[0.3125rem] text-[0.8125rem] leading-[1.35] text-subtle">{description}</p> : null}
         </div>
         {action}
       </div>
@@ -107,7 +107,7 @@ function Legend({ series, hidden, onToggle }: { series: Series[]; hidden: Set<st
             type="button"
             onClick={() => onToggle(s.key)}
             aria-pressed={!hidden.has(s.key)}
-            className={cn("flex items-center gap-1.5 text[0.8125rem] font-medium text-copy transition-opacity hover:text-ink", hidden.has(s.key) && "opacity-40")}
+            className={cn("flex items-center gap-1.5 text-[0.8125rem] font-medium text-copy transition-opacity hover:text-ink", hidden.has(s.key) && "opacity-40")}
           >
             <span className="size-2.5 rounded-full" style={{ background: s.color }} aria-hidden />
             {s.label}
@@ -274,7 +274,7 @@ function Tooltip({ left, width, title, rows }: { left: number; width: number; ti
   const flip = left > width - 170;
   return (
     <div
-      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-line bg-surface/95 px-3 py-2 text[0.75rem] shadow-[var(--card-shadow-hover)] backdrop-blur"
+      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[0.75rem] shadow-[var(--card-shadow-hover)] backdrop-blur"
       style={flip ? { right: width - left + 12 } : { left: left + 12 }}
     >
       <p className="mb-1 font-semibold text-ink">{title}</p>

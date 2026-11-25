@@ -607,7 +607,7 @@ export const home = {
   activityTitle: "Activity",
   activityDesc: "Last 14 days",
   vsLastWeek: "vs last week",
-  seriesRisen: "Articles risen",
+  seriesRisen: "New articles",
   seriesAi: "AI tools used",
   seriesPosted: "Posts sent",
   seriesMcp: "MCP calls",

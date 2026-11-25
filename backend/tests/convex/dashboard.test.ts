@@ -54,7 +54,8 @@ describe("dashboard.activity and key deletion", () => {
     const today = new Date(now).toISOString().slice(0, 10);
     const { keyId, bobKey } = await t.run(async (ctx) => {
       const graveId = await ctx.db.insert("graves", { userId: aliceId, feedUrl: "https://a.example/feed", title: "A", status: "alive", nextFetchAt: now, failureCount: 0, unreadCount: 0 });
-      await ctx.db.insert("items", { userId: aliceId, graveId, guid: "1", title: "T", publishedAt: now, contentHtml: "", excerpt: "", isRead: false, isStarred: false, risenAt: now });
+      const itemId = await ctx.db.insert("items", { userId: aliceId, graveId, guid: "1", title: "T", publishedAt: now, contentHtml: "", excerpt: "", isRead: false, isStarred: false, risenAt: now });
+      await ctx.db.insert("kindredIndex", { userId: aliceId, itemId, graveId, title: "T", publishedAt: now });
       await ctx.db.insert("publishes", { userId: aliceId, kind: "manual", platform: "x", status: "posted", createdAt: now, at: now - 1000, text: "hi" });
       await ctx.db.insert("aiUsage", { userId: aliceId, task: "seance", model: "m", inputTokens: 1, outputTokens: 1, day: today });
       const keyId = await ctx.db.insert("apiKeys", { userId: aliceId, name: "k", hash: "a".repeat(64), prefix: "necro_sk_aaaaaaaa" });

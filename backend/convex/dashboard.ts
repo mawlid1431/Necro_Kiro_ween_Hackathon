@@ -115,7 +115,7 @@ export type Activity = {
 
 export const ACTIVITY_DAYS = 14;
 
-/** Daily counts for the overview chart: articles that rose, posts that went out, AI tool uses and MCP calls. */
+/** Daily counts for the overview chart: new articles, posts that went out, AI tool uses and MCP calls. Reads only small rows. */
 export const activity = query({
   args: { now: v.optional(v.number()) },
   handler: async (ctx, args): Promise<Activity | null> => {
@@ -131,9 +131,11 @@ export const activity = query({
     const empty = () => days.map(() => 0);
     const bucket = (t: number) => Math.floor((t - start) / DAY);
 
+    // New articles per day, counted from kindredIndex (one small row per article: title and date) instead of items,
+    // whose HTML (up to 200 KB each) pushed big accounts past Convex's per-query read limit.
     const risen = empty();
-    for (const i of await ctx.db.query("items").withIndex("by_user_risen", (q) => q.eq("userId", uid).gte("risenAt", start)).take(3000)) {
-      const b = bucket(i.risenAt);
+    for (const i of await ctx.db.query("kindredIndex").withIndex("by_user_published", (q) => q.eq("userId", uid).gte("publishedAt", start).lte("publishedAt", now)).take(5000)) {
+      const b = bucket(i.publishedAt);
       if (b >= 0 && b < ACTIVITY_DAYS) risen[b]++;
     }
 
