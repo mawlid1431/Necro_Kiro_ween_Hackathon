@@ -42,3 +42,40 @@ describe("dashboard.overview", () => {
     expect(b).toMatchObject({ feeds: { total: 0, unread: 0 }, risenToday: 0, posts: { posted30d: 0, due: 0 }, upNext: [], recent: [], readNext: [] });
   });
 });
+
+describe("dashboard.activity and key deletion", () => {
+  it("buckets the caller's activity by UTC day and deletes only revoked keys", async () => {
+    const t = convexTest(schema, modules);
+    const alice = t.withIdentity({ subject: "h_alice", tokenIdentifier: "clerk|h_alice" });
+    const bob = t.withIdentity({ subject: "h_bob", tokenIdentifier: "clerk|h_bob" });
+    const aliceId = await alice.mutation(api.users.store, {});
+    const bobId = await bob.mutation(api.users.store, {});
+    const now = Date.now();
+    const today = new Date(now).toISOString().slice(0, 10);
+    const { keyId, bobKey } = await t.run(async (ctx) => {
+      const graveId = await ctx.db.insert("graves", { userId: aliceId, feedUrl: "https://a.example/feed", title: "A", status: "alive", nextFetchAt: now, failureCount: 0, unreadCount: 0 });
+      await ctx.db.insert("items", { userId: aliceId, graveId, guid: "1", title: "T", publishedAt: now, contentHtml: "", excerpt: "", isRead: false, isStarred: false, risenAt: now });
+      await ctx.db.insert("publishes", { userId: aliceId, kind: "manual", platform: "x", status: "posted", createdAt: now, at: now - 1000, text: "hi" });
+      await ctx.db.insert("aiUsage", { userId: aliceId, task: "seance", model: "m", inputTokens: 1, outputTokens: 1, day: today });
+      const keyId = await ctx.db.insert("apiKeys", { userId: aliceId, name: "k", hash: "a".repeat(64), prefix: "necro_sk_aaaaaaaa" });
+      await ctx.db.insert("mcpUsage", { userId: aliceId, keyId, day: today, calls: 5 });
+      const bobKey = await ctx.db.insert("apiKeys", { userId: bobId, name: "b", hash: "b".repeat(64), prefix: "necro_sk_bbbbbbbb", revokedAt: now });
+      return { keyId, bobKey };
+    });
+
+    const a = await alice.query(api.dashboard.activity, { now });
+    expect(a?.days).toHaveLength(14);
+    expect(a?.days.at(-1)).toBe(today);
+    expect([a?.risen.at(-1), a?.posted.at(-1), a?.ai.at(-1), a?.mcp.at(-1)]).toEqual([1, 1, 1, 5]);
+    expect(a?.mcpByKey).toEqual([{ keyId, calls: 5 }]);
+    const b = await bob.query(api.dashboard.activity, { now });
+    expect(b?.risen.reduce((x, y) => x + y, 0)).toBe(0);
+
+    await expect(alice.mutation(api.apiKeys.remove, { keyId })).rejects.toThrow(/Revoke/);
+    await expect(alice.mutation(api.apiKeys.remove, { keyId: bobKey })).rejects.toThrow();
+    await alice.mutation(api.apiKeys.revoke, { keyId });
+    await alice.mutation(api.apiKeys.remove, { keyId });
+    expect(await alice.query(api.apiKeys.list, {})).toEqual([]);
+    expect((await alice.query(api.dashboard.activity, { now }))?.mcp.at(-1)).toBe(0);
+  });
+});

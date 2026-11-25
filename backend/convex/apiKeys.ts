@@ -84,3 +84,16 @@ export const revoke = mutation({
     if (!key.revokedAt) await ctx.db.patch(keyId, { revokedAt: Date.now() });
   },
 });
+
+/** Deletes a revoked key for good (and its usage rows). Active keys must be revoked first. */
+export const remove = mutation({
+  args: { keyId: v.id("apiKeys") },
+  handler: async (ctx, { keyId }) => {
+    const user = await requireUser(ctx);
+    const key = await requireOwned(ctx, user._id, keyId);
+    if (!key.revokedAt) fail("INVALID_INPUT", "Revoke this key before deleting it.");
+    const rows = await ctx.db.query("mcpUsage").withIndex("by_key_day", (q) => q.eq("keyId", keyId)).take(400);
+    for (const r of rows) await ctx.db.delete(r._id);
+    await ctx.db.delete(keyId);
+  },
+});

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { Copy, Eye, KeyRound, PenLine } from "lucide-react";
+import { Copy, Eye, KeyRound, PenLine, Trash2 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
@@ -17,6 +17,17 @@ export function ApiKeys() {
   const keys = useQuery(api.apiKeys.list);
   const create = useAction(api.apiKeys.create);
   const revoke = useMutation(api.apiKeys.revoke);
+  const remove = useMutation(api.apiKeys.remove);
+  const revokedIds = (keys ?? []).filter((k) => k.revokedAt).map((k) => k._id);
+
+  async function removeKeys(ids: typeof revokedIds) {
+    setError(null);
+    try {
+      for (const keyId of ids) await remove({ keyId });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
   const [name, setName] = useState("");
   const [scope, setScope] = useState<"read" | "write">("read");
   const now = useMinute();
@@ -143,7 +154,20 @@ export function ApiKeys() {
               {copy.lastUsed}: {k.lastUsedAt ? timeAgo(k.lastUsedAt) : copy.never}
             </span>
             {k.revokedAt ? (
-              <span className="ml-auto text-meta font-semibold text-danger">{copy.revoked}</span>
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-meta font-semibold text-danger">{copy.revoked}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${copy.deleteKey} ${k.name}`}
+                  title={copy.deleteKey}
+                  onClick={() => {
+                    if (window.confirm(copy.deleteKeyConfirm(k.name))) void removeKeys([k._id]);
+                  }}
+                >
+                  <Trash2 aria-hidden strokeWidth={1.75} />
+                </Button>
+              </span>
             ) : (
               <Button variant="destructive" size="sm" className="ml-auto" onClick={() => void revoke({ keyId: k._id })}>
                 {copy.revoke}
@@ -152,6 +176,20 @@ export function ApiKeys() {
           </li>
         ))}
       </ul>
+
+      {revokedIds.length ? (
+        <div className="mt-2 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(copy.clearRevokedConfirm(revokedIds.length))) void removeKeys(revokedIds);
+            }}
+          >
+            <Trash2 aria-hidden strokeWidth={1.75} /> {copy.clearRevoked(revokedIds.length)}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <div className="mb-1.5 flex items-center justify-between">

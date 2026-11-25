@@ -37,6 +37,10 @@ export const authenticate = mutation({
     if (!(await hitLimit(ctx, `mcp:${key._id}`, MCP_CALLS_PER_MINUTE, 60_000))) return { ok: false as const, status: 429 };
     const now = Date.now();
     if (!key.lastUsedAt || now - key.lastUsedAt > 60_000) await ctx.db.patch(key._id, { lastUsedAt: now });
+    const day = utcDay(now);
+    const today = await ctx.db.query("mcpUsage").withIndex("by_key_day", (q) => q.eq("keyId", key._id).eq("day", day)).unique();
+    if (today) await ctx.db.patch(today._id, { calls: today.calls + 1 });
+    else await ctx.db.insert("mcpUsage", { userId: key.userId, keyId: key._id, day, calls: 1 });
     return { ok: true as const, userId: key.userId, prefix: key.prefix, keyId: key._id, scope: key.scope ?? ("read" as const) };
   },
 });

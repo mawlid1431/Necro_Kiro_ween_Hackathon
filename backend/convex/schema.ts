@@ -342,6 +342,16 @@ export default defineSchema({
     day: v.string(), // UTC date, e.g. "2026-11-08"
   }).index("by_user_day_task", ["userId", "day", "task"]),
 
+  // MCP calls per key per UTC day, for the overview chart. One row per key a day, so it stays small.
+  mcpUsage: defineTable({
+    userId: v.id("users"),
+    keyId: v.id("apiKeys"),
+    day: v.string(), // "YYYY-MM-DD" UTC
+    calls: v.number(),
+  })
+    .index("by_user_day", ["userId", "day"])
+    .index("by_key_day", ["keyId", "day"]),
+
   rateLimits: defineTable({
     key: v.string(), // e.g. "mcp:<apiKeyId>" or "summon:<userId>"
     windowStart: v.number(),

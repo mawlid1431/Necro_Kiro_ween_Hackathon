@@ -258,3 +258,18 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Overview charts: lines draw in, bars grow up (once, on mount). */
+@keyframes necro-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+@keyframes necro-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.necro-draw { animation: necro-draw 650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.necro-grow { animation: necro-grow 650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .necro-draw, .necro-grow { animation: none; }
+}

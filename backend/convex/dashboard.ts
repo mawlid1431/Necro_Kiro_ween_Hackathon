@@ -101,3 +101,63 @@ export const overview = query({
     };
   },
 });
+
+export type Activity = {
+  /** UTC days, oldest first ("YYYY-MM-DD"). */
+  days: string[];
+  risen: number[];
+  posted: number[];
+  ai: number[];
+  mcp: number[];
+  /** MCP calls per key over the same window. */
+  mcpByKey: { keyId: Id<"apiKeys">; calls: number }[];
+};
+
+export const ACTIVITY_DAYS = 14;
+
+/** Daily counts for the overview chart: articles that rose, posts that went out, AI tool uses and MCP calls. */
+export const activity = query({
+  args: { now: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<Activity | null> => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const uid = user._id;
+    const server = Date.now();
+    const now = args.now !== undefined && Math.abs(args.now - server) < 10 * 60_000 ? args.now : server;
+    const todayStart = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
+    const start = todayStart - (ACTIVITY_DAYS - 1) * DAY;
+    const days = Array.from({ length: ACTIVITY_DAYS }, (_, i) => new Date(start + i * DAY).toISOString().slice(0, 10));
+    const index = new Map(days.map((d, i) => [d, i]));
+    const empty = () => days.map(() => 0);
+    const bucket = (t: number) => Math.floor((t - start) / DAY);
+
+    const risen = empty();
+    for (const i of await ctx.db.query("items").withIndex("by_user_risen", (q) => q.eq("userId", uid).gte("risenAt", start)).take(3000)) {
+      const b = bucket(i.risenAt);
+      if (b >= 0 && b < ACTIVITY_DAYS) risen[b]++;
+    }
+
+    const posted = empty();
+    for (const p of await ctx.db.query("publishes").withIndex("by_user_at", (q) => q.eq("userId", uid).gte("at", start).lte("at", now)).take(1000)) {
+      const b = bucket(p.at ?? p.createdAt);
+      if (p.status === "posted" && b >= 0 && b < ACTIVITY_DAYS) posted[b]++;
+    }
+
+    const ai = empty();
+    for (const u of await ctx.db.query("aiUsage").withIndex("by_user_day_task", (q) => q.eq("userId", uid).gte("day", days[0])).take(3000)) {
+      const b = index.get(u.day);
+      if (b !== undefined) ai[b]++;
+    }
+
+    const mcp = empty();
+    const perKey = new Map<Id<"apiKeys">, number>();
+    for (const r of await ctx.db.query("mcpUsage").withIndex("by_user_day", (q) => q.eq("userId", uid).gte("day", days[0])).take(1000)) {
+      const b = index.get(r.day);
+      if (b === undefined) continue;
+      mcp[b] += r.calls;
+      perKey.set(r.keyId, (perKey.get(r.keyId) ?? 0) + r.calls);
+    }
+
+    return { days, risen, posted, ai, mcp, mcpByKey: [...perKey].map(([keyId, calls]) => ({ keyId, calls })) };
+  },
+});

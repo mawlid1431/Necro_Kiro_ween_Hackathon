@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, BookOpen, CalendarClock, Check, Circle, Clock, KeyRound, Plus, Rss, Send, Sparkles, X } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
-import type { Overview as OverviewData } from "@backend/convex/dashboard";
+import type { Activity, Overview as OverviewData } from "@backend/convex/dashboard";
 import { PlatformIcon } from "@/components/brand/PlatformIcon";
+import { BarChart, CHART_COLORS, ChartCard, LineChart, Sparkline } from "@/components/home/Charts";
+import { timeAgo } from "@/components/crypt/ItemList";
 import { Button } from "@/components/ui/button";
 import { connectors as names, home as copy, witching } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -40,7 +42,7 @@ function MoreLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function Stat({ label, value, href, tone, hint }: { label: string; value: number | string; href: string; tone?: "warn" | "ok"; hint?: string }) {
+function Stat({ label, value, href, tone, hint, trend, color }: { label: string; value: number | string; href: string; tone?: "warn" | "ok"; hint?: string; trend?: number[]; color?: string }) {
   return (
     <Link
       href={href}
@@ -52,6 +54,7 @@ function Stat({ label, value, href, tone, hint }: { label: string; value: number
       <span className="text-meta font-semibold text-subtle">{label}</span>
       <span className="font-display text-[1.75rem] leading-9 font-bold text-ink tabular-nums">{value}</span>
       {hint ? <span className={cn("text-[0.75rem] font-semibold", tone === "warn" ? "text-candle" : "text-ecto-ink")}>{hint}</span> : null}
+      {trend && trend.some((n) => n > 0) ? <Sparkline values={trend} color={color ?? CHART_COLORS.green} className="mt-auto pt-1" /> : null}
     </Link>
   );
 }
@@ -124,6 +127,138 @@ function PostRow({ p }: { p: OverviewData["upNext"][number] }) {
 }
 
 
+const dayLabel = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+const sum = (a: number[]) => a.reduce((n, v) => n + v, 0);
+
+const METRICS = [
+  { key: "risen", label: copy.seriesRisen, color: CHART_COLORS.green },
+  { key: "ai", label: copy.seriesAi, color: CHART_COLORS.violet },
+  { key: "posted", label: copy.seriesPosted, color: CHART_COLORS.amber },
+  { key: "mcp", label: copy.seriesMcp, color: CHART_COLORS.blue },
+] as const;
+
+/** One metric at a time: segmented tabs, the 14-day total, change vs the week before, and one smooth line. */
+function ActivityPanel({ activity, labels }: { activity: Activity | null | undefined; labels: string[] }) {
+  const [metric, setMetric] = useState<(typeof METRICS)[number]["key"]>("risen");
+  const m = METRICS.find((x) => x.key === metric)!;
+  const values = activity?.[metric] ?? [];
+  const total = sum(values);
+  const thisWeek = sum(values.slice(-7));
+  const lastWeek = sum(values.slice(-14, -7));
+  const change = lastWeek ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : thisWeek ? 100 : 0;
+  return (
+    <ChartCard title={copy.activityTitle} description={copy.activityDesc}>
+      <div role="tablist" aria-label={copy.activityTitle} className="grid grid-cols-2 gap-1 rounded-xl bg-white/[0.05] p-1 sm:grid-cols-4">
+        {METRICS.map((x) => (
+          <button
+            key={x.key}
+            role="tab"
+            type="button"
+            aria-selected={metric === x.key}
+            onClick={() => setMetric(x.key)}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+              metric === x.key ? "bg-white/[0.12] text-white shadow-sm" : "text-white/60 hover:text-white",
+            )}
+          >
+            <span className="size-2 rounded-full" style={{ background: x.color }} aria-hidden />
+            {x.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5 flex items-end gap-3">
+        <p className="text-[32px] leading-none font-[650] tracking-[-0.03em] tabular-nums">{activity ? total.toLocaleString() : "–"}</p>
+        {activity ? (
+          <span
+            className={cn(
+              "mb-0.5 rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums",
+              change > 0 ? "bg-[#6BC34E]/15 text-[#8DDB72]" : change < 0 ? "bg-[#F87171]/15 text-[#FCA5A5]" : "bg-white/10 text-white/70",
+            )}
+          >
+            {change > 0 ? "↑" : change < 0 ? "↓" : ""} {Math.abs(change)}% {copy.vsLastWeek}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-4">
+        {activity ? (
+          <LineChart key={metric} ariaLabel={`${m.label}, ${copy.activityDesc}`} labels={labels} height={220} legend={false} series={[{ key: m.key, label: m.label, color: m.color, values }]} />
+        ) : (
+          <div className="h-[220px] animate-pulse rounded-lg bg-white/5" />
+        )}
+      </div>
+    </ChartCard>
+  );
+}
+
+type KeyRow ={ _id: string; name: string; prefix: string; scope: "read" | "write"; lastUsedAt?: number; revokedAt?: number; expiresAt: number | null };
+
+function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activity: Activity | null | undefined; now: number }) {
+  const live = (keys ?? []).filter((k) => !k.revokedAt && !(k.expiresAt && k.expiresAt <= now));
+  const off = (keys ?? []).length - live.length;
+  const calls = activity?.mcp ?? [];
+  const byKey = new Map((activity?.mcpByKey ?? []).map((r) => [r.keyId as string, r.calls]));
+  const total = sum(calls);
+  return (
+    <ChartCard
+      title={copy.keysTitle}
+      description={copy.keysDesc(total)}
+      action={
+        <Link href="/settings#keys" className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[#6BC34E] hover:underline">
+          {copy.manage} <ArrowRight aria-hidden className="size-3.5" />
+        </Link>
+      }
+    >
+      {activity ? (
+        <BarChart ariaLabel={copy.keysChartLabel} labels={activity.days.map(dayLabel)} series={[{ key: "mcp", label: copy.seriesMcp, color: CHART_COLORS.blue, values: calls }]} height={120} />
+      ) : (
+        <div className="h-[120px] animate-pulse rounded-lg bg-white/5" />
+      )}
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        {([
+          [copy.keysActive, live.length],
+          [copy.keysWrite, live.filter((k) => k.scope === "write").length],
+          [copy.keysOff, off],
+        ] as const).map(([l, n]) => (
+          <div key={l} className="rounded-lg bg-white/[0.04] px-2 py-2">
+            <p className="text-[18px] font-[650] tabular-nums">{n}</p>
+            <p className="text-[11px] leading-tight text-white/60">{l}</p>
+          </div>
+        ))}
+      </div>
+      {live.length ? (
+        <ul className="mt-3 flex flex-col divide-y divide-white/[0.06]">
+          {live.slice(0, 4).map((k) => (
+            <li key={k._id} className="flex items-center gap-2.5 py-2 text-[13px]">
+              <KeyRound aria-hidden className="size-3.5 shrink-0 text-white/50" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{k.name}</p>
+                <p className="truncate text-[11px] text-white/55">
+                  {k.lastUsedAt ? copy.keyUsed(timeAgo(k.lastUsedAt)) : copy.keyNeverUsed}
+                  {k.expiresAt ? ` · ${copy.keyExpires(new Date(k.expiresAt))}` : ""}
+                </p>
+              </div>
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", k.scope === "write" ? "bg-[#F59E0B]/20 text-[#F59E0B]" : "bg-white/10 text-white/70")}>
+                {k.scope === "write" ? copy.scopeWrite : copy.scopeRead}
+              </span>
+              <span className="w-12 text-right leading-tight" title={copy.keyCallsTitle}>
+                <span className="block text-[13px] font-semibold tabular-nums">{(byKey.get(k._id) ?? 0).toLocaleString()}</span>
+                <span className="block text-[10px] text-white/50">{copy.calls}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-[13px] text-white/60">
+          {copy.mcpNone}.{" "}
+          <Link href="/settings#keys" className="font-semibold text-[#6BC34E] hover:underline">
+            {copy.keysCreate}
+          </Link>
+        </p>
+      )}
+    </ChartCard>
+  );
+}
+
 /** Home: your feeds, reading, posts, accounts and tools at a glance, live. */
 export function Overview() {
   const minute = useMinute();
@@ -131,6 +266,7 @@ export function Overview() {
   const accounts = useQuery(api.social.list, {});
   const usage = useQuery(api.usage.today, {});
   const keys = useQuery(api.apiKeys.list, {});
+  const activity = useQuery(api.dashboard.activity, { now: minute });
   const storedHidden = useSyncExternalStore(
     noSubscribe,
     () => {
@@ -164,8 +300,7 @@ export function Overview() {
         ["ask", copy.toolAsk, BookOpen],
       ] as const).map(([k, label, Icon]) => ({ k, label, Icon, ...(usage as Record<string, { used: number; limit: number }>)[k] }))
     : [];
-  const activeKeys = (keys ?? []).filter((k) => !k.revokedAt);
-  const lastKeyUse = activeKeys.reduce((m, k) => Math.max(m, k.lastUsedAt ?? 0), 0);
+  const labels = activity?.days.map(dayLabel) ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -237,8 +372,8 @@ export function Overview() {
       {/* Live numbers */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label={copy.statUnread} value={o.feeds.unread} href="/crypt" hint={copy.statFeeds(o.feeds.total)} />
-        <Stat label={copy.statRisen} value={o.risenToday} href="/graveyard" hint={o.risenToday ? copy.statRisenHint : undefined} tone={o.risenToday ? "ok" : undefined} />
-        <Stat label={copy.statPosted} value={o.posts.posted30d} href="/calendar" hint={copy.statPostedHint} />
+        <Stat label={copy.statRisen} value={o.risenToday} href="/graveyard" hint={o.risenToday ? copy.statRisenHint : undefined} tone={o.risenToday ? "ok" : undefined} trend={activity?.risen} color={CHART_COLORS.green} />
+        <Stat label={copy.statPosted} value={o.posts.posted30d} href="/calendar" hint={copy.statPostedHint} trend={activity?.posted} color={CHART_COLORS.blue} />
         <Stat
           label={copy.statScheduled}
           value={o.posts.scheduled}
@@ -246,6 +381,11 @@ export function Overview() {
           tone={o.posts.due ? "warn" : undefined}
           hint={o.posts.due ? copy.statDue(o.posts.due) : undefined}
         />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <ActivityPanel activity={activity} labels={labels} />
+        <KeysCard keys={keys} activity={activity} now={minute} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -333,14 +473,6 @@ export function Overview() {
                   </div>
                 </li>
               ))}
-              <li className="flex items-center justify-between border-t border-line pt-3 text-meta">
-                <span className="flex items-center gap-1.5 font-semibold text-ink">
-                  <KeyRound aria-hidden className="size-3.5 text-ecto-ink" /> {copy.mcp}
-                </span>
-                <span className="text-subtle">
-                  {activeKeys.length ? copy.mcpKeys(activeKeys.length, lastKeyUse ? new Date(lastKeyUse) : null) : copy.mcpNone}
-                </span>
-              </li>
             </ul>
           </Card>
         </div>
