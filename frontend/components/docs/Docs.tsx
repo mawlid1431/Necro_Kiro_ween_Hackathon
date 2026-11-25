@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Bot, Check, Copy, Eye, KeyRound, LifeBuoy, LogIn, MessageSquareText, PenLine, ShieldCheck, Terminal, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { docs as copy, docsAgentPrompt, docsClients } from "@/lib/copy";
+import { docs as copy, docsAgentPrompt, docsClients, MCP_URL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
-const FALLBACK_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://necro.malitos.tech";
-const noSubscribe = () => () => {};
-
-/** This site's MCP endpoint: the real origin in the browser, the configured app URL while prerendering. */
-function useEndpoint() {
-  const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => FALLBACK_ORIGIN);
-  return `${origin.replace(/\/$/, "")}/api/mcp`;
-}
 
 function CopyButton({ text, label = copy.copy, className }: { text: string; label?: string; className?: string }) {
   const [state, setState] = useState<"idle" | "done" | "failed">("idle");
@@ -78,7 +70,7 @@ const card = "rounded-2xl border border-line bg-surface p-5 shadow-[var(--card-s
 
 /** Public docs: how to connect Kiro, Claude, Cursor, ChatGPT and other MCP clients to Necro. */
 export function Docs() {
-  const url = useEndpoint();
+  const url = MCP_URL;
   const clients = docsClients(url);
   const [active, setActive] = useState(clients[0].id);
   const client = clients.find((c) => c.id === active) ?? clients[0];

@@ -6,7 +6,7 @@ import { Copy, Plug } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Notice } from "@/components/ui/field";
-import { settings as copy } from "@/lib/copy";
+import { settings as copy, MCP_URL } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ export function ConnectedApps() {
   const now = useMinute();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const url = `${typeof window === "undefined" ? "https://YOUR-APP" : window.location.origin}/api/mcp`;
+  const url = MCP_URL;
 
   async function copyUrl() {
     try {

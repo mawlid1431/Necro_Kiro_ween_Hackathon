@@ -6,7 +6,12 @@ export const site = {
   tagline: "RSS, resurrected with AI.",
   description:
     "Necro brings your feeds back from the dead: a calm reader, AI summaries, and social drafts in your voice.",
+  /** The live site. MCP setup snippets always point here, even when the page is opened on localhost or a preview. */
+  url: "https://necro.malitos.tech",
 } as const;
+
+/** The live MCP endpoint shown in Docs and Settings. */
+export const MCP_URL = `${site.url}/api/mcp`;
 
 export const labels = {
   summon: { themed: "Summon feed", plain: "Add a feed" },
@@ -909,7 +914,7 @@ export const learning = {
   resetBody: "Necro starts again from your next action. Your articles, stars and posts are not deleted.",
 } as const;
 
-// Docs: connecting an AI assistant to Necro over MCP. `url` is the live MCP endpoint (this site's origin + /api/mcp).
+// Docs: connecting an AI assistant to Necro over MCP. `url` is the live MCP endpoint (MCP_URL).
 export const docs = {
   navLabel: "Docs",
   overline: "Docs · MCP",

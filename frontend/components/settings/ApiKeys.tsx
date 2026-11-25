@@ -6,7 +6,7 @@ import { Copy, Eye, KeyRound, PenLine, Trash2 } from "lucide-react";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
-import { settings as copy } from "@/lib/copy";
+import { MCP_URL, settings as copy } from "@/lib/copy";
 import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { cn } from "@/lib/utils";
@@ -36,13 +36,12 @@ export function ApiKeys() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const origin = typeof window === "undefined" ? "https://YOUR-APP" : window.location.origin;
   const config = JSON.stringify(
     {
       mcpServers: {
         necro: {
           command: "npx",
-          args: ["-y", "mcp-remote", `${origin}/api/mcp`, "--header", "Authorization: Bearer ${NECRO_API_KEY}"],
+          args: ["-y", "mcp-remote", MCP_URL, "--header", "Authorization: Bearer ${NECRO_API_KEY}"],
           env: { NECRO_API_KEY: fresh ?? "necro_sk_..." },
         },
       },

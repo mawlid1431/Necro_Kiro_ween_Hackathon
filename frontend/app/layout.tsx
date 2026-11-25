@@ -8,7 +8,7 @@ import { cinzel, jakarta } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? site.url),
   title: { default: `${site.name}: ${site.tagline}`, template: `%s · ${site.name}` },
   description: site.description,
   manifest: "/site.webmanifest",
