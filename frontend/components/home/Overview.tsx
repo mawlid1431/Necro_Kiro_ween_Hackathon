@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useQueries, useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, BookOpen, CalendarClock, Check, Circle, Clock, KeyRound, Plus, Rss, Send, Sparkles, X } from "lucide-react";
@@ -267,7 +267,9 @@ export function Overview() {
   const usage = useQuery(api.usage.today, {});
   const keys = useQuery(api.apiKeys.list, {});
   // useQueries hands back an Error instead of throwing, so if the chart data fails the rest of the dashboard still shows.
-  const charts = useQueries({ activity: { query: api.dashboard.activity, args: { now: minute } } }).activity as Activity | null | undefined | Error;
+  // The queries object must be memoized: useQueries subscribes per object identity, so a new object each render loops forever.
+  const chartQueries = useMemo(() => ({ activity: { query: api.dashboard.activity, args: { now: minute } } }), [minute]);
+  const charts = useQueries(chartQueries).activity as Activity | null | undefined | Error;
   if (charts instanceof Error) console.error("Dashboard charts failed to load", charts);
   const activity = charts instanceof Error ? null : charts;
   const storedHidden = useSyncExternalStore(
