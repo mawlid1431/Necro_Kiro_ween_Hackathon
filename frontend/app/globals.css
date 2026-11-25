@@ -160,6 +160,7 @@
   --input: var(--color-line);
   --ring: var(--color-ecto-dim);
   --radius: 10px;
+  --fog-mist: color-mix(in srgb, var(--color-bone) 70%, transparent);
   /* Charts */
   --chart-grid: rgb(13 10 20 / 0.08);
   --chart-label: #6b6480;
@@ -182,6 +183,8 @@
   --color-ecto-ink: #7cf29a;
   --color-highlight: #f5a524;
   --color-danger: #ff6b70;
+  --color-violet-haze: rgb(124 90 180 / 0.16);
+  --fog-mist: rgb(124 90 180 / 0.1);
   --chart-grid: rgb(255 255 255 / 0.08);
   --chart-label: #a9a1bb;
   --chart-cursor: rgb(255 255 255 / 0.22);

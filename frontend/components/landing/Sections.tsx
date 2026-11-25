@@ -98,7 +98,7 @@ export function FinalCta() {
   return (
     <section className="pb-20 sm:pb-28">
       <Container>
-        <div className="flex flex-col items-center gap-5 rounded-[2rem] border border-line bg-gradient-to-br from-ecto/30 via-bone to-violet-haze px-6 py-12 text-center sm:py-16">
+        <div className="flex flex-col items-center gap-5 rounded-[2rem] border border-line bg-gradient-to-br from-ecto/30 via-surface-muted to-violet-haze px-6 py-12 text-center sm:py-16">
           <h2 className="max-w-2xl font-display text-[1.75rem] leading-9 font-bold text-balance sm:text-h1">{landing.final.title}</h2>
           <p className="max-w-xl text-copy">{landing.final.body}</p>
           <Button asChild size="lg">

@@ -11,9 +11,9 @@ const screens: Record<string, ReactNode> = {
 };
 
 const panels = [
-  "from-ecto/35 via-bone to-violet-haze",
-  "from-violet-haze via-bone to-ecto/30",
-  "from-candle/25 via-bone to-ecto/25",
+  "from-ecto/35 via-surface-muted to-violet-haze",
+  "from-violet-haze via-surface-muted to-ecto/30",
+  "from-candle/25 via-surface-muted to-ecto/25",
 ];
 
 /** "See it in action": each step of the loop, a short promise and the real screen on a phone. */
