@@ -511,7 +511,7 @@ Check the chains with `bunx convex run aiNode:healthCheck`, and the breakers, Gh
 
 ## 6. Database
 
-Convex, 27 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour, and `follows`, `sharedPosts` for the Circle). Every table except `users`, `follows`, `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it; `follows` is indexed from both sides (`followerId`, `followeeId`). The learning memory lives on the user row (`users.learned`, `learningOff`, `learnedResetAt`).
+Convex, 31 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour, and `follows`, `sharedPosts` for the Circle). Every table except `users`, `follows`, `mcpClients` (apps, shared by everyone who connects them), `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it; `follows` is indexed from both sides (`followerId`, `followeeId`). The learning memory lives on the user row (`users.learned`, `learningOff`, `learnedResetAt`).
 
 ```mermaid
 erDiagram
@@ -640,12 +640,15 @@ erDiagram
 | `uploads` | Images uploaded in the composer (owner-checked) | by_user, by_storage |
 | `apiKeys` | MCP keys (hashed), scope, expiry, last use | by_user, by_hash, by_user_revoked |
 | `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
+| `mcpClients` | OAuth apps that connect over MCP (ChatGPT, Claude): metadata-document or self-registered clients | by_client_id, by_fingerprint, by_kind_created |
+| `mcpCodes` | Single-use OAuth authorization codes (hashed, PKCE, short-lived) | by_hash, by_user, by_expires |
+| `mcpGrants` | "Sign in with Necro" connections: scope, expiry, hashed access and rotating refresh tokens | by_user, by_user_client, by_client, by_expires, by_revoked, by_access, by_refresh, by_prev_refresh |
 | `aiUsage` | Daily AI quota rows | by_user_day_task |
 | `rateLimits` | Fixed-window counters (summons, MCP, provider budgets) | by_key, by_windowStart |
 | `providerHealth` | Circuit breaker per AI provider | by_provider |
 | `briefings` | Morning Séance (planned) | by_user_day |
 | `voiceSessions` | Voice agent minutes (planned) | by_user_day |
-| `demoCache` | Cached AI answers for a demo account | by_key |
+| `demoCache` | Reserved for cached demo-account AI answers; not read or written yet | by_key |
 <!-- data-model:end -->
 
 ---
