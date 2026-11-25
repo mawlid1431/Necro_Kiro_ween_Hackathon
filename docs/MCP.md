@@ -6,6 +6,9 @@ designed with it.
 
 - **Endpoint:** `POST https://necro.malitos.tech/api/mcp` (Streamable HTTP, stateless, JSON responses)
 - **Auth:** `Authorization: Bearer necro_sk_...`, a personal key created in **Settings → MCP keys**
+- **User guide:** [necro.malitos.tech/docs](https://necro.malitos.tech/docs), step by step for Kiro, Claude Code, Claude,
+  Cursor, ChatGPT and VS Code, with copyable configs and a prompt that lets a coding agent set itself up
+- **Keys:** revoke any time; a revoked key can then be deleted for good (with its usage counts) in Settings → MCP keys
 - **Limits:** 60 requests a minute per key; up to 10 posts an hour per key; Séance, Ask and Summon also count against
   the app's daily limits
 

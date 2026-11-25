@@ -93,9 +93,12 @@ Each folder keeps its own `node_modules` on purpose. Vercel builds `frontend/`, 
 ├─ frontend/                Next.js 16 app (Vercel)
 │  ├─ app/
 │  │  ├─ page.tsx           Landing (hero, how it works, showcase, who it's for, FAQ)
+│  │  ├─ docs/              Public Docs: connect Kiro, Claude, Cursor, ChatGPT, VS Code (copyable configs + agent prompt)
+│  │  ├─ privacy/ terms/    Legal pages
+│  │  ├─ robots.ts · sitemap.ts  Public pages indexed; the signed-in app, APIs and OAuth are not
 │  │  ├─ sign-in/ sign-up/  Clerk
 │  │  ├─ (app)/             Signed-in area: auth.protect() + UserGate (layout sets `instant = false`)
-│  │  │  ├─ dashboard/      Home: live overview, where sign-in lands
+│  │  │  ├─ dashboard/      Home: live overview, 14-day activity chart, MCP keys & usage; where sign-in lands
 │  │  │  ├─ graveyard/      Feeds as tombstones, Summon dialog, Broken feeds tab (Feed Doctor)
 │  │  │  ├─ discover/       Shared feed collections (Covens)
 │  │  │  ├─ crypt/          Reader: list (topic filter, thumbnails), article, Séance, Resurrect
@@ -103,10 +106,10 @@ Each folder keeps its own `node_modules` on purpose. Vercel builds `frontend/`, 
 │  │  │  ├─ omens/          Topic alerts and the weekly newsletter (Grimoire)
 │  │  │  ├─ calendar/       Witching Hour: calendar, composer
 │  │  │  ├─ connectors/     OAuth callbacks for connected accounts
-│  │  │  └─ settings/       Interests, voice, public profile, "What Necro learned", MCP keys, usage
+│  │  │  └─ settings/       Interests, voice, public profile, "What Necro learned", MCP keys (revoke, delete), usage
 │  │  └─ api/mcp/           MCP server (route.ts + tools.ts)
-│  ├─ components/           brand · layout · landing · graveyard · crypt · circle · calendar · settings · ui (incl. model-badge) · providers
-│  └─ lib/                  copy.ts (all UI text) · motion.ts · errors.ts · server/convex.ts
+│  ├─ components/           brand · layout (incl. ThemeToggle) · landing · docs · home (Overview, Charts) · graveyard · crypt · circle · calendar · settings · ui · providers
+│  └─ lib/                  copy.ts (all UI text, site.url, MCP_URL) · utils.ts (cn with the brand type scale) · motion.ts · errors.ts · server/convex.ts
 ├─ backend/                 Convex: the only backend
 │  ├─ convex/               schema, queries, mutations, actions, crons (see §7)
 │  │  ├─ circle.ts          follows, shared posts, profiles (the Circle)
@@ -333,7 +336,7 @@ sequenceDiagram
   CL->>R: POST JSON-RPC + Authorization: Bearer necro_sk_...
   R->>R: key format check · sha256(key)
   R->>CX: mcp.authenticate({ hash, secret: MCP_SERVER_SECRET })
-  CX->>CX: secret check · key lookup by hash · not revoked · 60 calls/min · lastUsedAt
+  CX->>CX: secret check · key lookup by hash · not revoked or expired · 60 calls/min · lastUsedAt · +1 in mcpUsage (key, UTC day)
   alt bad or revoked key / rate limited
     CX-->>R: { ok: false, status: 401 | 429 }
     R-->>CL: 401 + WWW-Authenticate  /  429 + retry-after
@@ -348,7 +351,11 @@ sequenceDiagram
   end
 ```
 
-Tools: `list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `add_grave` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens`. The full table and client setup are in [`docs/MCP.md`](docs/MCP.md).
+Tools: 13 read (`list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 3 write for read-and-write access (`add_grave` · `create_post` · `cancel_post`). The full table is in [`docs/MCP.md`](docs/MCP.md).
+
+**Connecting a client** is documented for users on the public **Docs** page (`/docs`): personal key for Kiro, Claude Code, Cursor and VS Code; "Sign in with Necro" (OAuth) for ChatGPT and Claude. Every snippet, plus a prompt users paste into their coding agent so it sets the connection up itself, uses the live endpoint `https://necro.malitos.tech/api/mcp` (`MCP_URL` in `frontend/lib/copy.ts`), never the address the page happens to be opened on.
+
+**MCP keys in Settings:** create (shown once), revoke, and **delete** a revoked key for good (`apiKeys.remove`, which also deletes its usage rows; an active key must be revoked first).
 
 ### 4.7 Feed Doctor
 
@@ -399,7 +406,10 @@ flowchart LR
 
 ### 4.9 Witching Hour, Home and "one post, once"
 
-- **Home** (`/dashboard`, where sign-in lands; the logo always goes to the landing page `/`): a live overview of your feeds, unread and risen posts, your posts (up next and recent), connected accounts, AI tools used today and MCP keys, with a getting-started checklist and alerts that link to where you fix things (`backend/convex/dashboard.ts`).
+- **Home** (`/dashboard`, where sign-in lands; the logo always goes to the landing page `/`): a live overview of your feeds, unread and risen posts, your posts (up next and recent), connected accounts and AI tools used today, with a getting-started checklist and alerts that link to where you fix things (`backend/convex/dashboard.ts`).
+  - **Activity chart:** one metric at a time (New articles · AI tools used · Posts sent · MCP calls), the 14-day total, the change against the week before and a smooth line (`dashboard.activity`, UTC days). It reads only small rows (`kindredIndex`, `publishes`, `aiUsage`, `mcpUsage`), never article HTML, so big accounts stay under Convex's per-query read limit. If it ever fails, the rest of Home still renders (`useQueries` returns the error instead of throwing).
+  - **MCP keys & usage:** calls per day, active / can-post / revoked-or-expired counts, and each active key with scope, last use, expiry and its calls in 14 days. Calls through OAuth connections (ChatGPT, Claude) are not counted yet.
+  - **Charts** are dependency-free SVG (`frontend/components/home/Charts.tsx`): monotone curves that never overshoot, a soft fill, round axis steps, a crosshair tooltip and a short draw-in that respects reduced motion.
 - **Witching Hour** (`/calendar`): a month calendar and live timeline of every post. **Schedule for later** from Resurrect, or **New post** to upload your own JPG/PNG (Convex storage), write a caption or press **Write with AI** (a vision model looks at the image and writes in your saved voice), pick accounts, and post now or at a time. Connected accounts post on their own at that time (Convex scheduler); the others, and TikTok always, become **reminders**: the card turns due, the nav shows a badge, the browser notifies you, and **Share now** opens the share sheet with the image (`backend/convex/social.ts`, `socialNode.ts`, `captionNode.ts`).
 - **One post, once.** Every post carries a content key (`backend/lib/social/dedupe.ts`): one per article per platform, or the same caption and image per platform. While a post with that key is going out, waiting or posted, the same post is refused, checked inside the same Convex transaction that creates it (so two clicks or two tabs cannot both pass) and again by the scheduled job before sending. Resurrect locks its buttons live when a platform already has the article. Cancelled and failed posts can be retried. A post stuck "posting" for 15 minutes is marked failed (never retried automatically: the platform may already have it).
 - **Real time.** Every screen reads Convex live queries: a post scheduled in one tab, a reminder coming due, a cancel or an article read appears everywhere at once, without a reload. Time windows on Home ("rose today", "last 30 days") follow the page's clock, refreshed every minute.
@@ -451,9 +461,11 @@ Older actions fade with a 30-day half-life. The profile keeps topic shares, recu
 
 ### 4.13 Navigation, landing page and screen sizes
 
-- **Nav:** Dashboard · Graveyard ▾ (Your feeds, Discover, Broken feeds) · Crypt · Circle · Omens ▾ (Topic alerts, Weekly newsletter) · Witching Hour ▾ (Calendar, New post, Connected accounts) · ⚙ Settings. Below 1024 px a hamburger menu opens a full-width sheet on phones and a panel on tablets, with 44 px rows, the current page highlighted and the background dimmed and locked.
-- **Landing (`/`):** a hero with a plain one-line explanation, How it works (3 steps), Showcase (3 phone mockups), Who it's for, FAQ and a final call to action.
-- **Screen sizes:** checked with no horizontal overflow on 8 pages at 13 widths from 320 px to 7680 px. The root font scales to 125% at 2560 px, 150% at 3520 px, 200% at 4800 px and 275% at 6720 px CSS width (`frontend/app/globals.css`), for QHD, 4K, 5K and 8K screens.
+- **Nav:** Dashboard · Graveyard ▾ (Your feeds, Discover, Broken feeds) · Crypt · Circle · Omens ▾ (Topic alerts, Weekly newsletter) · Witching Hour ▾ (Calendar, New post, Connected accounts) · Docs · ⚙ Settings · ☾ theme. Signed-out visitors see Docs, Sign in and Enter the graveyard. Below 1024 px a hamburger menu opens a full-width sheet on phones and a panel on tablets, with 44 px rows, the current page highlighted and the background dimmed and locked.
+- **Landing (`/`):** a hero with a plain one-line explanation, How it works (4 steps: follow, understand, share, bring your AI assistant), Showcase (3 phone mockups), Who it's for, FAQ (including MCP, AI posting and dark mode) and a final call to action.
+- **Light and dark mode:** light is the default; the moon/sun button in the header switches it on every page, and the choice is kept in the browser (`localStorage` `necro.theme`), applied by a tiny script in `<head>` before first paint so there is no flash. All colours are semantic tokens in `frontend/app/globals.css`: `.dark` redefines them (deep page, clearly lighter cards, WCAG AA text), and Clerk, charts, the logo (official dark files) and the background fog follow. Text on the bright green always uses `text-on-ecto`.
+- **Class merging:** `cn` (`frontend/lib/utils.ts`) is told the brand type scale (`text-meta`, `text-body`, …); without it a size class would cancel the text colour next to it.
+- **Screen sizes:** checked with no horizontal overflow on 8 pages at 13 widths from 320 px to 7680 px. The whole UI is set 10% smaller than the browser default (root font 90%), and scales to 112.5% at 2560 px, 135% at 3520 px, 180% at 4800 px and 247.5% at 6720 px CSS width (`frontend/app/globals.css`), for QHD, 4K, 5K and 8K screens.
 - **Real time, checked in a browser:** a new post by someone you follow appears at the top of Following without a reload; starring 3 articles in one tab updated "What Necro learned" in another; a topic change updated the Crypt list live.
 
 ## 5. AI models and providers
@@ -626,7 +638,8 @@ erDiagram
 | `oauthStates` | Single-use OAuth state + PKCE verifier (15 min) | by_state, by_user |
 | `publishes` | Every post, scheduled post and reminder with its live status and content key | by_user, by_user_key, by_user_at, by_user_status, by_status_since, by_item |
 | `uploads` | Images uploaded in the composer (owner-checked) | by_user, by_storage |
-| `apiKeys` | MCP keys (hashed) | by_user, by_hash |
+| `apiKeys` | MCP keys (hashed), scope, expiry, last use | by_user, by_hash, by_user_revoked |
+| `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
 | `aiUsage` | Daily AI quota rows | by_user_day_task |
 | `rateLimits` | Fixed-window counters (summons, MCP, provider budgets) | by_key, by_windowStart |
 | `providerHealth` | Circuit breaker per AI provider | by_provider |
@@ -689,6 +702,9 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | `doctorNode.explain` | action | `{ graveId }` | `{ note }` |
 | `apiKeys.create` | action | `{ name }` | `{ key, prefix }` (the raw key, shown once) |
 | `apiKeys.list` / `revoke` | query / mutation | none / `{ keyId }` | keys without hashes / `null` |
+| `apiKeys.remove` | mutation | `{ keyId }` | `null`; deletes a **revoked** key and its usage rows (active key → `INVALID_INPUT`) |
+| `dashboard.overview` | query | `{ now? }` | feeds, posts, read-next, checklist for Home |
+| `dashboard.activity` | query | `{ now? }` | `{ days[14], risen[], posted[], ai[], mcp[], mcpByKey[] }` |
 | `usage.today` | query | none | `{ seance, resurrect, doctor, ask, voiceMinutes: { used, limit } }` |
 
 `ItemCard` = `{ _id, graveId, graveTitle, title, link, author, publishedAt, excerpt, isRead, isStarred, score, risenAt }`. Lists never include `contentHtml`.
@@ -759,6 +775,8 @@ These are the public Convex functions the UI calls (`api.<module>.<function>`). 
 | `SOCIAL_TOKEN_KEY` | backend | **yes** | 32 random bytes (base64): seals connected-account tokens |
 | `POST_IMAGE_SECRET` | both (same value) | **yes** | Signs the post-image links Instagram and TikTok fetch |
 | `LINKEDIN_CLIENT_ID/SECRET`, `X_CLIENT_ID/SECRET`, `INSTAGRAM_APP_ID/SECRET`, `TIKTOK_CLIENT_KEY/SECRET` | backend | **yes** | Connectors app keys (each optional; unset = Coming soon) |
+
+`NEXT_PUBLIC_APP_URL` (frontend) is only used for page metadata in development and previews; production always uses `https://necro.malitos.tech` (`site.url`), so link previews can't point at localhost.
 
 `bun run env:push` (in `backend/`) pushes the backend set to the dev deployment. Add `-- --prod` for production. When deploying the frontend to Vercel, set the frontend variables in the Vercel project.
 
