@@ -31,6 +31,9 @@ export function LegalFooter() {
       <Container className="flex flex-col items-center justify-between gap-2 text-meta text-subtle sm:flex-row">
         <span>{site.tagline}</span>
         <span className="flex items-center gap-4">
+          <Link href="/docs" className="hover:text-ink">
+            Docs
+          </Link>
           <Link href="/privacy" className="hover:text-ink">
             Privacy
           </Link>

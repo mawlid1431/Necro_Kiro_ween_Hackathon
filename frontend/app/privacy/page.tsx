@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="November 22, 2026">
+    <LegalPage title="Privacy Policy" updated="November 25, 2026">
       <p>
         Necro (necro.malitos.tech) is an RSS reader that summarises articles with AI and helps you share them. It is made
         by Mowlid Haibe and Arsikin Samaeng of <a href="https://barkulanhub.com">Barkulanhub</a>. This page explains
@@ -20,7 +20,12 @@ export default function PrivacyPage() {
         <li><strong>Your account:</strong> your name, email address and profile picture from the sign-in provider (Clerk).</li>
         <li><strong>Your reading:</strong> the feeds you add, the articles fetched from them, what you read or star, your interests and settings.</li>
         <li><strong>AI results:</strong> article summaries and scores (Séance), the social-post drafts you create (Resurrect) and your writing-voice profile if you set one.</li>
-        <li><strong>MCP keys:</strong> stored only as a one-way hash; we cannot show them again.</li>
+        <li><strong>MCP keys:</strong> stored only as a one-way hash, so we cannot show them again. For each key we also keep its name, access level, expiry, when it was last used and how many calls it made each day (shown on your dashboard).</li>
+        <li>
+          <strong>Connected apps</strong> (for example ChatGPT or Claude, if you sign in to them with Necro): the app&apos;s
+          name and address, the access you chose, expiry and last use. Their tokens are stored only as one-way hashes.
+        </li>
+        <li><strong>Posts made by an AI assistant</strong> are marked as such, with the key or connection that made them, so you can always see who posted what.</li>
         <li>
           <strong>Connected social accounts</strong> (LinkedIn, X, Instagram, TikTok), only if you connect them: the account
           id, name and picture, and the access tokens the platform gives us, which are stored encrypted (AES-256-GCM) and
@@ -32,9 +37,11 @@ export default function PrivacyPage() {
       <ul>
         <li>To run the reader: fetch your feeds, show new articles and keep your read state.</li>
         <li>To create the AI summaries, answers and drafts you ask for.</li>
+        <li>To answer your AI assistant over MCP, only with the access you granted (read only, or read and write) and only while that key or connection is active.</li>
         <li>
-          To post to a connected social account <strong>only when you press Post now</strong>, with the text and image
-          you see in the preview. Necro never reads your social feed, messages or contacts, and never posts on its own.
+          To post to a connected social account <strong>only when you ask</strong>: when you press Post now, when a post
+          you scheduled is due, or when you approve a post your AI assistant prepared. Necro never reads your social feed,
+          messages or contacts, and never posts on its own.
         </li>
       </ul>
 
@@ -50,6 +57,11 @@ export default function PrivacyPage() {
           <strong>LinkedIn, X, Instagram and TikTok</strong> receive the post you publish, through their official APIs,
           under their own privacy policies.
         </li>
+        <li>
+          <strong>Your AI assistant&apos;s provider</strong> (for example Kiro, Anthropic, OpenAI or Cursor) receives what
+          your assistant reads from Necro once you connect it, under that provider&apos;s own privacy policy. Necro sends
+          nothing to them until you create a key or approve a connection.
+        </li>
       </ul>
 
       <h2>How long we keep it</h2>
@@ -58,14 +70,18 @@ export default function PrivacyPage() {
         <li>Disconnecting a social account deletes its stored tokens straight away. You can also remove Necro&apos;s access in that platform&apos;s own settings.</li>
         <li>
           <strong>Deleting your account</strong> (Settings → Your data) deletes everything you own in Necro: feeds,
-          articles, summaries, drafts, voice profile, keys and connected accounts.
+          articles, summaries, drafts, voice profile, keys and their usage counts, connected apps and connected accounts.
         </li>
+        <li>Deleting a revoked MCP key (Settings → MCP keys) removes it and its usage counts for good.</li>
       </ul>
 
       <h2>Your choices</h2>
       <ul>
-        <li>Export your feeds as OPML at any time, turn on Private mode, revoke MCP keys, disconnect social accounts, or delete your account.</li>
-        <li>Necro uses only the cookies needed to keep you signed in. No advertising or tracking cookies.</li>
+        <li>Export your feeds as OPML at any time, turn on Private mode, revoke or delete MCP keys, disconnect apps and social accounts, or delete your account.</li>
+        <li>
+          Necro uses only the cookies needed to keep you signed in. Small preferences, such as light or dark mode, are
+          kept in your own browser&apos;s storage and never sent to us. No advertising or tracking cookies.
+        </li>
       </ul>
 
       <h2>Contact</h2>

@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, GraduationCap, Megaphone, Rocket, Rss, Send, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, GraduationCap, Megaphone, Rocket, Rss, Send, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
 import { labels, landing } from "@/lib/copy";
 
 // Landing sections in plain words: how it works, who it is for, honest answers, one clear next step.
 
-const stepIcons = [Rss, Sparkles, Send];
+const stepIcons = [Rss, Sparkles, Send, Bot];
 
-/** How it works: three numbered steps a first-time visitor understands in seconds. */
+/** How it works: four numbered steps a first-time visitor understands in seconds. */
 export function HowItWorks() {
   return (
     <section id="how" aria-labelledby="how-title" className="scroll-mt-20 pb-20 sm:pb-28">
@@ -19,11 +19,11 @@ export function HowItWorks() {
             {landing.how.title}
           </h2>
         </div>
-        <ol className="grid gap-4 sm:gap-6 md:grid-cols-3">
+        <ol className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
           {landing.how.steps.map((s, i) => {
             const Icon = stepIcons[i];
             return (
-              <li key={s.key} className="relative rounded-2xl border border-line bg-surface p-6 lg:p-8">
+              <li key={s.key} className="relative rounded-2xl border border-line bg-surface p-6 shadow-[var(--card-shadow)]">
                 <div className="flex items-center gap-3">
                   <span className="grid size-9 place-items-center rounded-full bg-ecto font-display text-body font-bold text-on-ecto">{i + 1}</span>
                   <Icon aria-hidden className="size-5 text-ecto-ink" strokeWidth={1.75} />
@@ -33,6 +33,11 @@ export function HowItWorks() {
                   {labels[s.key].themed} · {labels[s.key].plain}
                 </p>
                 <p className="mt-3 text-copy">{s.body}</p>
+                {s.key === "mcp" ? (
+                  <Link href="/docs" className="mt-3 inline-flex items-center gap-1 text-meta font-semibold text-ecto-ink hover:underline">
+                    {landing.how.docsLink} <ArrowRight aria-hidden className="size-3.5" />
+                  </Link>
+                ) : null}
               </li>
             );
           })}

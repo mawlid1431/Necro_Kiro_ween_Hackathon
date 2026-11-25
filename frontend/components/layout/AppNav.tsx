@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ChevronDown,
   Compass,
+  FileText,
   LayoutDashboard,
   Link2,
   Mail,
@@ -70,6 +71,7 @@ const ITEMS: Item[] = [
       { href: "/settings#connections", label: nav.menuAccounts, hint: nav.menuAccountsHint, icon: Link2 },
     ],
   },
+  { key: "docs", label: nav.docs, href: "/docs", icon: FileText },
 ];
 
 /** Which top item owns the current page (Discover belongs to the Graveyard; Settings is the gear). */
@@ -80,6 +82,7 @@ function activeKey(path: string): string | null {
   if (path.startsWith("/graveyard") || path.startsWith("/discover")) return "graveyard";
   if (path.startsWith("/omens")) return "omens";
   if (path.startsWith("/calendar")) return "calendar";
+  if (path.startsWith("/docs")) return "docs";
   return null;
 }
 

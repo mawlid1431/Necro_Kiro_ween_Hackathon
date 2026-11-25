@@ -196,31 +196,34 @@
   * {
     @apply border-border;
   }
+  /* The whole UI is set 10% smaller than the browser default (owner decision, Nov 25 2026): every size is in rem,
+     so this one value scales text, spacing and cards together. The large-screen steps below keep the same 0.9 ratio. */
   html {
     @apply font-sans;
+    font-size: 90%;
     -webkit-text-size-adjust: 100%;
   }
   /* Every size token is in rem, so scaling the root keeps the whole UI
      legible on large high-resolution displays (QHD 27-32" and 4K). */
   @media (min-width: 160rem) {
     html {
-      font-size: 125%;
+      font-size: 112.5%;
     }
   }
   @media (min-width: 220rem) {
     html {
-      font-size: 150%;
+      font-size: 135%;
     }
   }
   /* 5K and 8K panels shown at 100% scaling (about 5120 to 7680 CSS px wide). */
   @media (min-width: 300rem) {
     html {
-      font-size: 200%;
+      font-size: 180%;
     }
   }
   @media (min-width: 420rem) {
     html {
-      font-size: 275%;
+      font-size: 247.5%;
     }
   }
   body {

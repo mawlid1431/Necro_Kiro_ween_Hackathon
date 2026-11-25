@@ -21,8 +21,8 @@ export function ChartCard({ title, description, action, children, className }: {
     >
       <div className="mb-3.5 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="m-0 font-sans text-[16px] leading-[1.15] font-[650] tracking-[-0.02em] text-ink">{title}</h2>
-          {description ? <p className="mt-[5px] text-[13px] leading-[1.35] text-subtle">{description}</p> : null}
+          <h2 className="m-0 font-sans text[1rem] leading-[1.15] font-[650] tracking-[-0.02em] text-ink">{title}</h2>
+          {description ? <p className="mt[0.3125rem] text[0.8125rem] leading-[1.35] text-subtle">{description}</p> : null}
         </div>
         {action}
       </div>
@@ -107,7 +107,7 @@ function Legend({ series, hidden, onToggle }: { series: Series[]; hidden: Set<st
             type="button"
             onClick={() => onToggle(s.key)}
             aria-pressed={!hidden.has(s.key)}
-            className={cn("flex items-center gap-1.5 text-[13px] font-medium text-copy transition-opacity hover:text-ink", hidden.has(s.key) && "opacity-40")}
+            className={cn("flex items-center gap-1.5 text[0.8125rem] font-medium text-copy transition-opacity hover:text-ink", hidden.has(s.key) && "opacity-40")}
           >
             <span className="size-2.5 rounded-full" style={{ background: s.color }} aria-hidden />
             {s.label}
@@ -168,14 +168,14 @@ export function LineChart({ labels, series, height = 240, format = String, legen
             {ticks.map((t) => (
               <g key={t}>
                 <line x1={pad.l} x2={width - pad.r} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" strokeDasharray={t === 0 ? undefined : "3 5"} />
-                <text x={pad.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize={11} fill="var(--chart-label)" className="tabular-nums">
+                <text x={pad.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="0.75rem" fill="var(--chart-label)" className="tabular-nums">
                   {format(Math.round(t))}
                 </text>
               </g>
             ))}
             {labels.map((l, i) =>
               showTick(i, step, labels.length) ? (
-                <text key={i} x={x(i)} y={height - 6} textAnchor={i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--chart-label)">
+                <text key={i} x={x(i)} y={height - 6} textAnchor={i === labels.length - 1 ? "end" : "middle"} fontSize="0.75rem" fill="var(--chart-label)">
                   {l}
                 </text>
               ) : null,
@@ -254,7 +254,7 @@ export function BarChart({ labels, series, height = 140, format = String, ariaLa
                   />
                 ) : null}
                 {showTick(i, step, labels.length) ? (
-                  <text x={i === 0 ? cx - bw / 2 : i === labels.length - 1 ? cx + bw / 2 : cx} y={height - 4} textAnchor={i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--chart-label)">
+                  <text x={i === 0 ? cx - bw / 2 : i === labels.length - 1 ? cx + bw / 2 : cx} y={height - 4} textAnchor={i === 0 ? "start" : i === labels.length - 1 ? "end" : "middle"} fontSize="0.75rem" fill="var(--chart-label)">
                     {labels[i]}
                   </text>
                 ) : null}
@@ -274,7 +274,7 @@ function Tooltip({ left, width, title, rows }: { left: number; width: number; ti
   const flip = left > width - 170;
   return (
     <div
-      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[12px] shadow-[var(--card-shadow-hover)] backdrop-blur"
+      className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-lg border border-line bg-surface/95 px-3 py-2 text[0.75rem] shadow-[var(--card-shadow-hover)] backdrop-blur"
       style={flip ? { right: width - left + 12 } : { left: left + 12 }}
     >
       <p className="mb-1 font-semibold text-ink">{title}</p>

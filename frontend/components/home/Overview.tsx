@@ -157,7 +157,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
             aria-selected={metric === x.key}
             onClick={() => setMetric(x.key)}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+              "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text[0.78125rem] font-medium transition-colors",
               metric === x.key ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-subtle hover:text-ink",
             )}
           >
@@ -167,11 +167,11 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
         ))}
       </div>
       <div className="mt-5 flex items-end gap-3">
-        <p className="text-[32px] leading-none font-[650] tracking-[-0.03em] tabular-nums">{activity ? total.toLocaleString() : "–"}</p>
+        <p className="text[2rem] leading-none font-[650] tracking-[-0.03em] tabular-nums">{activity ? total.toLocaleString() : "–"}</p>
         {activity ? (
           <span
             className={cn(
-              "mb-0.5 rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums",
+              "mb-0.5 rounded-full px-2 py-0.5 text[0.75rem] font-semibold tabular-nums",
               change > 0 ? "bg-ecto/20 text-ecto-ink" : change < 0 ? "bg-danger/10 text-danger" : "bg-surface-muted text-subtle",
             )}
           >
@@ -183,7 +183,7 @@ function ActivityPanel({ activity, labels }: { activity: Activity | null | undef
         {activity ? (
           <LineChart key={metric} ariaLabel={`${m.label}, ${copy.activityDesc}`} labels={labels} height={220} legend={false} series={[{ key: m.key, label: m.label, color: m.color, values }]} />
         ) : (
-          <div className="h-[220px] animate-pulse rounded-lg bg-surface-muted" />
+          <div className="h[13.75rem] animate-pulse rounded-lg bg-surface-muted" />
         )}
       </div>
     </ChartCard>
@@ -203,7 +203,7 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
       title={copy.keysTitle}
       description={copy.keysDesc(total)}
       action={
-        <Link href="/settings#keys" className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-ecto-ink hover:underline">
+        <Link href="/settings#keys" className="inline-flex shrink-0 items-center gap-1 text[0.75rem] font-semibold text-ecto-ink hover:underline">
           {copy.manage} <ArrowRight aria-hidden className="size-3.5" />
         </Link>
       }
@@ -211,7 +211,7 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
       {activity ? (
         <BarChart ariaLabel={copy.keysChartLabel} labels={activity.days.map(dayLabel)} series={[{ key: "mcp", label: copy.seriesMcp, color: CHART_COLORS.blue, values: calls }]} height={120} />
       ) : (
-        <div className="h-[120px] animate-pulse rounded-lg bg-surface-muted" />
+        <div className="h[7.5rem] animate-pulse rounded-lg bg-surface-muted" />
       )}
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         {([
@@ -220,35 +220,35 @@ function KeysCard({ keys, activity, now }: { keys: KeyRow[] | undefined; activit
           [copy.keysOff, off],
         ] as const).map(([l, n]) => (
           <div key={l} className="rounded-lg bg-surface-muted px-2 py-2">
-            <p className="text-[18px] font-[650] tabular-nums">{n}</p>
-            <p className="text-[11px] leading-tight text-subtle">{l}</p>
+            <p className="text[1.125rem] font-[650] tabular-nums">{n}</p>
+            <p className="text[0.6875rem] leading-tight text-subtle">{l}</p>
           </div>
         ))}
       </div>
       {live.length ? (
         <ul className="mt-3 flex flex-col divide-y divide-line">
           {live.slice(0, 4).map((k) => (
-            <li key={k._id} className="flex items-center gap-2.5 py-2 text-[13px]">
+            <li key={k._id} className="flex items-center gap-2.5 py-2 text[0.8125rem]">
               <KeyRound aria-hidden className="size-3.5 shrink-0 text-subtle" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{k.name}</p>
-                <p className="truncate text-[11px] text-subtle">
+                <p className="truncate text[0.6875rem] text-subtle">
                   {k.lastUsedAt ? copy.keyUsed(timeAgo(k.lastUsedAt)) : copy.keyNeverUsed}
                   {k.expiresAt ? ` · ${copy.keyExpires(new Date(k.expiresAt))}` : ""}
                 </p>
               </div>
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", k.scope === "write" ? "bg-candle/20 text-ink" : "bg-surface-muted text-subtle")}>
+              <span className={cn("rounded-full px-2 py-0.5 text[0.625rem] font-bold uppercase", k.scope === "write" ? "bg-candle/20 text-ink" : "bg-surface-muted text-subtle")}>
                 {k.scope === "write" ? copy.scopeWrite : copy.scopeRead}
               </span>
               <span className="w-12 text-right leading-tight" title={copy.keyCallsTitle}>
-                <span className="block text-[13px] font-semibold tabular-nums">{(byKey.get(k._id) ?? 0).toLocaleString()}</span>
-                <span className="block text-[10px] text-subtle">{copy.calls}</span>
+                <span className="block text[0.8125rem] font-semibold tabular-nums">{(byKey.get(k._id) ?? 0).toLocaleString()}</span>
+                <span className="block text[0.625rem] text-subtle">{copy.calls}</span>
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-[13px] text-subtle">
+        <p className="mt-4 text[0.8125rem] text-subtle">
           {copy.mcpNone}.{" "}
           <Link href="/settings#keys" className="font-semibold text-ecto-ink hover:underline">
             {copy.keysCreate}
