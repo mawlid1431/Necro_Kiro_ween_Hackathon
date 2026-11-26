@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseScheduleAt, zoned } from "../../lib/social/time";
 import { editableError, overallStatus } from "../../lib/social/postStatus";
 import { mcpWriteLimits } from "../../lib/limits";
+import { decodeBase64Image, imageDamage } from "../../lib/social/imageBytes";
 
 describe("time zones", () => {
   it("shows one instant in UTC and in Singapore time", () => {
@@ -60,5 +61,29 @@ describe("configurable MCP write limits", () => {
     process.env.MCP_POSTS_PER_DAY = "5";
     process.env.MCP_WRITE_CALLS_PER_HOUR = "nonsense";
     expect(mcpWriteLimits()).toEqual({ postsPerDay: 5, writeCallsPerHour: 60 });
+  });
+});
+
+describe("images damaged on the way (base64 typed out by a chat assistant)", () => {
+  const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const png = () => decodeBase64Image(PNG)!;
+
+  it("a whole PNG passes", () => {
+    expect(imageDamage(png(), "image/png")).toBeNull();
+  });
+
+  it("one changed byte anywhere in the data is caught by the chunk checksum", () => {
+    for (const at of [20, 40, 50]) {
+      const b = png();
+      b[at] ^= 0x01;
+      expect(imageDamage(b, "image/png"), `byte ${at}`).toMatch(/checksum mismatch|cut short/);
+    }
+  });
+
+  it("a cut-off PNG or JPEG is caught", () => {
+    expect(imageDamage(png().slice(0, 40), "image/png")).toMatch(/cut short/);
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]);
+    expect(imageDamage(jpeg, "image/jpeg")).toBeNull();
+    expect(imageDamage(jpeg.slice(0, 7), "image/jpeg")).toMatch(/cut short/);
   });
 });

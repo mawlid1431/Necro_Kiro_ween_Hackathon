@@ -717,24 +717,28 @@ export function buildServer(ctx: ToolContext): McpServer {
         "Gets an image into Necro and returns its imageId (for draft_post / update_post) and a previewUrl. PNG or JPEG, up to 5 MB. " +
         "Nothing is posted. 1. A FILE you can read: call with no arguments for a one-time uploadUrl, POST the raw bytes " +
         "(curl -s -X POST -H 'Content-Type: image/png' --data-binary @poster.png '<uploadUrl>'), then call again with the storageId it " +
-        "answers. 2. A public http(s) link: imageUrl. 3. A small image as data: imageBase64 + mimeType. An image the user pasted into " +
-        "the chat cannot be forwarded by you: ask them for a link or a file.",
+        "answers. 2. A public http(s) link: imageUrl. 3. An image you made yourself in a chat app (claude.ai, ChatGPT): imageBase64 + " +
+        "mimeType + sha256 (hex SHA-256 of the bytes, computed where you made the image). Keep it small, ideally a JPEG under 200 KB, " +
+        "because every base64 character must be copied exactly; Necro checks the file and refuses a damaged one, so if it says " +
+        "'arrived damaged', make the image smaller and send it again. An image the user pasted into the chat cannot be forwarded by " +
+        "you: ask them for a link or a file.",
       inputSchema: {
         storageId: z.string().min(1).max(64).optional(),
         imageUrl: z.string().url().max(2000).optional(),
         imageBase64: z.string().max(7_000_000).optional(),
         mimeType: z.enum(["image/png", "image/jpeg"]).optional(),
+        sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional().describe("Hex SHA-256 of the image bytes: Necro refuses the image if what arrived differs"),
       },
       annotations: { ...WRITE, openWorldHint: true },
     },
-    ({ storageId, imageBase64, mimeType, imageUrl }) =>
+    ({ storageId, imageBase64, mimeType, imageUrl, sha256 }) =>
       wr("upload_post_image", async () => {
         if (!storageId && !imageUrl && !imageBase64) {
           const { uploadUrl } = await c.mutation(api.mcpWrite.uploadUrl, k);
           return { uploadUrl, next: "POST the raw file bytes to uploadUrl, then call upload_post_image with the storageId it answers." };
         }
         if (imageBase64 && !mimeType) throw bad("Give mimeType (image/png or image/jpeg) with imageBase64.");
-        const r = await c.action(api.mcpWriteNode.storeImage, { ...k, imageBase64, imageUrl, mimeType, uploadedStorageId: storageId });
+        const r = await c.action(api.mcpWriteNode.storeImage, { ...k, imageBase64, imageUrl, mimeType, uploadedStorageId: storageId, sha256 });
         return { imageId: r.imageId, imageUrl: r.previewUrl, previewUrl: r.previewUrl, contentType: r.contentType, bytes: r.bytes };
       }),
   );

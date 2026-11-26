@@ -11,9 +11,25 @@ import { action } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { safeFetch, SafeFetchError } from "../lib/security/ssrf";
-import { decodeBase64Image, MCP_IMAGE_MAX_BYTES, MCP_IMAGE_TYPES, sniffImage } from "../lib/social/imageBytes";
+import { createHash } from "node:crypto";
+import { decodeBase64Image, imageDamage, MCP_IMAGE_MAX_BYTES, MCP_IMAGE_TYPES, sniffImage } from "../lib/social/imageBytes";
 
 const bad = (message: string, code = "INVALID_INPUT") => new ConvexError({ code, message });
+
+const RESEND =
+  "Send it again: smaller is safer (a JPEG under 200 KB), or give an imageUrl, or upload the file to the uploadUrl. " +
+  "With base64, also send sha256 (the hex SHA-256 of the image bytes) so Necro can check every byte arrived.";
+
+/** Refuses an image that was damaged on the way: a broken PNG/JPEG, or bytes that do not match the sender's sha256. */
+function checkWhole(bytes: Uint8Array, type: "image/png" | "image/jpeg", sha256?: string) {
+  if (sha256 !== undefined) {
+    const want = sha256.trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(want)) throw bad("sha256 must be the 64-character hex SHA-256 of the image bytes.");
+    if (createHash("sha256").update(bytes).digest("hex") !== want) throw bad(`The image arrived damaged: its SHA-256 does not match. ${RESEND}`);
+  }
+  const damage = imageDamage(bytes, type);
+  if (damage) throw bad(`The image arrived damaged: ${damage}. ${RESEND}`);
+}
 
 export const storeImage = action({
   args: {
@@ -24,10 +40,11 @@ export const storeImage = action({
     imageBase64: v.optional(v.string()),
     mimeType: v.optional(v.string()),
     uploadedStorageId: v.optional(v.string()), // the storageId returned by POSTing bytes to request_image_upload's URL
+    sha256: v.optional(v.string()), // optional: hex SHA-256 of the image bytes, checked against what arrived
   },
   handler: async (
     ctx,
-    { secret, userId, keyId, imageUrl, imageBase64, mimeType, uploadedStorageId },
+    { secret, userId, keyId, imageUrl, imageBase64, mimeType, uploadedStorageId, sha256 },
   ): Promise<{ storageId: Id<"_storage">; imageId: Id<"_storage">; previewUrl: string | null; contentType: string; bytes: number }> => {
     const { keyLabel } = await ctx.runMutation(api.mcpWrite.startImageUpload, { secret, userId, keyId });
     if ([imageUrl, imageBase64, uploadedStorageId].filter(Boolean).length !== 1) {
@@ -48,6 +65,12 @@ export const storeImage = action({
       if (!raw || raw.length > MCP_IMAGE_MAX_BYTES || !sniffed) {
         await ctx.storage.delete(info.id);
         throw bad(raw && raw.length > MCP_IMAGE_MAX_BYTES ? "The image is over 5 MB." : "Only PNG or JPEG images can be posted.");
+      }
+      try {
+        checkWhole(raw, sniffed, sha256);
+      } catch (e) {
+        await ctx.storage.delete(info.id); // never keep a damaged upload
+        throw e;
       }
       let id = info.id;
       if (info.contentType?.toLowerCase() !== sniffed) {
@@ -89,6 +112,7 @@ export const storeImage = action({
     const type = sniffImage(bytes);
     if (!type) throw bad("Only PNG or JPEG images can be posted.");
     if (declared && declared !== type) throw bad(`mimeType says ${declared} but the file is ${type}.`);
+    checkWhole(bytes, type, sha256);
 
     const storageId = await ctx.storage.store(new Blob([new Uint8Array(bytes)], { type }));
     await ctx.runMutation(internal.mcpWrite.registerImage, { userId, storageId, keyId, keyLabel });

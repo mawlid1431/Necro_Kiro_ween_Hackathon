@@ -224,6 +224,20 @@ describe("MCP server: do everything (write key)", () => {
     expect((await call("remove_grave", { graveId, confirm: true })).data.removed).toBe("Example");
   });
 
+  it("a damaged image is refused with a clear 'send it again'; a matching sha256 passes", async () => {
+    const { call } = await connect("write");
+    const { createHash } = await import("node:crypto");
+    const bytes = Buffer.from(PNG, "base64");
+    const broken = Buffer.from(bytes);
+    broken[45] ^= 0x01; // one wrong character's worth of damage inside the image data
+    const r1 = await call("upload_post_image", { imageBase64: broken.toString("base64"), mimeType: "image/png" });
+    expect(r1.data).toMatchObject({ error: "INVALID_INPUT", message: expect.stringMatching(/^The image arrived damaged: .*Send it again/) });
+    const r2 = await call("upload_post_image", { imageBase64: PNG, mimeType: "image/png", sha256: "0".repeat(64) });
+    expect(r2.data.message).toMatch(/SHA-256 does not match/);
+    const ok = await call("upload_post_image", { imageBase64: PNG, mimeType: "image/png", sha256: createHash("sha256").update(bytes).digest("hex") });
+    expect(ok.data.imageId).toBeTruthy();
+  });
+
   it("draft_post publishes nothing; X says plainly it is a reminder while coming soon", async () => {
     const { call } = await connect("write");
     const d = await call("draft_post", { text: "Hello from Claude", platforms: ["linkedin", "x"] });
