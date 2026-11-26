@@ -262,10 +262,10 @@ describe("MCP server: do everything (write key)", () => {
     expect(draft.data.perPlatform[0]).toMatchObject({ delivery: "auto" });
 
     const at = sgt(2 * 60_000 + 30_000);
-    const scheduled = await call("schedule_post", { postId: draft.data.postId, scheduleAt: at });
+    const scheduled = await call("schedule_post", { postId: draft.data.postId, scheduleAt: at, confirm: true });
     expect(scheduled.data).toMatchObject({ status: "scheduled", scheduledFor: { singapore: at }, scheduledFrom: draft.data.postId });
     // Scheduling the same draft again returns the same post: it is queued once.
-    expect((await call("schedule_post", { postId: draft.data.postId, scheduleAt: at })).data.postId).toBe(scheduled.data.postId);
+    expect((await call("schedule_post", { postId: draft.data.postId, scheduleAt: at, confirm: true })).data.postId).toBe(scheduled.data.postId);
     expect(urls).toEqual([]); // nothing sent before the time
     // No copy kept: once queued the draft row is gone and the post lives only in publishes.
     expect(await t.run((ctx) => ctx.db.query("postDrafts").collect())).toEqual([]);
@@ -280,6 +280,22 @@ describe("MCP server: do everything (write key)", () => {
     expect(log).toEqual(["upload_post_image:ok", "draft_post:ok", "schedule_post:ok", "schedule_post:ok"]);
   });
 
+  it("scheduling, moving and editing a scheduled post need the user's yes (confirm: true); editing a draft does not", async () => {
+    const { call } = await connect("write");
+    const d = await call("draft_post", { text: "Ask me first", platforms: ["linkedin"] });
+    // Editing a draft sends nothing, so no confirm is needed.
+    expect((await call("update_post", { postId: d.data.postId, text: "Ask me first, please" })).data.text).toBe("Ask me first, please");
+    const noYes = await call("schedule_post", { postId: d.data.postId, scheduleAt: sgt(3 * 3_600_000) });
+    expect(noYes.data).toMatchObject({ error: "CONFIRM_REQUIRED", message: expect.stringMatching(/^Ask the user first: schedule this post/) });
+    expect((await call("list_posts")).data).toEqual([]); // nothing was queued
+    const s = (await call("schedule_post", { postId: d.data.postId, scheduleAt: sgt(3 * 3_600_000), confirm: true })).data;
+    expect(s.status).toBe("scheduled");
+    expect((await call("reschedule_post", { postId: s.postId, scheduleAt: sgt(4 * 3_600_000) })).data.error).toBe("CONFIRM_REQUIRED");
+    expect((await call("update_post", { postId: s.postId, text: "Changed" })).data.error).toBe("CONFIRM_REQUIRED");
+    expect((await call("get_post", { postId: s.postId })).data).toMatchObject({ text: "Ask me first, please", scheduledFor: { singapore: sgt(3 * 3_600_000) } });
+    expect((await call("update_post", { postId: s.postId, text: "Changed", confirm: true })).data.text).toBe("Changed");
+  });
+
   it("publish_post with confirm sends a draft now; reschedule and retry work on queued posts", async () => {
     vi.useFakeTimers();
     const { t, userId, call } = await connect("write");
@@ -291,8 +307,8 @@ describe("MCP server: do everything (write key)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => (fail ? new Response("nope", { status: 500 }) : new Response(null, { status: 201, headers: { "x-restli-id": "urn:li:share:9" } }))));
 
     const a = await call("draft_post", { text: "Later", platforms: ["linkedin"] });
-    const s = await call("schedule_post", { postId: a.data.postId, scheduleAt: sgt(3 * 3_600_000) });
-    const moved = await call("reschedule_post", { postId: s.data.postId, scheduleAt: sgt(5 * 3_600_000) });
+    const s = await call("schedule_post", { postId: a.data.postId, scheduleAt: sgt(3 * 3_600_000), confirm: true });
+    const moved = await call("reschedule_post", { postId: s.data.postId, scheduleAt: sgt(5 * 3_600_000), confirm: true });
     expect(moved.data.scheduledFor.singapore).toBe(sgt(5 * 3_600_000));
 
     const d = await call("draft_post", { text: "Now please", platforms: ["linkedin"] });
@@ -346,7 +362,7 @@ describe("MCP server: isolation between users", () => {
     const { t, userId: alice, call } = await connect("write");
     const { graveId, items } = await addFeedWithItems(t, alice);
     const draft = (await call("draft_post", { text: "Alice's draft", platforms: ["linkedin"] })).data;
-    const queued = (await call("schedule_post", { postId: (await call("draft_post", { text: "Alice queued", platforms: ["linkedin"] })).data.postId, scheduleAt: sgt(5 * 3_600_000) })).data;
+    const queued = (await call("schedule_post", { postId: (await call("draft_post", { text: "Alice queued", platforms: ["linkedin"] })).data.postId, scheduleAt: sgt(5 * 3_600_000), confirm: true })).data;
 
     // Bob: his own account and his own read-and-write key.
     const bobUser = t.withIdentity({ subject: "m_bob", tokenIdentifier: "clerk|m_bob" });
@@ -366,7 +382,7 @@ describe("MCP server: isolation between users", () => {
     await expect(t.query(api.mcpAgent.getPost, { ...b, postId: queued.postId })).rejects.toThrow(notFound);
     await expect(t.mutation(api.mcpAgent.publishPost, { ...b, postId: draft.postId, confirm: true })).rejects.toThrow(notFound);
     await expect(t.mutation(api.mcpAgent.cancelPost, { ...b, postId: queued.postId, confirm: true })).rejects.toThrow(notFound);
-    await expect(t.mutation(api.mcpAgent.updatePost, { ...b, postId: queued.postId, text: "hijack" })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.updatePost, { ...b, postId: queued.postId, text: "hijack", confirm: true })).rejects.toThrow(notFound);
     await expect(t.mutation(api.mcpAgent.setRead, { ...b, itemId: items[0], read: true })).rejects.toThrow(notFound);
     await expect(t.mutation(api.mcpAgent.removeGrave, { ...b, graveId, confirm: true })).rejects.toThrow(notFound);
     await expect(t.mutation(api.mcpAgent.updateGrave, { ...b, graveId, title: "x" })).rejects.toThrow(notFound);

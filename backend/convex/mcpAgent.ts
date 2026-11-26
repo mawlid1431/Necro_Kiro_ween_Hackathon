@@ -592,10 +592,14 @@ async function queueDraft(ctx: MutationCtx, k: K, keyLabel: string, id: Id<"post
 }
 
 export const schedulePost = mutation({
-  args: { ...keyed, postId: v.string(), atIso: v.string() },
+  args: { ...keyed, postId: v.string(), atIso: v.string(), confirm: v.optional(v.boolean()) },
   handler: async (ctx, a) => {
     const key = await writeKey(ctx, a.secret, a.userId, a.keyId);
     const draftId = draftIdOf(ctx, a.postId);
+    // Ownership first (another user's id is simply not found), then the user's yes from the chat.
+    if (draftId) await draftOrQueued(ctx, a.userId, draftId);
+    else await groupRows(ctx, a.userId, a.postId);
+    needConfirm(a.confirm, `schedule this post for ${a.atIso.slice(0, 40)} on the user's real accounts (show them the final text, image and time first)`);
     let view;
     if (draftId) {
       view = await queueDraft(ctx, a, key.prefix, draftId, scheduleMs(a.atIso)!);
@@ -628,7 +632,7 @@ export const publishPost = mutation({
 
 /** update_post for a draft (any field) or a queued post (only while scheduled). */
 export const updatePost = mutation({
-  args: { ...keyed, postId: v.string(), text: v.optional(v.string()), imageId: v.optional(v.string()), platforms: v.optional(v.array(socialPlatform)), atIso: v.optional(v.string()) },
+  args: { ...keyed, postId: v.string(), text: v.optional(v.string()), imageId: v.optional(v.string()), platforms: v.optional(v.array(socialPlatform)), atIso: v.optional(v.string()), confirm: v.optional(v.boolean()) },
   handler: async (ctx, a) => {
     const key = await writeKey(ctx, a.secret, a.userId, a.keyId);
     if (a.text === undefined && a.imageId === undefined && a.platforms === undefined && a.atIso === undefined) fail("INVALID_INPUT", "Nothing to change: give text, imageId, platforms or scheduleAt.");
@@ -645,6 +649,9 @@ export const updatePost = mutation({
       await ctx.db.patch(d._id, { text, platforms, imageId, updatedAt: Date.now() });
       view = await draftView(ctx, (await ctx.db.get(d._id))!);
     } else {
+      // A queued post is on its way to the user's real accounts: changing its text, image, accounts or time needs their yes.
+      await groupRows(ctx, a.userId, found.postId);
+      needConfirm(a.confirm, a.atIso && a.text === undefined && a.imageId === undefined && a.platforms === undefined ? `move this scheduled post to ${a.atIso.slice(0, 40)}` : "change this scheduled post (show them the new version first)");
       view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, { ...a, postId: found.postId });
     }
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix, tool: a.atIso && !a.text && !a.platforms && !a.imageId ? "reschedule_post" : "update_post", postId: view.postId, status: "ok" });

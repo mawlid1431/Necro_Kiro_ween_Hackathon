@@ -1019,8 +1019,8 @@ export const docs = {
     steps: [
       { title: "Turn on posting", body: "Settings → MCP keys → Allow posting on the key or app you use. Then reconnect it." },
       { title: "Draft it", body: "upload_post_image for the picture, then draft_post (or generate_post_from_item for an article, in your voice). This only makes a draft: nothing is sent." },
-      { title: "See it, then say yes", body: "Your assistant shows you the final text and image; get_page_image with page post-preview shows exactly how it will look on each platform." },
-      { title: "Schedule or publish", body: "schedule_post with a time and zone, e.g. 2026-11-26T09:00:00+08:00 (it runs at that minute), or publish_post with confirm: true to send it now. get_post then shows the live link." },
+      { title: "See it, then say yes in the chat", body: "Your assistant shows you the final text, image and time and asks, e.g. \"Schedule this to LinkedIn for Thu 9:00 AM?\". You just answer yes in Claude, ChatGPT or Kiro: there is nothing to approve inside Necro. get_page_image with page post-preview shows exactly how it will look." },
+      { title: "Schedule, post, move or cancel", body: "After your yes: schedule_post with a time and zone, e.g. 2026-11-26T09:00:00+08:00 (it runs at that minute), or publish_post to send it now. reschedule_post, update_post and cancel_post change it while it is scheduled. Each of these carries confirm: true, which tells Necro you said yes. get_post then shows the live link." },
     ],
     routesTitle: "How the image gets to Necro",
     routes: [
@@ -1045,7 +1045,7 @@ export const docs = {
   },
   tools: {
     title: "Tools",
-    lead: "Read tools work with every key and app. Write tools appear only with full access, and a read-only key that tries one gets \"This key is read only\". Risky ones (publish_post, cancel_post, remove_grave, mark_all_read) need confirm: true, which your assistant may only send after asking you.",
+    lead: "Read tools work with every key and app. Write tools appear only with full access, and a read-only key that tries one gets \"This key is read only\". Risky ones (schedule_post, reschedule_post, publish_post, cancel_post, editing a scheduled post, remove_grave, mark_all_read) need confirm: true, which your assistant sends only after you said yes in the chat.",
     read: "Read",
     write: "Write",
     list: [
@@ -1200,7 +1200,7 @@ asyncio.run(main())`,
 { "name": "get_page_image", "arguments": { "page": "post-preview", "postId": "jd7…" } }
 
 // 4a. After their yes: schedule it to the minute (with a time zone)
-{ "name": "schedule_post", "arguments": { "postId": "jd7…", "scheduleAt": "2026-11-27T09:00:00+08:00" } }
+{ "name": "schedule_post", "arguments": { "postId": "jd7…", "scheduleAt": "2026-11-27T09:00:00+08:00", "confirm": true } }
 // 4b. ...or publish now (confirm is required)
 { "name": "publish_post", "arguments": { "postId": "jd7…", "confirm": true } }
 
