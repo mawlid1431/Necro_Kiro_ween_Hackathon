@@ -9,8 +9,8 @@ import { action, mutation, query, type MutationCtx, type QueryCtx } from "./_gen
 import { api, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireOwned, utcDay } from "./lib/auth";
-import { audit, checkText, countPosts, liveKey, mcpKeyId, ownedImage, ownedItem, postView, scheduleMs, writeKey } from "./mcpWrite";
-import { byUserPlatform, cancelGroupFor, composeFor, editScheduledFor, groupRows, modeFor, NAMES, publishNowFor, PUBLISHES_PER_HOUR_PER_USER } from "./social";
+import { audit, checkText, countPosts, liveKey, mcpKeyId, ownedImage, ownedItem, postView, scheduleMs, updateQueuedFor, writeKey } from "./mcpWrite";
+import { byUserPlatform, cancelGroupFor, composeFor, groupRows, modeFor, NAMES, publishNowFor, PUBLISHES_PER_HOUR_PER_USER } from "./social";
 import { overviewFor } from "./dashboard";
 import { usageToday } from "./aiUsage";
 import { markAllReadBatch, setReadFor, setStarredFor } from "./items";
@@ -299,7 +299,7 @@ export const itemsFiltered = query({
     const graves = await ctx.db.query("graves").withIndex("by_user", (q) => q.eq("userId", a.userId)).take(300);
     const titles = new Map(graves.map((g) => [g._id as string, g.customTitle ?? g.title]));
     let allowed: Set<string> | null = null;
-    if (a.graveId) allowed = new Set([idOf(ctx, "graves", a.graveId)]);
+    if (a.graveId) allowed = new Set([(await requireOwned(ctx, a.userId, idOf(ctx, "graves", a.graveId)))._id as string]);
     const folder = a.folder?.trim();
     if (folder !== undefined) {
       const f = graves.filter((g) => (g.folder ?? "") === folder).map((g) => g._id as string);
@@ -589,16 +589,13 @@ export const schedulePost = mutation({
   args: { ...keyed, postId: v.string(), atIso: v.string() },
   handler: async (ctx, a) => {
     const key = await writeKey(ctx, a.secret, a.userId, a.keyId);
-    const at = scheduleMs(a.atIso)!;
     const draftId = draftIdOf(ctx, a.postId);
     let view;
     if (draftId) {
-      view = await queueDraft(ctx, a, key.prefix, await ownedDraft(ctx, a.userId, draftId), at);
+      view = await queueDraft(ctx, a, key.prefix, await ownedDraft(ctx, a.userId, draftId), scheduleMs(a.atIso)!);
     } else {
-      // Already queued: move it (the same edit as Witching Hour's reschedule).
-      const rows = await groupRows(ctx, a.userId, a.postId);
-      await editScheduledFor(ctx, await userOf(ctx, a.userId), rows, { at }, `mcp:${key.prefix}`);
-      view = await postView(ctx, await groupRows(ctx, a.userId, rows[0].groupId ?? rows[0]._id));
+      // Already queued: move it (the same edit as update_post with only a time).
+      view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, { postId: a.postId, atIso: a.atIso });
     }
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix, tool: "schedule_post", postId: view.postId, status: "ok", message: a.atIso.slice(0, 40) });
     return { ...view, scheduledFrom: draftId ? a.postId : null, note: "Scheduled. Necro's scheduler sends it at that minute; call get_post afterwards for the live link." };
@@ -642,15 +639,7 @@ export const updatePost = mutation({
       await ctx.db.patch(d._id, { text, platforms, imageId, updatedAt: Date.now() });
       view = await draftView(ctx, (await ctx.db.get(d._id))!);
     } else {
-      const rows = await groupRows(ctx, a.userId, a.postId);
-      const storageId = await ownedImage(ctx, a.userId, a.imageId);
-      const live = rows.filter((r) => r.status !== "canceled");
-      const chosen = a.platforms ? [...new Set(a.platforms)] : live.map((r) => r.platform);
-      if (a.text !== undefined || a.platforms !== undefined) checkText(a.text ?? live[0]?.text ?? "", chosen);
-      const added = chosen.filter((p) => !live.some((r) => r.platform === p)).length;
-      if (added) await countPosts(ctx, a.keyId, added);
-      await editScheduledFor(ctx, await userOf(ctx, a.userId), rows, { text: a.text, storageId, platforms: a.platforms, at: scheduleMs(a.atIso) }, `mcp:${key.prefix}`);
-      view = await postView(ctx, await groupRows(ctx, a.userId, live[0]?.groupId ?? live[0]?._id ?? a.postId));
+      view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, a);
     }
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix, tool: a.atIso && !a.text && !a.platforms && !a.imageId ? "reschedule_post" : "update_post", postId: view.postId, status: "ok" });
     return view;
@@ -768,6 +757,8 @@ export const saveGenerated = mutation({
   args: { ...keyed, itemId: v.id("items"), platform: socialPlatform, text: v.string(), keyLabel: v.string() },
   handler: async (ctx, a) => {
     await liveKey(ctx, a.secret, a.userId, a.keyId, true);
+    await requireOwned(ctx, a.userId, a.itemId); // only ever the caller's own article
+    if (a.text.length > 4000) fail("INVALID_INPUT", "The generated post is too long.");
     const now = Date.now();
     const id = await ctx.db.insert("postDrafts", { userId: a.userId, keyId: a.keyId, text: a.text, platforms: [a.platform], itemId: a.itemId, status: "draft", createdAt: now, updatedAt: now });
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: a.keyLabel, tool: "generate_post_from_item", postId: id, status: "ok" });

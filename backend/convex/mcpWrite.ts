@@ -262,7 +262,33 @@ export const compose = mutation({
   },
 });
 
-/** Edit a post that is still scheduled: text, image, accounts and/or time. */
+/**
+ * Edit a queued post that is still scheduled (text, image, accounts and/or time) through social.editScheduledFor.
+ * The one implementation for update_post / reschedule_post (mcpAgent.updatePost) and the older update mutation below.
+ */
+export async function updateQueuedFor(
+  ctx: MutationCtx,
+  k: { userId: Id<"users">; keyId: KeyId; keyLabel: string },
+  a: { postId: string; text?: string; imageId?: string; platforms?: SocialPlatform[]; atIso?: string },
+) {
+  const rows = await groupRows(ctx, k.userId, a.postId);
+  const blocked = editableError(rows.map((r) => r.status), "edit"); // status first: the clearest reason wins
+  if (blocked) fail("INVALID_INPUT", blocked);
+  const live = rows.filter((r) => r.status !== "canceled");
+  const chosen = a.platforms ? [...new Set(a.platforms)] : live.map((r) => r.platform);
+  if (!chosen.length) fail("INVALID_INPUT", "Keep at least one platform, or cancel the post instead.");
+  if (a.text !== undefined || a.platforms !== undefined) checkText(a.text ?? live[0]?.text ?? "", chosen);
+  const at = scheduleMs(a.atIso);
+  const storageId = await ownedImage(ctx, k.userId, a.imageId);
+  const added = chosen.filter((p) => !live.some((r) => r.platform === p)).length;
+  if (added) await countPosts(ctx, k.keyId, added);
+  const user = await ctx.db.get(k.userId);
+  if (!user) fail("NOT_FOUND", "Unknown user.");
+  await editScheduledFor(ctx, user, rows, { text: a.text, storageId, platforms: a.platforms, at }, `mcp:${k.keyLabel}`);
+  return await postView(ctx, await groupRows(ctx, k.userId, live[0]?.groupId ?? live[0]?._id ?? a.postId));
+}
+
+/** Older callers (the MCP route before draft_post existed): edit a scheduled post. */
 export const update = mutation({
   args: {
     ...keyed,
@@ -277,22 +303,7 @@ export const update = mutation({
     if (text === undefined && imageId === undefined && platforms === undefined && atIso === undefined) {
       fail("INVALID_INPUT", "Nothing to change: give text, imageId, platforms or scheduleAt.");
     }
-    const rows = await groupRows(ctx, userId, postId);
-    const blocked = editableError(rows.map((r) => r.status), "edit"); // status first: the clearest reason wins
-    if (blocked) fail("INVALID_INPUT", blocked);
-    const live = rows.filter((r) => r.status !== "canceled");
-    const chosen = platforms ? [...new Set(platforms)] : live.map((r) => r.platform);
-    if (!chosen.length) fail("INVALID_INPUT", "Keep at least one platform, or cancel the post instead.");
-    if (text !== undefined || platforms !== undefined) checkText(text ?? live[0]?.text ?? "", chosen);
-    const at = scheduleMs(atIso);
-    const storageId = await ownedImage(ctx, userId, imageId);
-    const added = chosen.filter((p) => !live.some((r) => r.platform === p)).length;
-    if (added) await countPosts(ctx, keyId, added);
-    const user = await ctx.db.get(userId);
-    if (!user) fail("NOT_FOUND", "Unknown user.");
-    await editScheduledFor(ctx, user, rows, { text, storageId, platforms, at }, `mcp:${key.prefix}`);
-    const id = live[0]?.groupId ?? live[0]?._id ?? postId;
-    const view = await postView(ctx, await groupRows(ctx, userId, id));
+    const view = await updateQueuedFor(ctx, { userId, keyId, keyLabel: key.prefix }, { postId, text, imageId, platforms, atIso });
     await audit(ctx, { userId, keyId, keyLabel: key.prefix, tool: "update_post", postId: view.postId, status: "ok" });
     return view;
   },

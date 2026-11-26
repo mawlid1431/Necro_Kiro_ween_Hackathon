@@ -16,9 +16,11 @@ if (!origin || !clerkUserId || !outDir) {
 }
 mkdirSync(outDir, { recursive: true });
 
-const requests: PageRequest[] = PAGE_IDS.filter((p) => p !== "public-profile").map((page) => ({ page, graveId, itemId, postId }));
+// SHOTS_PAGES=analytics,settings-keys limits the run; SHOTS_THEME=dark switches the theme.
+const only = process.env.SHOTS_PAGES?.split(",");
+const requests: PageRequest[] = PAGE_IDS.filter((p) => p !== "public-profile" && (!only || only.includes(p))).map((page) => ({ page, graveId, itemId, postId }));
 const started = Date.now();
-const shots = await screenshotPages({ origin, clerkUserId, publicSlug: null, requests, options: { theme: "light", width: 1280, fullPage: true } });
+const shots = await screenshotPages({ origin, clerkUserId, publicSlug: null, requests, options: { theme: process.env.SHOTS_THEME === "dark" ? "dark" : "light", width: 1280, fullPage: true } });
 let failed = 0;
 for (const s of shots) {
   if ("error" in s) {

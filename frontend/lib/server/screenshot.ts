@@ -191,8 +191,9 @@ export async function screenshotPages(opts: {
       else void req.continue();
     });
 
-    // 1. Sign in once with the one-time ticket (Clerk's own client, on Necro's sign-in page).
-    await page.goto(new URL("/sign-in", origin).toString(), { waitUntil: "domcontentloaded", timeout: 30_000 });
+    // 1. Sign in once with the one-time ticket (Clerk's own client, on a plain public Necro page).
+    // A plain public page (no sign-in widget to hydrate): Clerk is loaded on every page by the root layout.
+    await page.goto(new URL("/privacy", origin).toString(), { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.waitForFunction(() => !!(window as unknown as { Clerk?: { loaded?: boolean } }).Clerk?.loaded, { timeout: 20_000 });
     sessionId = await page.evaluate(async (ticket: string) => {
       const C = (window as unknown as {

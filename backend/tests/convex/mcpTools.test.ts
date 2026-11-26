@@ -338,3 +338,52 @@ describe("MCP server: pictures", () => {
     expect(batch.isError).toBe(true);
   });
 });
+
+describe("MCP server: isolation between users", () => {
+  it("another user's key can never read or change this user's feeds, articles, drafts, posts or previews", async () => {
+    const { t, userId: alice, call } = await connect("write");
+    const { graveId, items } = await addFeedWithItems(t, alice);
+    const draft = (await call("draft_post", { text: "Alice's draft", platforms: ["linkedin"] })).data;
+    const queued = (await call("schedule_post", { postId: (await call("draft_post", { text: "Alice queued", platforms: ["linkedin"] })).data.postId, scheduleAt: sgt(5 * 3_600_000) })).data;
+
+    // Bob: his own account and his own read-and-write key.
+    const bobUser = t.withIdentity({ subject: "m_bob", tokenIdentifier: "clerk|m_bob" });
+    const bob = await bobUser.mutation(api.users.store, {});
+    await t.mutation(internal.apiKeys.insert, { userId: bob, name: "Bob", hash: "b".repeat(64), prefix: "bbbbbbbb", scope: "write", expiresAt: Date.now() + 86_400_000 });
+    const who = await t.mutation(api.mcp.authenticate, { hash: "b".repeat(64), secret: SECRET });
+    if (!who.ok) throw new Error("auth");
+    const b = { secret: SECRET, userId: bob, keyId: who.keyId };
+
+    // Bob's key with Alice's userId: refused (the key must belong to the user it acts for).
+    await expect(t.query(api.mcpAgent.profile, { ...b, userId: alice })).rejects.toThrow(/not valid/);
+    await expect(t.mutation(api.mcpAgent.setInterests, { ...b, userId: alice, interests: ["x"] })).rejects.toThrow(/not valid/);
+
+    // Bob's key with Alice's ids: never found, never changed.
+    const notFound = /NOT_FOUND|No (post|feed|article)|not found/i;
+    await expect(t.query(api.mcpAgent.getPost, { ...b, postId: draft.postId })).rejects.toThrow(notFound);
+    await expect(t.query(api.mcpAgent.getPost, { ...b, postId: queued.postId })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.publishPost, { ...b, postId: draft.postId, confirm: true })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.cancelPost, { ...b, postId: queued.postId, confirm: true })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.updatePost, { ...b, postId: queued.postId, text: "hijack" })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.setRead, { ...b, itemId: items[0], read: true })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.removeGrave, { ...b, graveId, confirm: true })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.updateGrave, { ...b, graveId, title: "x" })).rejects.toThrow(notFound);
+    await expect(t.query(api.mcpAgent.itemsFiltered, { ...b, filter: "all", graveId, limit: 10 })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.draftPost, { ...b, text: "x", platforms: ["linkedin"], sourceItemId: items[0] })).rejects.toThrow(notFound);
+    await expect(t.mutation(api.mcpAgent.saveGenerated, { ...b, itemId: items[0], platform: "linkedin", text: "x", keyLabel: "b" })).rejects.toThrow(notFound);
+
+    // Bob's own views show none of Alice's data.
+    expect((await t.query(api.mcpAgent.listPosts, { ...b, limit: 50 }))).toEqual([]);
+    expect((await t.query(api.mcpAgent.listPosts, { ...b, status: "draft", limit: 50 }))).toEqual([]);
+    expect((await t.query(api.mcpAgent.analytics, { ...b, days: 7 })).totals.newArticles).toBe(0);
+    expect((await t.query(api.mcpAgent.folders, b)).folders).toEqual([]);
+    expect(JSON.stringify(await t.query(api.mcpAgent.access, b))).not.toContain("Claude"); // Alice's key name
+    // The preview page, signed in as Bob, cannot open Alice's post.
+    expect(await bobUser.query(api.mcpAgent.previewForPage, { postId: draft.postId })).toBeNull();
+    expect(await bobUser.query(api.mcpAgent.previewForPage, { postId: queued.postId })).toBeNull();
+
+    // And Alice's data is untouched.
+    expect((await call("get_post", { postId: queued.postId })).data).toMatchObject({ status: "scheduled", text: "Alice queued" });
+    expect((await call("get_grave", { graveId })).data.title).toBe("Example");
+  });
+});
