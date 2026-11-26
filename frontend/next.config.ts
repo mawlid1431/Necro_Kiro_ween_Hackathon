@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // screenshot_page (MCP) runs a headless Chromium: keep these out of the bundle so their binaries ship as files.
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  // The Chromium binary itself (bin/*.br) is read from disk at run time, so file tracing never sees it: ship it with
+  // the MCP route explicitly, or chromium.executablePath() finds nothing on Vercel and every screenshot fails.
+  outputFileTracingIncludes: {
+    "/api/mcp": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
   // Dev only: lets a temporary cloudflared tunnel (used to test MCP OAuth with ChatGPT, Claude or MCP Inspector)
   // load dev assets and the HMR socket. Has no effect on production builds.
   allowedDevOrigins: ["*.trycloudflare.com"],
