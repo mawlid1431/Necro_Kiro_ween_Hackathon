@@ -127,9 +127,14 @@ export const activity = query({
   handler: async (ctx, args): Promise<Activity | null> => {
     const user = await getCurrentUser(ctx);
     if (!user) return null;
-    const uid = user._id;
     const server = Date.now();
-    const now = args.now !== undefined && Math.abs(args.now - server) < 10 * 60_000 ? args.now : server;
+    return await activityFor(ctx, user._id, args.now !== undefined && Math.abs(args.now - server) < 10 * 60_000 ? args.now : server);
+  },
+});
+
+/** The overview chart's daily series (UTC days). Shared with the MCP get_dashboard tool. */
+export async function activityFor(ctx: QueryCtx, uid: Id<"users">, now: number): Promise<Activity> {
+  {
     const todayStart = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
     const start = todayStart - (ACTIVITY_DAYS - 1) * DAY;
     const days = Array.from({ length: ACTIVITY_DAYS }, (_, i) => new Date(start + i * DAY).toISOString().slice(0, 10));
@@ -167,5 +172,5 @@ export const activity = query({
     }
 
     return { days, risen, posted, ai, mcp, mcpByKey: [...perKey].map(([keyId, calls]) => ({ keyId, calls })) };
-  },
-});
+  }
+}

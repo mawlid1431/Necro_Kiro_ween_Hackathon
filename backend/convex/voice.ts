@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireUser } from "./lib/auth";
 
 /** The caller's voice profile (null until saved). */
@@ -26,6 +27,14 @@ export const save = mutation({
   },
   handler: async (ctx, a) => {
     const user = await requireUser(ctx);
+    return await saveVoiceFor(ctx, user._id, a);
+  },
+});
+
+export type VoiceInput = { tone: string; audience: string; wordsToUse: string[]; wordsToAvoid: string[]; samplePosts: string[] };
+
+/** Save the voice profile (shared with the MCP set_voice tool). */
+export async function saveVoiceFor(ctx: MutationCtx, userId: Id<"users">, a: VoiceInput) {
     const profile = {
       tone: a.tone.trim(),
       audience: a.audience.trim(),
@@ -40,9 +49,8 @@ export const save = mutation({
     if (profile.samplePosts.length > 3 || profile.samplePosts.some((s) => s.length > 2000)) {
       fail("INVALID_INPUT", "Add up to 3 sample posts, each up to 2000 characters.");
     }
-    const existing = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", user._id)).first();
+    const existing = await ctx.db.query("voice").withIndex("by_user", (q) => q.eq("userId", userId)).first();
     if (existing) await ctx.db.patch(existing._id, profile);
-    else await ctx.db.insert("voice", { userId: user._id, ...profile });
+    else await ctx.db.insert("voice", { userId, ...profile });
     return profile;
-  },
-});
+}

@@ -10,7 +10,8 @@ export type ErrorCode =
   | "BLOCKED"
   | "INVALID_INPUT"
   | "AI_UNAVAILABLE"
-  | "FORBIDDEN";
+  | "FORBIDDEN"
+  | "CONFIRM_REQUIRED";
 
 const DIAGNOSES: Record<string, string> = {
   DNS: "This site's domain could not be found. It may have moved or shut down.",

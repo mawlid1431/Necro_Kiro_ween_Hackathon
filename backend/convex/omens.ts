@@ -37,21 +37,33 @@ export const create = mutation({
   args: { topic: v.string(), strict: v.optional(v.boolean()) },
   handler: async (ctx, { topic, strict }) => {
     const user = await requireUser(ctx);
-    const clean = cleanTopic(topic);
-    const mine = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", user._id)).take(MAX_OMENS_PER_USER);
-    if (mine.length >= MAX_OMENS_PER_USER) fail("LIMIT", `You can watch up to ${MAX_OMENS_PER_USER} topics.`);
-    if (mine.some((o) => o.topic.toLowerCase() === clean.toLowerCase())) fail("DUPLICATE", "You already watch this topic.");
-    const omenId = await ctx.db.insert("omens", { userId: user._id, topic: clean, keywords: omenKeywords(clean), strict: strict ?? false, muted: false, matchCount: 0 });
-    // Check the last 7 days right away, so a new topic shows what already matches instead of waiting for new posts.
-    const recent = await ctx.db
-      .query("items")
-      .withIndex("by_user_published", (q) => q.eq("userId", user._id).gte("publishedAt", Date.now() - FRESH))
-      .order("desc")
-      .take(50);
-    if (recent.length) await ctx.scheduler.runAfter(0, internal.omensNode.check, { userId: user._id, itemIds: recent.map((r) => r._id) });
-    return omenId;
+    return await createOmenFor(ctx, user._id, topic, strict);
   },
 });
+
+/** Watch a new topic (shared with the MCP set_omens tool). */
+export async function createOmenFor(ctx: MutationCtx, userId: Id<"users">, topic: string, strict?: boolean) {
+  const clean = cleanTopic(topic);
+  const mine = await ctx.db.query("omens").withIndex("by_user", (q) => q.eq("userId", userId)).take(MAX_OMENS_PER_USER);
+  if (mine.length >= MAX_OMENS_PER_USER) fail("LIMIT", `You can watch up to ${MAX_OMENS_PER_USER} topics.`);
+  if (mine.some((o) => o.topic.toLowerCase() === clean.toLowerCase())) fail("DUPLICATE", "You already watch this topic.");
+  const omenId = await ctx.db.insert("omens", { userId, topic: clean, keywords: omenKeywords(clean), strict: strict ?? false, muted: false, matchCount: 0 });
+  // Check the last 7 days right away, so a new topic shows what already matches instead of waiting for new posts.
+  const recent = await ctx.db
+    .query("items")
+    .withIndex("by_user_published", (q) => q.eq("userId", userId).gte("publishedAt", Date.now() - FRESH))
+    .order("desc")
+    .take(50);
+  if (recent.length) await ctx.scheduler.runAfter(0, internal.omensNode.check, { userId, itemIds: recent.map((r) => r._id) });
+  return omenId;
+}
+
+/** Stop watching a topic and drop its matches. */
+export async function removeOmenFor(ctx: MutationCtx, userId: Id<"users">, omenId: Id<"omens">) {
+  await requireOwned(ctx, userId, omenId);
+  await ctx.db.delete(omenId);
+  await ctx.scheduler.runAfter(0, internal.omens.deleteMatches, { omenId });
+}
 
 export const update = mutation({
   args: { omenId: v.id("omens"), muted: v.optional(v.boolean()), strict: v.optional(v.boolean()) },
@@ -66,9 +78,7 @@ export const remove = mutation({
   args: { omenId: v.id("omens") },
   handler: async (ctx, { omenId }) => {
     const user = await requireUser(ctx);
-    await requireOwned(ctx, user._id, omenId);
-    await ctx.db.delete(omenId);
-    await ctx.scheduler.runAfter(0, internal.omens.deleteMatches, { omenId });
+    await removeOmenFor(ctx, user._id, omenId);
   },
 });
 

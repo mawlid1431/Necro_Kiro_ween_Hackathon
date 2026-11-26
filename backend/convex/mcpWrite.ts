@@ -39,7 +39,7 @@ const keyed = { secret: v.string(), userId: v.id("users"), keyId: mcpKeyId };
 type KeyId = Id<"apiKeys"> | Id<"mcpGrants">;
 
 /** The key (or OAuth grant) that made this call: must belong to the user and be live. `needWrite` also requires scope "write". */
-async function liveKey(
+export async function liveKey(
   ctx: QueryCtx | MutationCtx,
   secret: string,
   userId: Id<"users">,
@@ -53,22 +53,26 @@ async function liveKey(
   }
   const scope = key.scope ?? "read";
   if (needWrite && scope !== "write") {
-    fail("FORBIDDEN", "This key is read-only (no posts:write). Turn on posting for it in Necro Settings → MCP keys, then reconnect.");
+    fail("FORBIDDEN", "This key is read only. Turn on \"Allow posting\" for it in Necro Settings → MCP keys (or Connected apps), then reconnect.");
   }
   return { prefix: "prefix" in key ? key.prefix : grantLabel(key._id), scope };
 }
 
 /** A write call: live write key, then the per-key hourly cap on write calls. */
-async function writeKey(ctx: MutationCtx, secret: string, userId: Id<"users">, keyId: KeyId) {
+export async function writeKey(ctx: MutationCtx, secret: string, userId: Id<"users">, keyId: KeyId) {
   const key = await liveKey(ctx, secret, userId, keyId, true);
   const { writeCallsPerHour } = mcpWriteLimits();
   if (!(await hitLimit(ctx, `mcpwc:${keyId}`, writeCallsPerHour, 3_600_000))) {
-    fail("LIMIT", `An AI assistant can make up to ${writeCallsPerHour} posting calls an hour with one key. Try again later.`);
+    fail("LIMIT", `An AI assistant can make up to ${writeCallsPerHour} write calls an hour with one key. Try again later.`);
+  }
+  // And per user, across all their keys and connections together.
+  if (!(await hitLimit(ctx, `mcpwu:${userId}`, writeCallsPerHour * 2, 3_600_000))) {
+    fail("LIMIT", `AI assistants can make up to ${writeCallsPerHour * 2} write calls an hour on one account. Try again later.`);
   }
   return key;
 }
 
-async function audit(
+export async function audit(
   ctx: MutationCtx,
   a: { userId: Id<"users">; keyId: KeyId; keyLabel: string; tool: string; postId?: string; status: "ok" | "refused"; message?: string },
 ) {
@@ -78,7 +82,7 @@ async function audit(
 const thousands = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 /** Text rules with the count in the message, so the assistant can trim to fit. */
-function checkText(text: string, platforms: SocialPlatform[]) {
+export function checkText(text: string, platforms: SocialPlatform[]) {
   if (!text.trim()) fail("INVALID_INPUT", "The post text is empty.");
   for (const p of new Set(platforms)) {
     const n = postLength(p, text.trim());
@@ -86,7 +90,7 @@ function checkText(text: string, platforms: SocialPlatform[]) {
   }
 }
 
-function scheduleMs(iso: string | undefined): number | undefined {
+export function scheduleMs(iso: string | undefined): number | undefined {
   if (iso === undefined) return undefined;
   const r = parseScheduleAt(iso);
   if (!r.ok) fail("INVALID_INPUT", r.message);
@@ -95,7 +99,7 @@ function scheduleMs(iso: string | undefined): number | undefined {
 }
 
 /** An image id handed out by upload_post_image, owned by this user. */
-async function ownedImage(ctx: MutationCtx, userId: Id<"users">, imageId: string | undefined): Promise<Id<"_storage"> | undefined> {
+export async function ownedImage(ctx: MutationCtx, userId: Id<"users">, imageId: string | undefined): Promise<Id<"_storage"> | undefined> {
   if (imageId === undefined) return undefined;
   const id = ctx.db.system.normalizeId("_storage", imageId);
   const up = id ? await ctx.db.query("uploads").withIndex("by_storage", (q) => q.eq("storageId", id)).unique() : null;
@@ -103,7 +107,7 @@ async function ownedImage(ctx: MutationCtx, userId: Id<"users">, imageId: string
   return id;
 }
 
-async function ownedItem(ctx: MutationCtx, userId: Id<"users">, itemId: string | undefined): Promise<Id<"items"> | undefined> {
+export async function ownedItem(ctx: MutationCtx, userId: Id<"users">, itemId: string | undefined): Promise<Id<"items"> | undefined> {
   if (itemId === undefined) return undefined;
   const id = ctx.db.normalizeId("items", itemId);
   const item = id ? await ctx.db.get(id) : null;
@@ -112,7 +116,7 @@ async function ownedItem(ctx: MutationCtx, userId: Id<"users">, itemId: string |
 }
 
 /** Daily and hourly post caps per key: one count per account the post goes to. */
-async function countPosts(ctx: MutationCtx, keyId: KeyId, n: number) {
+export async function countPosts(ctx: MutationCtx, keyId: KeyId, n: number) {
   const { postsPerDay } = mcpWriteLimits();
   for (let i = 0; i < Math.max(n, 1); i++) {
     if (!(await hitLimit(ctx, `mcpd:${keyId}`, postsPerDay, 86_400_000))) {
@@ -130,7 +134,7 @@ const DELIVERY_NOTE = {
 };
 
 /** One post as the assistant sees it: current state from the database, never cached. No tokens, no internal fields. */
-async function postView(ctx: QueryCtx | MutationCtx, rows: Doc<"publishes">[]) {
+export async function postView(ctx: QueryCtx | MutationCtx, rows: Doc<"publishes">[]) {
   const live = rows.filter((r) => r.status !== "canceled");
   const first = live[0] ?? rows[0];
   const at = first.at ?? first.createdAt;

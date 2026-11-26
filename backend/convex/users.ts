@@ -67,25 +67,34 @@ export const setInterests = mutation({
   args: { interests: v.array(v.string()) },
   handler: async (ctx, { interests }) => {
     const user = await requireUser(ctx);
-    const clean = [...new Set(interests.map((s) => s.trim()).filter(Boolean))];
-    if (clean.length < 1 || clean.length > 20 || clean.some((s) => s.length > 40)) {
-      fail("INVALID_INPUT", "Add 1 to 20 interests, each up to 40 characters.");
-    }
-    await ctx.db.patch(user._id, { interests: clean });
+    await setInterestsFor(ctx, user._id, interests);
   },
 });
+
+export async function setInterestsFor(ctx: MutationCtx, userId: Id<"users">, interests: string[]) {
+  const clean = [...new Set(interests.map((s) => s.trim()).filter(Boolean))];
+  if (clean.length < 1 || clean.length > 20 || clean.some((s) => s.length > 40)) {
+    fail("INVALID_INPUT", "Add 1 to 20 interests, each up to 40 characters.");
+  }
+  await ctx.db.patch(userId, { interests: clean });
+  return clean;
+}
 
 /** Public name shown on collections you publish. Empty resets to "A Necro reader". Never your email. */
 export const setDisplayName = mutation({
   args: { displayName: v.string() },
   handler: async (ctx, { displayName }) => {
     const user = await requireUser(ctx);
-    const name = displayName.replace(/\s+/g, " ").trim();
-    if (name.length > 40) fail("INVALID_INPUT", "Display names can be up to 40 characters.");
-    if (/@/.test(name)) fail("INVALID_INPUT", "Use a name, not an email address.");
-    await ctx.db.patch(user._id, { displayName: name || undefined });
+    await setDisplayNameFor(ctx, user._id, displayName);
   },
 });
+
+export async function setDisplayNameFor(ctx: MutationCtx, userId: Id<"users">, displayName: string) {
+  const name = displayName.replace(/\s+/g, " ").trim();
+  if (name.length > 40) fail("INVALID_INPUT", "Display names can be up to 40 characters.");
+  if (/@/.test(name)) fail("INVALID_INPUT", "Use a name, not an email address.");
+  await ctx.db.patch(userId, { displayName: name || undefined });
+}
 
 /** Settings: summary language (multilingual Séance), timezone and Morning Séance hour. */
 /** Private mode: every AI task skips providers that may train on prompts (Ghost mode if none is left). */
@@ -110,6 +119,12 @@ export const setPreferences = mutation({
   },
   handler: async (ctx, a) => {
     const user = await requireUser(ctx);
+    await setPreferencesFor(ctx, user._id, a);
+  },
+});
+
+/** Summary language, timezone and Morning Séance hour (shared with the MCP update_settings tool). */
+export async function setPreferencesFor(ctx: MutationCtx, userId: Id<"users">, a: { summaryLanguage?: string; timezone?: string; briefingHour?: number }) {
     const patch: { summaryLanguage?: string; timezone?: string; briefingHour?: number } = {};
     if (a.summaryLanguage !== undefined) {
       const lang = a.summaryLanguage.trim();
@@ -128,9 +143,8 @@ export const setPreferences = mutation({
       if (!Number.isInteger(a.briefingHour) || a.briefingHour < 0 || a.briefingHour > 23) fail("INVALID_INPUT", "Pick an hour from 0 to 23.");
       patch.briefingHour = a.briefingHour;
     }
-    await ctx.db.patch(user._id, patch);
-  },
-});
+    await ctx.db.patch(userId, patch);
+}
 
 export const completeOnboarding = mutation({
   args: {},

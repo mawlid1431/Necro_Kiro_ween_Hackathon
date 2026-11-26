@@ -148,6 +148,12 @@ export const holdSeanceInternal = internalAction({
   handler: (ctx, { userId, itemId }): Promise<SeanceView> => seanceFor(ctx, userId, itemId),
 });
 
+/** For MCP generate_post_from_item: post drafts for one article in the user's voice (counts as a Resurrect). */
+export const resurrectInternal = internalAction({
+  args: { userId: v.id("users"), itemId: v.id("items") },
+  handler: (ctx, { userId, itemId }): Promise<DraftView[]> => resurrectFor(ctx, userId, itemId),
+});
+
 /**
  * Ops check: walks every task's chain through the real ladder (breakers and budgets included)
  * and reports which rung answered. `bunx convex run aiNode:healthCheck`

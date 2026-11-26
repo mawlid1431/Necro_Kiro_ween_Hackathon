@@ -11,6 +11,7 @@ import { firstBodyImage, safeImageUrl } from "../lib/feeds/image";
 import { classifyTopic } from "../lib/topics";
 import { collectionTopic } from "./schema";
 import { scheduleLearn } from "./learning";
+import { localDay, safeZone } from "../lib/social/time";
 
 const DAY = 86_400_000;
 const MAX_CONTENT = 200 * 1024;
@@ -282,6 +283,17 @@ export async function setReadFor(ctx: MutationCtx, userId: Id<"users">, itemId: 
   if (item.isRead === value) return;
   await ctx.db.patch(itemId, { isRead: value });
   await bumpUnread(ctx, item.graveId, value ? -1 : 1);
+  if (value) await countRead(ctx, userId, 1);
+}
+
+/** Articles read per local day (readDays), for get_analytics. One small row per user a day. */
+async function countRead(ctx: MutationCtx, userId: Id<"users">, n: number) {
+  if (n <= 0) return;
+  const user = await ctx.db.get(userId);
+  const day = localDay(Date.now(), safeZone(user?.timezone));
+  const row = await ctx.db.query("readDays").withIndex("by_user_day", (q) => q.eq("userId", userId).eq("day", day)).unique();
+  if (row) await ctx.db.patch(row._id, { count: row.count + n });
+  else await ctx.db.insert("readDays", { userId, day, count: n });
 }
 
 export async function setStarredFor(ctx: MutationCtx, userId: Id<"users">, itemId: Id<"items">, value: boolean) {
@@ -292,7 +304,7 @@ export async function setStarredFor(ctx: MutationCtx, userId: Id<"users">, itemI
   }
 }
 
-async function markAllReadBatch(ctx: MutationCtx, userId: Id<"users">, graveId?: Id<"graves">): Promise<number> {
+export async function markAllReadBatch(ctx: MutationCtx, userId: Id<"users">, graveId?: Id<"graves">): Promise<number> {
   const rows = graveId
     ? await ctx.db.query("items").withIndex("by_grave_read", (q) => q.eq("graveId", graveId).eq("isRead", false)).take(500)
     : await ctx.db.query("items").withIndex("by_user_read", (q) => q.eq("userId", userId).eq("isRead", false)).take(500);
@@ -302,6 +314,7 @@ async function markAllReadBatch(ctx: MutationCtx, userId: Id<"users">, graveId?:
     perGrave.set(i.graveId, (perGrave.get(i.graveId) ?? 0) + 1);
   }
   for (const [gid, n] of perGrave) await bumpUnread(ctx, gid, -n);
+  await countRead(ctx, userId, rows.length);
   if (rows.length === 500) await ctx.scheduler.runAfter(0, internal.items.markAllReadMore, { userId, graveId });
   return rows.length;
 }

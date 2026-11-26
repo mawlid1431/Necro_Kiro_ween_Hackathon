@@ -40,3 +40,39 @@ export function parseScheduleAt(iso: string): { ok: true; ms: number } | { ok: f
   if (!Number.isFinite(ms)) return { ok: false, message: "That date does not exist. Check the day and month." };
   return { ok: true, ms };
 }
+
+/** A valid IANA zone, or Singapore (the default) when missing or unknown. */
+export function safeZone(tz: string | undefined | null): string {
+  if (!tz) return USER_TIME_ZONE;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return tz;
+  } catch {
+    return USER_TIME_ZONE;
+  }
+}
+
+/** The calendar day ("YYYY-MM-DD") of `ms` in `timeZone`. */
+export function localDay(ms: number, timeZone: string): string {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms));
+  const get = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** The last `n` local days ending today, oldest first. */
+export function lastDays(n: number, now: number, timeZone: string): string[] {
+  const out: string[] = [];
+  // Step back by 24 h from local noon-ish: a day is never skipped or doubled, even across DST changes.
+  for (let i = n - 1 + 2; i >= 0 && out.length < n + 2; i--) {
+    const d = localDay(now - i * 86_400_000, timeZone);
+    if (out.at(-1) !== d) out.push(d);
+  }
+  return out.slice(-n);
+}
+
+/** One instant in UTC, Singapore AND the user's own zone ("local"). */
+export function zonedFor(ms: number, timeZone: string): Zoned & { local: string; localTimeZone: string } {
+  const z = zoned(ms);
+  const p = new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short" }).format(new Date(ms));
+  return { ...z, local: p, localTimeZone: timeZone };
+}

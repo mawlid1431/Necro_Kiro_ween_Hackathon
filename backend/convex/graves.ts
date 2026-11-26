@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { fail, getCurrentUser, requireOwned, requireUser } from "./lib/auth";
@@ -75,21 +75,36 @@ export const rename = mutation({
   args: { graveId: v.id("graves"), title: v.string() },
   handler: async (ctx, { graveId, title }) => {
     const user = await requireUser(ctx);
-    await requireOwned(ctx, user._id, graveId);
-    const t = title.trim();
-    if (t.length > 200) fail("INVALID_INPUT", "Titles can be up to 200 characters.");
-    await ctx.db.patch(graveId, { customTitle: t || undefined }); // empty resets to the feed's own title
+    await renameFor(ctx, user._id, graveId, title);
   },
 });
+
+export async function renameFor(ctx: MutationCtx, userId: Id<"users">, graveId: Id<"graves">, title: string) {
+  await requireOwned(ctx, userId, graveId);
+  const t = title.trim();
+  if (t.length > 200) fail("INVALID_INPUT", "Titles can be up to 200 characters.");
+  await ctx.db.patch(graveId, { customTitle: t || undefined }); // empty resets to the feed's own title
+}
+
+export async function moveFor(ctx: MutationCtx, userId: Id<"users">, graveId: Id<"graves">, folder: string | undefined) {
+  await requireOwned(ctx, userId, graveId);
+  const f = folder?.trim();
+  if (f && f.length > 60) fail("INVALID_INPUT", "Folder names can be up to 60 characters.");
+  await ctx.db.patch(graveId, { folder: f || undefined });
+}
+
+/** Unsubscribe: deletes the grave now and its items, Séances and drafts in scheduled batches. */
+export async function layToRestFor(ctx: MutationCtx, userId: Id<"users">, graveId: Id<"graves">) {
+  await requireOwned(ctx, userId, graveId);
+  await ctx.db.delete(graveId);
+  await ctx.scheduler.runAfter(0, internal.graves.deleteGraveData, { graveId });
+}
 
 export const moveToFolder = mutation({
   args: { graveId: v.id("graves"), folder: v.optional(v.string()) },
   handler: async (ctx, { graveId, folder }) => {
     const user = await requireUser(ctx);
-    await requireOwned(ctx, user._id, graveId);
-    const f = folder?.trim();
-    if (f && f.length > 60) fail("INVALID_INPUT", "Folder names can be up to 60 characters.");
-    await ctx.db.patch(graveId, { folder: f || undefined });
+    await moveFor(ctx, user._id, graveId, folder);
   },
 });
 
@@ -98,9 +113,7 @@ export const layToRest = mutation({
   args: { graveId: v.id("graves") },
   handler: async (ctx, { graveId }) => {
     const user = await requireUser(ctx);
-    await requireOwned(ctx, user._id, graveId);
-    await ctx.db.delete(graveId);
-    await ctx.scheduler.runAfter(0, internal.graves.deleteGraveData, { graveId });
+    await layToRestFor(ctx, user._id, graveId);
   },
 });
 

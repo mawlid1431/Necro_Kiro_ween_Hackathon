@@ -367,6 +367,24 @@ export default defineSchema({
     .index("by_user_at", ["userId", "at"])
     .index("by_key_at", ["keyId", "at"]),
 
+  // MCP draft → confirm → schedule/publish: a post an AI assistant prepared, NOT yet in the queue. Nothing here is
+  // ever sent. schedule_post / publish_post turn it into publishes rows (social.composeFor) and record their postId.
+  postDrafts: defineTable({
+    userId: v.id("users"),
+    keyId: v.union(v.id("apiKeys"), v.id("mcpGrants")),
+    text: v.string(),
+    platforms: v.array(socialPlatform),
+    imageId: v.optional(v.id("_storage")),
+    itemId: v.optional(v.id("items")),
+    status: v.union(v.literal("draft"), v.literal("queued"), v.literal("discarded")),
+    postId: v.optional(v.string()), // the queued post's id (publishes groupId) once scheduled or published
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId", "createdAt"]),
+
+  // Articles read per day, in the user's own time zone (for get_analytics). One small row per user a day.
+  readDays: defineTable({ userId: v.id("users"), day: v.string(), count: v.number() }).index("by_user_day", ["userId", "day"]),
+
   rateLimits: defineTable({
     key: v.string(), // e.g. "mcp:<apiKeyId>" or "summon:<userId>"
     windowStart: v.number(),
