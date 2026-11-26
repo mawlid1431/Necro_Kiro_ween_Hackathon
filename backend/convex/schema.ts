@@ -368,7 +368,8 @@ export default defineSchema({
     .index("by_key_at", ["keyId", "at"]),
 
   // MCP draft → confirm → schedule/publish: a post an AI assistant prepared, NOT yet in the queue. Nothing here is
-  // ever sent. schedule_post / publish_post turn it into publishes rows (social.composeFor) and record their postId.
+  // ever sent. schedule_post / publish_post turn it into publishes rows (social.composeFor, idemKey "draft:<id>") and
+  // delete the draft, so a post's text lives in one place only.
   postDrafts: defineTable({
     userId: v.id("users"),
     keyId: v.union(v.id("apiKeys"), v.id("mcpGrants")),
@@ -376,8 +377,6 @@ export default defineSchema({
     platforms: v.array(socialPlatform),
     imageId: v.optional(v.id("_storage")),
     itemId: v.optional(v.id("items")),
-    status: v.union(v.literal("draft"), v.literal("queued"), v.literal("discarded")),
-    postId: v.optional(v.string()), // the queued post's id (publishes groupId) once scheduled or published
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId", "createdAt"]),

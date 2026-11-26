@@ -518,18 +518,15 @@ async function draftView(ctx: QueryCtx | MutationCtx, d: Doc<"postDrafts">) {
   }
   return {
     postId: d._id,
-    status: d.status === "draft" ? ("draft" as const) : d.status === "queued" ? ("queued" as const) : ("discarded" as const),
-    queuedPostId: d.postId ?? null,
+    status: "draft" as const,
     text: d.text,
     image: d.imageId ? { imageId: d.imageId, previewUrl: await ctx.storage.getUrl(d.imageId) } : null,
     sourceItem: item ? { id: item._id, title: item.title, link: item.link ?? null, source: UNTRUSTED } : null,
     perPlatform,
     updatedAt: zonedFor(d.updatedAt, safeZone(user.timezone)),
     next:
-      d.status === "draft"
-        ? "Nothing is published yet. Show the user this exact text and image (get_page_image page 'post-preview' shows how it will look), " +
-          "wait for their OK, then call schedule_post (a time) or publish_post (now, confirm: true)."
-        : null,
+      "Nothing is published yet. Show the user this exact text and image (get_page_image page 'post-preview' shows how it will look), " +
+      "wait for their OK, then call schedule_post (a time) or publish_post (now, confirm: true).",
   };
 }
 
@@ -537,10 +534,16 @@ function draftIdOf(ctx: QueryCtx | MutationCtx, postId: string): Id<"postDrafts"
   return ctx.db.normalizeId("postDrafts", postId);
 }
 
-async function ownedDraft(ctx: QueryCtx | MutationCtx, userId: Id<"users">, id: Id<"postDrafts">) {
+/**
+ * A draft id is either a live draft, or (once scheduled or published) the post it became: queueing deletes the draft,
+ * so its text is never kept twice, and the queued rows carry idemKey "draft:<id>", which finds the post again.
+ */
+async function draftOrQueued(ctx: QueryCtx | MutationCtx, userId: Id<"users">, id: Id<"postDrafts">): Promise<{ draft: Doc<"postDrafts"> } | { postId: string }> {
   const d = await ctx.db.get(id);
-  if (!d || d.userId !== userId) fail("NOT_FOUND", "No post with that id. Get ids from list_posts or draft_post.");
-  return d;
+  if (d && d.userId === userId) return { draft: d };
+  const row = await ctx.db.query("publishes").withIndex("by_user_idem", (q) => q.eq("userId", userId).eq("idemKey", `draft:${id}`)).first();
+  if (row) return { postId: row.groupId ?? row._id };
+  fail("NOT_FOUND", "No post with that id. Get ids from list_posts or draft_post.");
 }
 
 /** Text and image rules for a draft, with the same messages the queue would give (so nothing fails later). */
@@ -566,23 +569,26 @@ export const draftPost = mutation({
         const recent = await ctx.db.query("postDrafts").withIndex("by_user", (q) => q.eq("userId", a.userId).gte("createdAt", Date.now() - DAY)).take(101);
         if (recent.length > 100) fail("LIMIT", "Up to 100 drafts a day.");
         const now = Date.now();
-        const id = await ctx.db.insert("postDrafts", { userId: a.userId, keyId: a.keyId, text: a.text.trim(), platforms, imageId, itemId, status: "draft", createdAt: now, updatedAt: now });
+        const id = await ctx.db.insert("postDrafts", { userId: a.userId, keyId: a.keyId, text: a.text.trim(), platforms, imageId, itemId, createdAt: now, updatedAt: now });
         return await draftView(ctx, (await ctx.db.get(id))!);
       },
       (r) => r.postId,
     ),
 });
 
-/** Queue a draft through the app's composer (social.composeFor): now (at undefined) or at a time. */
-async function queueDraft(ctx: MutationCtx, k: K, keyLabel: string, d: Doc<"postDrafts">, at: number | undefined) {
-  if (d.status === "queued" && d.postId) return await postView(ctx, await groupRows(ctx, k.userId, d.postId)); // retried call: same post
-  if (d.status === "discarded") fail("INVALID_INPUT", "This draft was cancelled. Make a new one with draft_post.");
+/**
+ * Queue a draft through the app's composer (social.composeFor), now (at undefined) or at a time, then delete the
+ * draft: from here the post lives only in publishes. A retried call (same draft id) returns the same post.
+ */
+async function queueDraft(ctx: MutationCtx, k: K, keyLabel: string, id: Id<"postDrafts">, at: number | undefined) {
+  const found = await draftOrQueued(ctx, k.userId, id);
+  if ("postId" in found) return await postView(ctx, await groupRows(ctx, k.userId, found.postId));
+  const d = found.draft;
   await countPosts(ctx, k.keyId, d.platforms.length);
   const user = await userOf(ctx, k.userId);
   const res = await composeFor(ctx, user, { caption: d.text, platforms: d.platforms, storageId: d.imageId, at }, `mcp:${keyLabel}`, { itemId: d.itemId, idemKey: `draft:${d._id}` });
-  const postId = res[0].publishId as string;
-  await ctx.db.patch(d._id, { status: "queued", postId, updatedAt: Date.now() });
-  return await postView(ctx, await groupRows(ctx, k.userId, postId));
+  await ctx.db.delete(d._id);
+  return await postView(ctx, await groupRows(ctx, k.userId, res[0].publishId));
 }
 
 export const schedulePost = mutation({
@@ -592,7 +598,7 @@ export const schedulePost = mutation({
     const draftId = draftIdOf(ctx, a.postId);
     let view;
     if (draftId) {
-      view = await queueDraft(ctx, a, key.prefix, await ownedDraft(ctx, a.userId, draftId), scheduleMs(a.atIso)!);
+      view = await queueDraft(ctx, a, key.prefix, draftId, scheduleMs(a.atIso)!);
     } else {
       // Already queued: move it (the same edit as update_post with only a time).
       view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, { postId: a.postId, atIso: a.atIso });
@@ -609,7 +615,7 @@ export const publishPost = mutation({
     needConfirm(a.confirm, "publish this post now to the user's real accounts (show them the final text and image first)");
     const draftId = draftIdOf(ctx, a.postId);
     let view;
-    if (draftId) view = await queueDraft(ctx, a, key.prefix, await ownedDraft(ctx, a.userId, draftId), undefined);
+    if (draftId) view = await queueDraft(ctx, a, key.prefix, draftId, undefined);
     else {
       const rows = await groupRows(ctx, a.userId, a.postId);
       await publishNowFor(ctx, rows);
@@ -627,10 +633,10 @@ export const updatePost = mutation({
     const key = await writeKey(ctx, a.secret, a.userId, a.keyId);
     if (a.text === undefined && a.imageId === undefined && a.platforms === undefined && a.atIso === undefined) fail("INVALID_INPUT", "Nothing to change: give text, imageId, platforms or scheduleAt.");
     const draftId = draftIdOf(ctx, a.postId);
+    const found = draftId ? await draftOrQueued(ctx, a.userId, draftId) : { postId: a.postId };
     let view;
-    if (draftId) {
-      const d = await ownedDraft(ctx, a.userId, draftId);
-      if (d.status !== "draft") fail("INVALID_INPUT", d.status === "queued" ? `This draft is already queued as post ${d.postId}. Update that postId instead.` : "This draft was cancelled.");
+    if ("draft" in found) {
+      const d = found.draft;
       if (a.atIso !== undefined) fail("INVALID_INPUT", "A draft has no time yet: use schedule_post to pick one.");
       const platforms = a.platforms ? [...new Set(a.platforms)] : d.platforms;
       const imageId = a.imageId !== undefined ? await ownedImage(ctx, a.userId, a.imageId) : d.imageId;
@@ -639,7 +645,7 @@ export const updatePost = mutation({
       await ctx.db.patch(d._id, { text, platforms, imageId, updatedAt: Date.now() });
       view = await draftView(ctx, (await ctx.db.get(d._id))!);
     } else {
-      view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, a);
+      view = await updateQueuedFor(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix }, { ...a, postId: found.postId });
     }
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix, tool: a.atIso && !a.text && !a.platforms && !a.imageId ? "reschedule_post" : "update_post", postId: view.postId, status: "ok" });
     return view;
@@ -652,16 +658,15 @@ export const cancelPost = mutation({
     const key = await writeKey(ctx, a.secret, a.userId, a.keyId);
     needConfirm(a.confirm, "cancel this post");
     const draftId = draftIdOf(ctx, a.postId);
+    const found = draftId ? await draftOrQueued(ctx, a.userId, draftId) : { postId: a.postId };
     let out;
-    if (draftId) {
-      const d = await ownedDraft(ctx, a.userId, draftId);
-      if (d.status === "queued") fail("INVALID_INPUT", `This draft is already queued as post ${d.postId}. Cancel that postId instead.`);
-      await ctx.db.patch(d._id, { status: "discarded", updatedAt: Date.now() });
-      out = { postId: d._id, status: "canceled" as const, perPlatform: [] };
+    if ("draft" in found) {
+      await ctx.db.delete(found.draft._id); // a cancelled draft is simply gone: it was never sent anywhere
+      out = { postId: found.draft._id as string, status: "canceled" as const, perPlatform: [] };
     } else {
-      const rows = await groupRows(ctx, a.userId, a.postId);
+      const rows = await groupRows(ctx, a.userId, found.postId);
       await cancelGroupFor(ctx, a.userId, rows);
-      const view = await postView(ctx, await groupRows(ctx, a.userId, a.postId));
+      const view = await postView(ctx, await groupRows(ctx, a.userId, found.postId));
       out = { postId: view.postId, status: "canceled" as const, perPlatform: view.perPlatform };
     }
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: key.prefix, tool: "cancel_post", postId: out.postId, status: "ok" });
@@ -693,9 +698,9 @@ export const getPost = query({
     await liveKey(ctx, secret, userId, keyId, false);
     const draftId = draftIdOf(ctx, postId);
     if (draftId) {
-      const d = await ownedDraft(ctx, userId, draftId);
-      if (d.status === "queued" && d.postId) return { ...(await postView(ctx, await groupRows(ctx, userId, d.postId))), fromDraft: d._id };
-      return await draftView(ctx, d);
+      const found = await draftOrQueued(ctx, userId, draftId);
+      if ("draft" in found) return await draftView(ctx, found.draft);
+      return { ...(await postView(ctx, await groupRows(ctx, userId, found.postId))), fromDraft: draftId };
     }
     return await postView(ctx, await groupRows(ctx, userId, postId));
   },
@@ -720,7 +725,7 @@ export const listPosts = query({
     if (a.status === "draft") {
       const drafts = await ctx.db.query("postDrafts").withIndex("by_user", (q) => q.eq("userId", a.userId)).order("desc").take(200);
       return drafts
-        .filter((d) => d.status === "draft" && (!a.platform || d.platforms.includes(a.platform)) && d.createdAt >= (a.fromMs ?? 0) && d.createdAt <= (a.toMs ?? Infinity))
+        .filter((d) => (!a.platform || d.platforms.includes(a.platform)) && d.createdAt >= (a.fromMs ?? 0) && d.createdAt <= (a.toMs ?? Infinity))
         .slice(0, limit)
         .map((d) => ({ postId: d._id, status: "draft", platforms: d.platforms, text: d.text.slice(0, 300), hasImage: !!d.imageId, createdAt: zonedFor(d.createdAt, tz) }));
     }
@@ -760,7 +765,7 @@ export const saveGenerated = mutation({
     await requireOwned(ctx, a.userId, a.itemId); // only ever the caller's own article
     if (a.text.length > 4000) fail("INVALID_INPUT", "The generated post is too long.");
     const now = Date.now();
-    const id = await ctx.db.insert("postDrafts", { userId: a.userId, keyId: a.keyId, text: a.text, platforms: [a.platform], itemId: a.itemId, status: "draft", createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("postDrafts", { userId: a.userId, keyId: a.keyId, text: a.text, platforms: [a.platform], itemId: a.itemId, createdAt: now, updatedAt: now });
     await audit(ctx, { userId: a.userId, keyId: a.keyId, keyLabel: a.keyLabel, tool: "generate_post_from_item", postId: id, status: "ok" });
     return await draftView(ctx, (await ctx.db.get(id))!);
   },
@@ -793,13 +798,15 @@ export const previewForPage = query({
     if (!user) return null;
     const draftId = draftIdOf(ctx, postId);
     let text: string, platforms: SocialPlatform[], imageId: Id<"_storage"> | undefined, itemId: Id<"items"> | undefined, status: string;
-    if (draftId) {
-      const d = await ctx.db.get(draftId);
-      if (!d || d.userId !== user._id) return null;
+    const d = draftId ? await ctx.db.get(draftId) : null;
+    const queued = draftId && !d ? await ctx.db.query("publishes").withIndex("by_user_idem", (q) => q.eq("userId", user._id).eq("idemKey", `draft:${draftId}`)).first() : null;
+    if (d) {
+      if (d.userId !== user._id) return null;
       ({ text, platforms, imageId, itemId } = d);
-      status = d.status === "draft" ? "draft" : d.status;
+      status = "draft";
     } else {
-      const rows = await ctx.db.query("publishes").withIndex("by_user_group", (q) => q.eq("userId", user._id).eq("groupId", postId)).take(10);
+      const groupId = queued ? (queued.groupId ?? queued._id) : postId;
+      const rows = await ctx.db.query("publishes").withIndex("by_user_group", (q) => q.eq("userId", user._id).eq("groupId", groupId)).take(10);
       const id = ctx.db.normalizeId("publishes", postId);
       const one = !rows.length && id ? await ctx.db.get(id) : null;
       const all = rows.length ? rows : one && one.userId === user._id ? [one] : [];

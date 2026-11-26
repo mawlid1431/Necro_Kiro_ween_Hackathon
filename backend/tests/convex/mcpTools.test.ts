@@ -267,6 +267,8 @@ describe("MCP server: do everything (write key)", () => {
     // Scheduling the same draft again returns the same post: it is queued once.
     expect((await call("schedule_post", { postId: draft.data.postId, scheduleAt: at })).data.postId).toBe(scheduled.data.postId);
     expect(urls).toEqual([]); // nothing sent before the time
+    // No copy kept: once queued the draft row is gone and the post lives only in publishes.
+    expect(await t.run((ctx) => ctx.db.query("postDrafts").collect())).toEqual([]);
 
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     const got = await call("get_post", { postId: scheduled.data.postId });

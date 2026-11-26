@@ -177,6 +177,14 @@ export const exportData = query({
       collections: collections.map((c) => ({ title: c.title, description: c.description, topic: c.topic, visibility: c.visibility, slug: c.slug, feeds: c.feeds })),
       following: (await Promise.all(follows.map(async (f) => (await ctx.db.get(f.collectionId))?.slug ?? null))).filter((s): s is string => !!s),
       grimoires: grimoires.map((g) => ({ weekOf: g.weekOf, title: g.title, markdown: g.markdown })),
+      // What AI assistants did through MCP: their unsent post drafts and the activity log (no key values, ever).
+      assistantDrafts: (await ctx.db.query("postDrafts").withIndex("by_user", (q) => q.eq("userId", uid)).order("desc").take(100)).map((d) => ({
+        text: d.text, platforms: d.platforms, hasImage: !!d.imageId, createdAt: new Date(d.createdAt).toISOString(),
+      })),
+      assistantActivity: (await ctx.db.query("mcpAudit").withIndex("by_user_at", (q) => q.eq("userId", uid)).order("desc").take(200)).map((r) => ({
+        tool: r.tool, key: r.keyLabel, status: r.status, message: r.message ?? null, at: new Date(r.at).toISOString(),
+      })),
+      readsPerDay: (await ctx.db.query("readDays").withIndex("by_user_day", (q) => q.eq("userId", uid)).order("desc").take(366)).map((r) => ({ day: r.day, read: r.count })),
     };
   },
 });

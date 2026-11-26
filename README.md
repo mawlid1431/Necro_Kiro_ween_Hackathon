@@ -643,7 +643,7 @@ erDiagram
 | `apiKeys` | MCP keys (hashed), scope (`read`, or `write` = posts:write, switchable in Settings), expiry, last use | by_user, by_hash, by_user_revoked |
 | `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
 | `mcpAudit` | Every MCP write call and screenshot: key label, tool, post id, ok/refused, reason, time (Settings → MCP keys) | by_user_at, by_key_at |
-| `postDrafts` | Posts an AI assistant drafted (`draft_post`), not yet queued: text, platforms, image, article; `postId` once scheduled or published | by_user |
+| `postDrafts` | Posts an AI assistant drafted (`draft_post`), not yet queued: text, platforms, image, article. Deleted when scheduled, published or cancelled (the post then lives only in `publishes`, found again by `idemKey` `draft:<id>`) | by_user |
 | `readDays` | Articles read per day in the user's time zone (for `get_analytics`) | by_user_day |
 | `mcpClients` | OAuth apps that connect over MCP (ChatGPT, Claude): metadata-document or self-registered clients | by_client_id, by_fingerprint, by_kind_created |
 | `mcpCodes` | Single-use OAuth authorization codes (hashed, PKCE, short-lived) | by_hash, by_user, by_expires |
