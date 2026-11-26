@@ -12,8 +12,10 @@
     "smoke": "bun scripts/smoke.ts"
   },
   "dependencies": {
+    "@clerk/backend": "3.27.0",
     "@clerk/nextjs": "^7.9.23",
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "@sparticuz/chromium": "141.0.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "convex": "^1.49.0",
@@ -22,6 +24,7 @@
     "motion": "^14.9.0",
     "next": "16.4.6",
     "pngjs": "7.0.0",
+    "puppeteer-core": "24.43.1",
     "radix-ui": "^1.8.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",

@@ -1003,9 +1003,11 @@ export const docs = {
     rows: [
       ["See feeds, articles, summaries, stats and posts", "Yes", "Yes"],
       ["See your Home overview, live (get_dashboard)", "Yes", "Yes"],
+      ["Real screenshots of any of your Necro pages (screenshot_page)", "Yes", "Yes"],
       ["Get pictures of your Necro sections (get_page_image)", "Yes", "Yes"],
       ["Add feeds", "No", "Yes"],
       ["Upload images, post, schedule, edit, cancel, send now", "No", "Yes (posts:write)"],
+      ["Create, revoke or delete MCP keys", "No", "No (only you, in Settings)"],
       ["Expires", "Never", "After 90 days"],
     ] as [string, string, string][],
     head: ["", "Read only", "Full access"] as [string, string, string],
@@ -1031,7 +1033,7 @@ export const docs = {
   },
   pictures: {
     title: "Pictures of your Necro",
-    lead: "Ask your assistant to show you a section and Necro draws it on its server from your live data, then sends the picture back through MCP into the chat. Works with read-only access too.",
+    lead: "Ask your assistant for a screenshot of any page (\"show me my profile\", \"screenshot my Settings, connected accounts\") and screenshot_page returns a real screenshot of your signed-in page, exactly as you see it. Necro's server signs a private browser in as you for that one page (a 60-second, single-use ticket), never clicks anything, then ends that session. Works with read-only access too; up to 20 an hour. Pages: dashboard, crypt, graveyard, calendar, omens, circle, discover, settings, profile, public_profile, docs. get_page_image is a lighter drawn version of three sections:",
     items: [
       ["dashboard", "Home overview: feeds, unread, new today, posted, scheduled, failed, up next, recently posted, read next, connected accounts."],
       ["posts", "Your scheduled and recent posts with status and Singapore time, and which ones your assistant created."],
@@ -1059,6 +1061,7 @@ export const docs = {
       ["list_connections", "read", "Which social accounts are connected"],
       ["list_posts", "read", "Your recent and scheduled posts"],
       ["get_dashboard", "read", "Your Home overview, live"],
+      ["screenshot_page", "read", "A real screenshot of any of your Necro pages, exactly as you see it"],
       ["get_page_image", "read", "A live picture of your dashboard, posts or feeds"],
       ["add_grave", "write", "Follow a new website or feed"],
       ["upload_post_image", "write", "Add a PNG or JPEG (up to 5 MB) for a post: send the file, a link or base64"],

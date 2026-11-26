@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // screenshot_page (MCP) runs a headless Chromium: keep these out of the bundle so their binaries ship as files.
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   // Dev only: lets a temporary cloudflared tunnel (used to test MCP OAuth with ChatGPT, Claude or MCP Inspector)
   // load dev assets and the HMR socket. Has no effect on production builds.
   allowedDevOrigins: ["*.trycloudflare.com"],

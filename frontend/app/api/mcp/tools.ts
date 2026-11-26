@@ -8,6 +8,7 @@ import { api } from "@backend/convex/_generated/api";
 import type { Id } from "@backend/convex/_generated/dataModel";
 import { zoned } from "@backend/lib/social/time";
 import { PAGES, renderPage } from "./pageImage";
+import { SCREENSHOT_PAGES, SCREENSHOT_PAGE_NAMES, screenshotAs } from "../../../lib/server/screenshot"; // relative: the backend tests import this file
 
 // Talk to the Dead: tools over the user's graveyard. Every tool calls a secret-guarded Convex function
 // (backend/convex/mcp.ts, mcpWrite.ts), scoped to the user the API key resolved to. Read-only keys get the read
@@ -22,6 +23,7 @@ export interface ToolContext {
   keyPrefix: string;
   keyId: Id<"apiKeys"> | Id<"mcpGrants">; // an API key or an OAuth grant (same checks on the server)
   scope: "read" | "write";
+  origin?: string; // this Necro's own address (screenshot_page signs a browser in here); the request origin
 }
 
 const SAFE_CODES = new Set(["NOT_FOUND", "LIMIT", "NOT_A_FEED", "BLOCKED", "INVALID_INPUT", "DUPLICATE", "AI_UNAVAILABLE", "FORBIDDEN"]);
@@ -240,6 +242,46 @@ export function buildServer(ctx: ToolContext): McpServer {
         if (code === "ERROR") console.error(JSON.stringify({ ev: "mcp", tool: "get_page_image", error: String(e).slice(0, 300) })); // server log only
         log("get_page_image", ctx, started, code);
         return { isError: true, content: [{ type: "text", text: JSON.stringify({ error: code, message }) }] };
+      }
+    },
+  );
+
+  server.registerTool(
+    "screenshot_page",
+    {
+      title: "Real screenshot of a Necro page",
+      description:
+        "Takes a REAL screenshot of one of the user's own Necro pages, exactly as they see it when signed in, and returns the image. " +
+        "Use it whenever the user asks to see, show or send a screenshot of any part of their Necro. Pages: " +
+        Object.entries(SCREENSHOT_PAGES).map(([k, v]) => `'${k}' (${v.label})`).join(", ") +
+        ". 'section' scrolls to part of a page, e.g. settings + 'connections', 'keys', 'privacy', 'learning' or 'data'. " +
+        "fullPage captures the whole page (up to 4000 px tall). Necro's server signs a private browser in for this one page, never " +
+        "clicks anything, and ends that session straight after. Takes a few seconds; up to 20 an hour.",
+      inputSchema: {
+        page: z.enum(SCREENSHOT_PAGE_NAMES).default("dashboard").describe("Which page to photograph"),
+        section: z.string().regex(/^[a-z0-9-]{1,40}$/).optional().describe("An anchor on the page to start from, e.g. 'connections'"),
+        fullPage: z.boolean().default(false).describe("The whole page instead of the first screen"),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ page, section, fullPage }): Promise<CallToolResult> => {
+      const started = Date.now();
+      try {
+        if (!ctx.origin) throw new ConvexError({ code: "INVALID_INPUT", message: "Screenshots are not available on this server." });
+        const grant = await c.mutation(api.mcpWrite.screenshotGrant, { ...g, keyId: ctx.keyId, page });
+        const shot = await screenshotAs({ origin: ctx.origin, clerkUserId: grant.clerkId, page, section, publicSlug: grant.publicSlug, fullPage });
+        log("screenshot_page", ctx, started, "ok");
+        return {
+          content: [
+            { type: "image", data: shot.data, mimeType: shot.mimeType },
+            { type: "text", text: JSON.stringify({ page, section: section ?? null, path: shot.url, size: `${shot.width}x${shot.height}`, takenAt: zoned(Date.now()).label, note: "Real screenshot of the user's signed-in Necro page. Show it to the user." }) },
+          ],
+        };
+      } catch (e) {
+        const { code, message } = safeError(e);
+        if (code === "ERROR") console.error(JSON.stringify({ ev: "mcp", tool: "screenshot_page", error: String(e).slice(0, 300) })); // server log only
+        log("screenshot_page", ctx, started, code);
+        return { isError: true, content: [{ type: "text", text: JSON.stringify({ error: code, message: code === "ERROR" ? "The screenshot could not be taken right now. Try again, or use get_page_image." : message }) }] };
       }
     },
   );

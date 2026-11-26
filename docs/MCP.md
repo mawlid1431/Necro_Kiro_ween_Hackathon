@@ -159,6 +159,7 @@ Try:
 | `list_kindred` | any | `limit` 1–20 (10) | Stories reported by more than one feed |
 | `get_omens` | any | `limit` 1–30 (10) | Watched topics (Omens) and recent matches, each with a reason and "ai" or "keyword" |
 | `list_connections` | any | none | Per platform: connected, account name, and delivery `auto` (posts on its own) or `reminder` |
+| `screenshot_page` | any | `page`: `dashboard`, `crypt`, `graveyard`, `calendar`, `omens`, `circle`, `discover`, `settings`, `profile`, `public_profile`, `docs`; `section?` (an anchor, e.g. `connections`); `fullPage?` | A real screenshot (PNG 1280×900, or JPEG up to 4000 px tall) of the user's signed-in page |
 | `get_page_image` | any | `page`: `dashboard` (default), `posts`, `feeds` | An MCP image block (PNG, 1200 px wide) drawn from live data, plus a short text summary |
 | `get_dashboard` | any | none | Home overview, live: feeds, new today, post counts, next scheduled and recently posted (with links), read next, connections, setup |
 | `list_posts` | any | `limit` 1–50 (20) | Posts from the last 30 days and next 90: status, time, text, image, live link, created by app or assistant |
@@ -172,6 +173,16 @@ Try:
 
 `list_posts` rows also carry `postId`, the id the posting tools take. A post to several platforms is one `postId` with
 one `publishId` per platform.
+
+### Real screenshots (`screenshot_page`)
+
+`frontend/lib/server/screenshot.ts`. The route first calls `mcpWrite.screenshotGrant` (live key, 20 an hour per key, audit
+row). Then Necro's server mints a Clerk sign-in token (single use, 60 seconds), opens a fresh headless Chromium
+(`puppeteer-core` + `@sparticuz/chromium` on Vercel; a local Chrome in development), signs it in with that ticket,
+loads the page on Necro's own origin (main-frame navigation is limited to Necro and Clerk's sign-in handshake),
+waits for the live data to settle, and takes the screenshot. It never clicks or types. The session is then revoked
+through Clerk's API and the browser is closed; only the image is returned. MCP has no tool that creates, revokes or
+deletes keys: that stays in Settings.
 
 ### How a picture of your Necro gets to your assistant
 

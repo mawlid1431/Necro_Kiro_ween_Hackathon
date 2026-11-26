@@ -62,7 +62,7 @@ export async function POST(req: Request): Promise<Response> {
       : jsonRpcError(401, key ? "Invalid, expired or revoked API key." : "This connection expired or was disconnected. Sign in again.", challenge(origin, "invalid_token"));
   }
 
-  const server = buildServer({ convex, secret, userId: who.userId, keyPrefix: who.prefix, keyId: who.keyId, scope: who.scope });
+  const server = buildServer({ convex, secret, userId: who.userId, keyPrefix: who.prefix, keyId: who.keyId, scope: who.scope, origin });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {

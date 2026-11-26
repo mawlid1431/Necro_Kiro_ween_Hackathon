@@ -395,6 +395,32 @@ export const auditRefusal = mutation({
   },
 });
 
+// ---------- screenshot_page: a real screenshot of a Necro page, taken by Necro's server as the user ----------
+
+/** Screenshots a key or connection may take per hour (each one opens a headless browser). */
+export const SCREENSHOTS_PER_HOUR_PER_KEY = 20;
+
+/**
+ * Called by the MCP route before it opens the headless browser: any live key or connection (read-only too: a
+ * screenshot only shows data the key can already read, and the browser never clicks anything), rate limited and
+ * audited. Returns the user's Clerk id (to sign the browser in for one page) and public profile slug.
+ */
+export const screenshotGrant = mutation({
+  args: { ...keyed, page: v.string() },
+  handler: async (ctx, { secret, userId, keyId, page }) => {
+    const key = await liveKey(ctx, secret, userId, keyId, false);
+    if (!(await hitLimit(ctx, `mcpshot:${keyId}`, SCREENSHOTS_PER_HOUR_PER_KEY, 3_600_000))) {
+      fail("LIMIT", `An AI assistant can take up to ${SCREENSHOTS_PER_HOUR_PER_KEY} screenshots an hour with one key or connection.`);
+    }
+    const user = await ctx.db.get(userId);
+    if (!user?.clerkId || user.clerkId.startsWith("seed_") || user.clerkId.startsWith("demo_")) {
+      fail("FORBIDDEN", "Screenshots need a real signed-in Necro account.");
+    }
+    await audit(ctx, { userId, keyId, keyLabel: key.prefix, tool: "screenshot_page", status: "ok", message: page.slice(0, 60) });
+    return { clerkId: user.clerkId, publicSlug: user.publicSlug ?? null };
+  },
+});
+
 // ---------- the user's own view (Settings → MCP keys & usage) ----------
 
 /** The latest MCP write calls for the signed-in user. */

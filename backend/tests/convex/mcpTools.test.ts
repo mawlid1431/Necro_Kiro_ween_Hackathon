@@ -18,7 +18,7 @@ const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwA
 
 const READ_TOOLS = [
   "get_stats", "get_briefing", "get_omens", "get_seance", "get_item", "get_grave", "list_items",
-  "list_graves", "list_kindred", "list_posts", "list_connections", "search_items", "ask_crypt", "get_dashboard", "get_page_image",
+  "list_graves", "list_kindred", "list_posts", "list_connections", "search_items", "ask_crypt", "get_dashboard", "get_page_image", "screenshot_page",
 ];
 const POSTING_TOOLS = ["upload_post_image", "create_post", "get_post", "update_post", "cancel_post", "publish_post_now"];
 
@@ -75,7 +75,7 @@ async function connect(scope: "read" | "write") {
 const sgt = (fromNow: number) => zoned(Math.ceil((Date.now() + fromNow) / 60_000) * 60_000).singapore;
 
 describe("MCP server: tool list", () => {
-  it("a read-only key sees exactly the 13 original read tools plus get_dashboard and get_page_image; a posts:write key also sees the posting tools", async () => {
+  it("a read-only key sees exactly the 13 original read tools plus get_dashboard, get_page_image and screenshot_page; a posts:write key also sees the posting tools", async () => {
     const read = await connect("read");
     expect((await read.client.listTools()).tools.map((x) => x.name).sort()).toEqual([...READ_TOOLS].sort());
 
@@ -121,6 +121,24 @@ describe("MCP server: pictures of Necro sections", () => {
       const meta = JSON.parse((r.content.find((x) => x.type === "text") as { text: string }).text);
       expect(meta).toMatchObject({ page, size: expect.stringMatching(/^1200x/) });
     }
+  });
+});
+
+describe("MCP server: real screenshots", () => {
+  it("screenshot_page is listed for every key, checks the key first, and refuses accounts that cannot sign in", async () => {
+    const { client, alice } = await connect("read");
+    const tool = (await client.listTools()).tools.find((x) => x.name === "screenshot_page")!;
+    expect(tool.description).toMatch(/REAL screenshot/);
+    expect(JSON.stringify(tool.inputSchema)).toContain("public_profile");
+    // The test user has no real Clerk account, so the server refuses before any browser opens.
+    const r = (await client.callTool({ name: "screenshot_page", arguments: { page: "settings", section: "connections" } })) as { isError?: boolean; content: { text: string }[] };
+    expect(r.isError).toBe(true);
+    const err = JSON.parse(r.content[0].text);
+    expect(err.error).toMatch(/FORBIDDEN|INVALID_INPUT/);
+    // A bad section never reaches the browser.
+    const bad = (await client.callTool({ name: "screenshot_page", arguments: { page: "settings", section: "../keys" } })) as { isError?: boolean };
+    expect(bad.isError).toBe(true);
+    void alice;
   });
 });
 
