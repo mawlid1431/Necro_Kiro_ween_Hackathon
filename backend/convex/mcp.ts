@@ -18,6 +18,7 @@ import type { SeanceView } from "./seances";
 import type { AskResult } from "./askNode";
 import { overviewFor } from "./dashboard";
 import { byUserPlatform, modeFor } from "./social";
+import { credsFor } from "../lib/social/providers";
 import { SOCIAL_PLATFORMS } from "../lib/social/post";
 import { zoned } from "../lib/social/time";
 
@@ -202,7 +203,9 @@ export const getDashboard = query({
     const connected = [];
     for (const platform of SOCIAL_PLATFORMS) {
       const c = await byUserPlatform(ctx, userId, platform);
-      connected.push({ platform, connected: !!c && c.status === "active", delivery: modeFor(platform, c) });
+      // Same wording as Home's "Connected accounts" card: connected, expired, not connected, or coming soon (not set up).
+      const status = c ? (c.status === "expired" ? "expired" : "connected") : credsFor(platform) ? "not connected" : "coming soon";
+      connected.push({ platform, connected: !!c && c.status === "active", status, account: c && c.status === "active" ? (c.name ?? c.username ?? null) : null, delivery: modeFor(platform, c) });
     }
     return {
       asOf: zoned(now),
