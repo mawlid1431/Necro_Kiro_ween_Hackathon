@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Bot, Check, Copy, Eye, KeyRound, LifeBuoy, LogIn, MessageSquareText, PenLine, ShieldCheck, Terminal, Wrench } from "lucide-react";
+import { ArrowRight, Bot, Check, Code2, Copy, Eye, KeyRound, LifeBuoy, LogIn, MessageSquareText, PenLine, ShieldCheck, Terminal, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { docs as copy, docsAgentPrompt, docsClients, MCP_URL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -75,6 +75,8 @@ export function Docs() {
   const [active, setActive] = useState(clients[0].id);
   const client = clients.find((c) => c.id === active) ?? clients[0];
   const prompt = docsAgentPrompt(url);
+  const [lang, setLang] = useState<string>(copy.build.langs[0].id);
+  const code = copy.build.langs.find((l) => l.id === lang) ?? copy.build.langs[0];
 
   return (
     <div className="grid gap-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-14">
@@ -300,6 +302,69 @@ export function Docs() {
               </tbody>
             </table>
           </div>
+        </Section>
+
+        <Section id="build" title={copy.build.title} icon={Code2} lead={copy.build.lead}>
+          <ol className="grid gap-3 md:grid-cols-2">
+            {copy.build.steps.map((s, i) => (
+              <li key={s.title} className={card}>
+                <span className="grid size-7 place-items-center rounded-full bg-ecto text-meta font-bold text-on-ecto">{i + 1}</span>
+                <h3 className="mt-3 text-body font-semibold">{s.title}</h3>
+                <p className="mt-1 text-meta text-copy">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+
+          <dl className={cn(card, "mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-[8rem_minmax(0,1fr)]")}>
+            {copy.build.facts.map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="text-meta font-semibold text-ink">{k}</dt>
+                <dd className="min-w-0 text-meta break-words text-copy">{v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div role="tablist" aria-label={copy.build.title} className="mt-6 flex flex-wrap gap-1.5 rounded-xl border border-line bg-surface-muted p-1.5">
+            {copy.build.langs.map((l) => (
+              <button
+                key={l.id}
+                role="tab"
+                type="button"
+                id={`build-tab-${l.id}`}
+                aria-selected={lang === l.id}
+                aria-controls="build-panel"
+                onClick={() => setLang(l.id)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-meta font-semibold transition-colors",
+                  lang === l.id ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-subtle hover:text-ink",
+                )}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div id="build-panel" role="tabpanel" aria-labelledby={`build-tab-${code.id}`} className="mt-3">
+            <p className="mb-2 text-meta text-subtle">{code.note}</p>
+            <CodeBlock lang={code.id === "post" ? "jsonc" : code.id === "ts" ? "typescript" : code.id === "py" ? "python" : "bash"} text={code.code} />
+          </div>
+
+          <h3 className="mt-8 text-body font-semibold text-ink">{copy.build.oauthTitle}</h3>
+          <ol className="mt-3 flex flex-col gap-2.5">
+            {copy.build.oauth.map((s, i) => (
+              <li key={s} className="flex gap-3 text-copy">
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-line text-[0.6875rem] font-bold text-subtle">{i + 1}</span>
+                <span className="min-w-0 text-meta leading-6 break-words">{s}</span>
+              </li>
+            ))}
+          </ol>
+
+          <ul className={cn(card, "mt-6 flex flex-col gap-3")}>
+            {copy.build.tips.map((t) => (
+              <li key={t} className="flex gap-2.5 text-meta text-copy">
+                <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-ecto-ink" /> {t}
+              </li>
+            ))}
+          </ul>
         </Section>
 
         <Section id="safety" title={copy.safety.title} icon={ShieldCheck}>

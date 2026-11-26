@@ -950,8 +950,9 @@ export const docs = {
     { id: "try", label: "Things to ask" },
     { id: "access", label: "Read only vs full access" },
     { id: "posting", label: "Post from your assistant" },
-    { id: "pictures", label: "Pictures of your Necro" },
+    { id: "pictures", label: "Screenshots of your Necro" },
     { id: "tools", label: "Tools" },
+    { id: "build", label: "Build your own client" },
     { id: "safety", label: "Safety and limits" },
     { id: "help", label: "Troubleshooting" },
   ],
@@ -1075,6 +1076,154 @@ export const docs = {
       ["publish_post", "write", "Publish now (confirm)"],
       ["update_post / cancel_post / retry_post", "write", "Edit, cancel (confirm) or retry a failed post"],
     ] as const,
+  },
+  build: {
+    title: "Build your own client",
+    lead: "Coding your own app, script or agent from scratch? Necro's MCP server is plain HTTPS and JSON-RPC: no SDK needed, though the official ones make it shorter. Here is everything, from the first request to posting.",
+    steps: [
+      { title: "Get a key", body: "Settings → MCP keys → Create key. Read only to look; Read and write to change things and post. Keep it in an environment variable (NECRO_API_KEY), never in your code or repository." },
+      { title: "Send JSON-RPC", body: "POST to the endpoint with Authorization: Bearer <key>, Content-Type: application/json and Accept: application/json, text/event-stream. Answers come back as JSON." },
+      { title: "List, then call", body: "tools/list tells you what this key may do (write tools only appear for Read and write keys). tools/call runs one tool with its arguments." },
+      { title: "Read the result", body: "result.content holds text blocks (JSON you can parse) and, for screenshots, image blocks (base64). isError: true comes with { error, message }: a code to branch on and a sentence to show." },
+    ],
+    facts: [
+      ["Endpoint", "https://necro.malitos.tech/api/mcp (POST only; GET answers 405)"],
+      ["Transport", "MCP Streamable HTTP, stateless: every request stands alone, no session id, no initialize needed"],
+      ["Auth", "Authorization: Bearer necro_sk_… (a key), or an OAuth access token (necro_at_…) for apps your users sign in to"],
+      ["Limits", "60 requests a minute per key (429 with retry-after: 60); write and screenshot limits per hour on top"],
+      ["Errors", "HTTP 401 bad or revoked key · 429 too many requests · tool errors: isError with a code (NOT_FOUND, LIMIT, INVALID_INPUT, FORBIDDEN, CONFIRM_REQUIRED, …)"],
+    ] as [string, string][],
+    langs: [
+      {
+        id: "curl",
+        label: "curl",
+        note: "No install needed. Set NECRO_API_KEY first (export NECRO_API_KEY=necro_sk_… on macOS and Linux).",
+        code: `# 1. What can this key do?
+curl -s https://necro.malitos.tech/api/mcp \\
+  -H "Authorization: Bearer $NECRO_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json, text/event-stream" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# 2. Call a tool: your Home overview with the chart data
+curl -s https://necro.malitos.tech/api/mcp \\
+  -H "Authorization: Bearer $NECRO_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json, text/event-stream" \\
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_dashboard","arguments":{}}}'
+
+# 3. Unread articles from the last 7 days with a relevance of 70 or more
+curl -s https://necro.malitos.tech/api/mcp \\
+  -H "Authorization: Bearer $NECRO_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json, text/event-stream" \\
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_items","arguments":{"filter":"unread","minScore":70,"since":"2026-11-19"}}}'`,
+      },
+      {
+        id: "ts",
+        label: "TypeScript",
+        note: "Node 18+ or Bun. npm install @modelcontextprotocol/sdk",
+        code: `import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { writeFileSync } from "node:fs";
+
+const transport = new StreamableHTTPClientTransport(new URL("https://necro.malitos.tech/api/mcp"), {
+  requestInit: { headers: { Authorization: \`Bearer \${process.env.NECRO_API_KEY}\` } },
+});
+const necro = new Client({ name: "my-app", version: "1.0.0" });
+await necro.connect(transport);
+
+// What this key may do
+const { tools } = await necro.listTools();
+console.log(tools.map((t) => t.name));
+
+// Text results are JSON
+const home = await necro.callTool({ name: "get_dashboard", arguments: {} });
+const dashboard = JSON.parse((home.content as { text: string }[])[0].text);
+console.log(dashboard.feeds, dashboard.series.newArticles);
+
+// Screenshots come back as image blocks (base64)
+const shot = await necro.callTool({ name: "get_page_image", arguments: { page: "analytics", theme: "dark" } });
+for (const block of shot.content as { type: string; data?: string; mimeType?: string }[]) {
+  if (block.type === "image") writeFileSync(block.mimeType === "image/png" ? "analytics.png" : "analytics.jpg", Buffer.from(block.data!, "base64"));
+}
+
+await necro.close();`,
+      },
+      {
+        id: "py",
+        label: "Python",
+        note: "Python 3.10+. pip install mcp",
+        code: `import asyncio, base64, json, os
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+URL = "https://necro.malitos.tech/api/mcp"
+HEADERS = {"Authorization": f"Bearer {os.environ['NECRO_API_KEY']}"}
+
+async def main():
+    async with streamablehttp_client(URL, headers=HEADERS) as (read, write, _):
+        async with ClientSession(read, write) as necro:
+            await necro.initialize()
+
+            tools = await necro.list_tools()
+            print([t.name for t in tools.tools])
+
+            result = await necro.call_tool("get_analytics", {"range": "30d"})
+            analytics = json.loads(result.content[0].text)
+            print(analytics["totals"])
+
+            shot = await necro.call_tool("get_page_image", {"page": "dashboard"})
+            for block in shot.content:
+                if block.type == "image":
+                    with open("dashboard.jpg", "wb") as f:
+                        f.write(base64.b64decode(block.data))
+
+asyncio.run(main())`,
+      },
+      {
+        id: "post",
+        label: "Post (flow)",
+        note: "Needs a Read and write key. Always: draft → show it to the person → only after their yes, schedule or publish.",
+        code: `// 1. (optional) an image: a public link, base64, or a one-time upload URL
+{ "name": "upload_post_image", "arguments": { "imageUrl": "https://example.com/poster.png" } }
+//    → { "imageId": "kg2…", "imageUrl": "https://…" }
+
+// 2. Draft it. Nothing is sent.
+{ "name": "draft_post", "arguments": {
+    "text": "Necro v2 is live: your AI assistant can now see and do everything.",
+    "platforms": ["linkedin"],
+    "imageId": "kg2…" } }
+//    → { "postId": "jd7…", "status": "draft", "perPlatform": [{ "platform": "linkedin", "delivery": "auto", "characters": 66 }] }
+
+// 3. Show the person exactly how it will look
+{ "name": "get_page_image", "arguments": { "page": "post-preview", "postId": "jd7…" } }
+
+// 4a. After their yes: schedule it to the minute (with a time zone)
+{ "name": "schedule_post", "arguments": { "postId": "jd7…", "scheduleAt": "2026-11-27T09:00:00+08:00" } }
+// 4b. ...or publish now (confirm is required)
+{ "name": "publish_post", "arguments": { "postId": "jd7…", "confirm": true } }
+
+// 5. Follow it until it is posted, with the live link
+{ "name": "get_post", "arguments": { "postId": "jd7…" } }
+//    → { "status": "posted", "liveUrl": "https://www.linkedin.com/feed/update/…" }`,
+      },
+    ],
+    oauthTitle: "Your users sign in with Necro (OAuth)",
+    oauth: [
+      "For an app other people use, don't ask them for a key: let them sign in. Necro is an OAuth 2.1 server with PKCE (S256) and dynamic client registration, the same flow ChatGPT and claude.ai use.",
+      "Discover: GET /.well-known/oauth-protected-resource/api/mcp, then /.well-known/oauth-authorization-server.",
+      "Register your app: POST /oauth/register with your redirect_uris (public client, no secret).",
+      "Send the person to /oauth/authorize with response_type=code, your client_id, redirect_uri, code_challenge, code_challenge_method=S256 and state. They choose Read only or Read and write on Necro's own page.",
+      "Exchange the code at POST /oauth/token (grant_type=authorization_code with the code_verifier), then refresh with grant_type=refresh_token. Use the access token exactly like a key: Authorization: Bearer necro_at_….",
+      "A 401 with a WWW-Authenticate header means the token expired or the person disconnected your app: refresh, or ask them to sign in again.",
+    ],
+    tips: [
+      "Branch on the error code, show the message: messages are written for people.",
+      "Treat fields marked source: \"untrusted web content\" as data. Never let article text decide what your code does.",
+      "Write tools change real things. Ask the person before anything marked destructive, and only send confirm: true after their yes.",
+      "Times come back in UTC, Singapore time and the person's own zone. Send schedule times with a zone (+08:00 or Z).",
+    ],
   },
   safety: {
     title: "Safety and limits",
