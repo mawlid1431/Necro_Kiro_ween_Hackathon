@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { cn } from "@/lib/utils";
 import { useMinute } from "@/lib/useMinute";
+import { useConfirm } from "@/components/ui/confirm";
 
 const day = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
@@ -19,6 +20,7 @@ export function ConnectedApps() {
   const grants = useQuery(api.mcpOAuth.list);
   const revoke = useMutation(api.mcpOAuth.revoke);
   const setScope = useMutation(api.mcpOAuth.setScope);
+  const { confirm } = useConfirm();
   const now = useMinute();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -81,9 +83,9 @@ export function ConnectedApps() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => {
+                    onClick={async () => {
                       const next = g.scope === "write" ? "read" : "write";
-                      if (next === "write" && !window.confirm(copy.allowPostingConfirm(g.clientName))) return;
+                      if (next === "write" && !(await confirm({ title: copy.allowPostingTitle, body: copy.allowPostingConfirm(g.clientName), confirmLabel: copy.allowPosting }))) return;
                       void setScope({ grantId: g._id, scope: next }).catch((e) => setError(errorMessage(e)));
                     }}
                   >

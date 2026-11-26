@@ -12,6 +12,8 @@ type ConfirmOptions = {
   confirmLabel?: string;
   /** "danger" for deletes: the confirm button is red. */
   tone?: "default" | "danger";
+  /** A checkbox the user must tick before confirming (for actions that cannot be undone). */
+  acknowledge?: string;
 };
 type AskOptions = ConfirmOptions & { label: string; placeholder?: string; maxLength?: number };
 
@@ -28,12 +30,14 @@ const Ctx = createContext<{ confirm: (o: ConfirmOptions) => Promise<boolean>; as
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [text, setText] = useState("");
+  const [acked, setAcked] = useState(false);
   const settled = useRef(false);
 
   const confirm = useCallback(
     (opts: ConfirmOptions) =>
       new Promise<boolean>((resolve) => {
         settled.current = false;
+        setAcked(false);
         setPending({ kind: "confirm", opts, resolve });
       }),
     [],
@@ -58,6 +62,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (pending?.kind === "confirm" && pending.opts.acknowledge && !acked) return;
     finish(pending?.kind === "ask" ? text.trim() : true);
   }
 
@@ -81,13 +86,25 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 />
               </div>
             ) : null}
+            {pending.kind === "confirm" && o.acknowledge ? (
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-line bg-surface-muted/60 p-3 text-meta text-ink">
+                <input
+                  type="checkbox"
+                  checked={acked}
+                  onChange={(e) => setAcked(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-[var(--color-danger)]"
+                />
+                <span>{o.acknowledge}</span>
+              </label>
+            ) : null}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => finish(pending.kind === "ask" ? null : false)}>
                 {copy.cancel}
               </Button>
               <Button
                 type="submit"
-                autoFocus={pending.kind === "confirm"}
+                autoFocus={pending.kind === "confirm" && !o.acknowledge}
+                disabled={pending.kind === "confirm" && !!o.acknowledge && !acked}
                 variant={o.tone === "danger" ? "destructive" : "default"}
                 className={o.tone === "danger" ? "border border-danger/40 bg-danger/10 hover:bg-danger/15" : undefined}
               >

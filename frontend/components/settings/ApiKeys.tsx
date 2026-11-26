@@ -12,6 +12,7 @@ import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/components/crypt/ItemList";
 import { cn } from "@/lib/utils";
 import { useMinute } from "@/lib/useMinute";
+import { useConfirm } from "@/components/ui/confirm";
 
 /** MCP keys: create (shown once), list, revoke, plus a ready-to-paste client config. */
 export function ApiKeys() {
@@ -20,9 +21,10 @@ export function ApiKeys() {
   const revoke = useMutation(api.apiKeys.revoke);
   const remove = useMutation(api.apiKeys.remove);
   const setKeyScope = useMutation(api.apiKeys.setScope);
+  const { confirm } = useConfirm();
 
   async function changeScope(keyId: NonNullable<typeof keys>[number]["_id"], keyName: string, next: "read" | "write") {
-    if (next === "write" && !window.confirm(copy.allowPostingConfirm(keyName))) return;
+    if (next === "write" && !(await confirm({ title: copy.allowPostingTitle, body: copy.allowPostingConfirm(keyName), confirmLabel: copy.allowPosting }))) return;
     setError(null);
     try {
       await setKeyScope({ keyId, scope: next });
@@ -32,10 +34,34 @@ export function ApiKeys() {
   }
   const revokedIds = (keys ?? []).filter((k) => k.revokedAt).map((k) => k._id);
 
+  // Bulk delete for revoked keys: tick some (or Select all), then Delete selected. Only revoked keys can be picked.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const selected = revokedIds.filter((id) => picked.has(id)); // drops ids that are gone or no longer revoked
+  const allPicked = revokedIds.length > 0 && selected.length === revokedIds.length;
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  /** Asks first (in the app's own dialog, with an "I understand" tick box), then deletes for good. */
   async function removeKeys(ids: typeof revokedIds) {
+    if (!ids.length) return;
+    const names = (keys ?? []).filter((k) => ids.includes(k._id)).map((k) => k.name);
+    const ok = await confirm({
+      title: ids.length === 1 ? copy.deleteKeyTitle(names[0] ?? "") : copy.deleteKeysTitle(ids.length),
+      body: copy.deleteKeysBody,
+      acknowledge: copy.deleteKeysAck,
+      confirmLabel: ids.length === 1 ? copy.deleteKey : copy.deleteKeysButton(ids.length),
+      tone: "danger",
+    });
+    if (!ok) return;
     setError(null);
     try {
       for (const keyId of ids) await remove({ keyId });
+      setPicked(new Set());
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -145,7 +171,16 @@ export function ApiKeys() {
 
       <ul className="mt-4 divide-y divide-line">
         {keys?.map((k) => (
-          <li key={k._id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+          <li key={k._id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5", k.revokedAt && picked.has(k._id) && "bg-danger/5")}>
+            {k.revokedAt ? (
+              <input
+                type="checkbox"
+                checked={picked.has(k._id)}
+                onChange={() => toggle(k._id)}
+                aria-label={copy.selectKey(k.name)}
+                className="size-4 shrink-0 cursor-pointer accent-[var(--color-danger)]"
+              />
+            ) : null}
             <span className="font-semibold text-ink">{k.name}</span>
             <code className="text-meta text-subtle">{k.prefix}…</code>
             <span
@@ -172,9 +207,7 @@ export function ApiKeys() {
                   size="icon-sm"
                   aria-label={`${copy.deleteKey} ${k.name}`}
                   title={copy.deleteKey}
-                  onClick={() => {
-                    if (window.confirm(copy.deleteKeyConfirm(k.name))) void removeKeys([k._id]);
-                  }}
+                  onClick={() => void removeKeys([k._id])}
                 >
                   <Trash2 aria-hidden strokeWidth={1.75} />
                 </Button>
@@ -194,16 +227,30 @@ export function ApiKeys() {
       </ul>
 
       {revokedIds.length ? (
-        <div className="mt-2 flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (window.confirm(copy.clearRevokedConfirm(revokedIds.length))) void removeKeys(revokedIds);
-            }}
-          >
-            <Trash2 aria-hidden strokeWidth={1.75} /> {copy.clearRevoked(revokedIds.length)}
-          </Button>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface-muted/50 px-3 py-2">
+          <label className="flex cursor-pointer items-center gap-2 text-meta font-semibold text-ink">
+            <input
+              type="checkbox"
+              checked={allPicked}
+              ref={(el) => {
+                if (el) el.indeterminate = selected.length > 0 && !allPicked;
+              }}
+              onChange={() => setPicked(allPicked ? new Set() : new Set(revokedIds))}
+              className="size-4 cursor-pointer accent-[var(--color-danger)]"
+            />
+            {copy.selectAllRevoked(revokedIds.length)}
+          </label>
+          <span className="text-meta text-subtle">{copy.selectedCount(selected.length)}</span>
+          <span className="ml-auto flex items-center gap-2">
+            {selected.length ? (
+              <Button variant="ghost" size="sm" onClick={() => setPicked(new Set())}>
+                {copy.unselect}
+              </Button>
+            ) : null}
+            <Button variant="destructive" size="sm" disabled={!selected.length} onClick={() => void removeKeys(selected)}>
+              <Trash2 aria-hidden strokeWidth={1.75} /> {copy.deleteKeysButton(selected.length)}
+            </Button>
+          </span>
         </div>
       ) : null}
 
