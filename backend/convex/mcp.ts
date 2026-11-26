@@ -16,7 +16,7 @@ import { htmlToPlain } from "../lib/text";
 import { MCP_CALLS_PER_MINUTE } from "../lib/limits";
 import type { SeanceView } from "./seances";
 import type { AskResult } from "./askNode";
-import { overviewFor } from "./dashboard";
+import { activityFor, overviewFor } from "./dashboard";
 import { byUserPlatform, modeFor } from "./social";
 import { credsFor } from "../lib/social/providers";
 import { SOCIAL_PLATFORMS } from "../lib/social/post";
@@ -217,6 +217,11 @@ export const getDashboard = query({
       readNext: o.readNext.map((i) => ({ id: i._id, title: i.title, feed: i.source, score: i.score, publishedAt: new Date(i.publishedAt).toISOString(), source: UNTRUSTED })),
       connections: connected,
       setup: o.checklist,
+      // The Home charts' data (last 14 UTC days, oldest first): the Activity chart and the MCP calls bar chart.
+      series: await (async () => {
+        const a = await activityFor(ctx, userId, now);
+        return { days: a.days, newArticles: a.risen, postsPosted: a.posted, aiToolUses: a.ai, mcpCalls: a.mcp };
+      })(),
     };
   },
 });

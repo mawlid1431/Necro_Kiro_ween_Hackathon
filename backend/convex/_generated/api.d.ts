@@ -33,6 +33,7 @@ import type * as learning from "../learning.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_ladder from "../lib/ladder.js";
 import type * as mcp from "../mcp.js";
+import type * as mcpAgent from "../mcpAgent.js";
 import type * as mcpOAuth from "../mcpOAuth.js";
 import type * as mcpOAuthNode from "../mcpOAuthNode.js";
 import type * as mcpWrite from "../mcpWrite.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/ladder": typeof lib_ladder;
   mcp: typeof mcp;
+  mcpAgent: typeof mcpAgent;
   mcpOAuth: typeof mcpOAuth;
   mcpOAuthNode: typeof mcpOAuthNode;
   mcpWrite: typeof mcpWrite;

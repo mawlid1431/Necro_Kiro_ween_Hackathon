@@ -159,7 +159,8 @@ function LinkedInCard({ card, loading }: { card: LinkPreview | null; loading: bo
  * The post as it will appear, built from the exact text that is shared (`post`).
  * Link cards come from the article's own tags, the Instagram image is the PNG you download. Nothing is sent anywhere.
  */
-export function PostPreview({ platform, post, author, article }: { platform: SocialPlatform; post: string; author: Author; article: Article }) {
+export function PostPreview({ platform, post, author, article, image }: { platform: SocialPlatform; post: string; author: Author; article: Article; image?: string | null }) {
+  // `image`: the user's own uploaded image (composer and MCP posts), shown instead of the article card or image.
   const link = platform === "instagram" || platform === "tiktok" ? undefined : post.match(URL_RE)?.[0] ?? undefined;
   const { data: card, loading } = useLinkPreview(link);
 
@@ -180,7 +181,7 @@ export function PostPreview({ platform, post, author, article }: { platform: Soc
         <div className="px-3 py-2">
           <PostText text={post} lines={3} linkClass="font-semibold text-[#0A66C2]" moreLabel={copy.more} />
         </div>
-        <LinkedInCard card={card} loading={loading} />
+        {image ? <CardImage src={image} className="w-full object-cover" /> : <LinkedInCard card={card} loading={loading} />}
         <div className="flex justify-around border-t border-[#e0e0e0] px-2 py-1.5 text-[0.75rem] font-semibold text-[#666]">
           {(
             [
@@ -215,7 +216,7 @@ export function PostPreview({ platform, post, author, article }: { platform: Soc
             <PostText text={shown} lines={0} linkClass="text-[#1d9bf0]" moreLabel={copy.more} />
           </div>
           <div className="mt-2">
-            <XCard card={card} loading={loading} />
+            {image ? <CardImage src={image} className="w-full rounded-2xl border border-[#cfd9de] object-cover" /> : <XCard card={card} loading={loading} />}
           </div>
           <div className="mt-2 flex justify-between pr-2 text-[#536471]">
             <MessageCircle aria-hidden className="size-4" />
@@ -235,7 +236,7 @@ export function PostPreview({ platform, post, author, article }: { platform: Soc
       <div className="relative mx-auto aspect-[9/16] max-h-[34rem] w-full max-w-[19rem] overflow-hidden rounded-xl bg-black text-white shadow-sm">
         <div className="absolute inset-0 grid place-items-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- the exact image TikTok will post */}
-          <img src={postImageUrl(article.title, article.source || hostOf(article.link))} alt={article.title} className="aspect-square w-full object-cover" />
+          <img src={image ?? postImageUrl(article.title, article.source || hostOf(article.link))} alt={article.title} className="aspect-square w-full object-cover" />
         </div>
         <div className="absolute top-3 right-3">
           <PlatformIcon platform="tiktok" brand className="size-5" />
@@ -272,7 +273,7 @@ export function PostPreview({ platform, post, author, article }: { platform: Soc
         <PlatformIcon platform="instagram" brand className="ml-auto size-5" />
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element -- the exact PNG the share button downloads */}
-      <img src={postImageUrl(article.title, article.source || hostOf(article.link))} alt={article.title} className="aspect-square w-full bg-[#1f2a24] object-cover" />
+      <img src={image ?? postImageUrl(article.title, article.source || hostOf(article.link))} alt={article.title} className="aspect-square w-full bg-[#1f2a24] object-cover" />
       <div className="flex gap-3 px-3 pt-2">
         <Heart aria-hidden className="size-5" />
         <MessageCircle aria-hidden className="size-5" />

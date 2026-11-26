@@ -402,7 +402,7 @@ export const auditRefusal = mutation({
 // ---------- screenshot_page: a real screenshot of a Necro page, taken by Necro's server as the user ----------
 
 /** Screenshots a key or connection may take per hour (each one opens a headless browser). */
-export const SCREENSHOTS_PER_HOUR_PER_KEY = 20;
+export const SCREENSHOTS_PER_HOUR_PER_KEY = 60;
 
 /**
  * Called by the MCP route before it opens the headless browser: any live key or connection (read-only too: a
@@ -427,7 +427,7 @@ export const screenshotGrant = mutation({
 
 // ---------- the user's own view (Settings → MCP keys & usage) ----------
 
-/** The latest MCP write calls for the signed-in user. */
+/** The latest MCP write calls (and screenshots) for the signed-in user: every tool, key, time and result. */
 export const auditLog = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {

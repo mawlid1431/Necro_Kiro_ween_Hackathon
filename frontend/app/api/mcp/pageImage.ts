@@ -7,10 +7,12 @@ import { home as copy } from "../../../lib/copy";
 // get_page_image: a live picture of one Necro section, drawn on Necro's server from the user's current data (the same
 // query the page itself uses) and returned to the assistant as an MCP image block. Every call reads the database
 // again, so the picture is always "now". It mirrors the real page: the same light theme colours (app/globals.css),
-// the same cards in the same order and the same words (lib/copy.ts `home`). Only the interactive parts (buttons,
-// the activity chart, links) are left out. Same renderer as /api/post-image (next/og), no browser, no cookies.
+// the same cards in the same order and the same words (lib/copy.ts `home`), and the same Activity chart (the same
+// series, colours and labels as components/home/Charts.tsx). Only buttons and links are left out. Same renderer as
+// /api/post-image (next/og), no browser, no cookies. get_page_image uses this only when the real browser screenshot
+// fails, and then says so ("renderer": "fallback").
 
-export const PAGES = ["dashboard", "posts", "feeds"] as const;
+export const PAGES = ["dashboard", "analytics", "posts", "feeds"] as const;
 export type Page = (typeof PAGES)[number];
 
 const W = 1200;
@@ -30,7 +32,69 @@ type Dashboard = {
   recentlyPosted: { platform: string; title: string; at: Zoned }[];
   readNext: { title: string; feed: string; score: number }[];
   connections: { platform: string; connected: boolean; status?: string; account?: string | null }[];
+  series?: { days: string[]; newArticles: number[]; postsPosted: number[]; aiToolUses: number[]; mcpCalls: number[] };
 };
+
+// components/home/Charts.tsx CHART_COLORS, and the Activity chart's series in the same order.
+const CHART = { green: "#6BC34E", blue: "#60A5FA", amber: "#F59E0B", violet: "#A78BFA", grid: "#e6e1ec", label: "#5e5670" };
+const SERIES = [
+  { key: "newArticles", label: copy.seriesRisen, color: CHART.green },
+  { key: "postsPosted", label: copy.seriesPosted, color: CHART.blue },
+  { key: "aiToolUses", label: copy.seriesAi, color: CHART.amber },
+  { key: "mcpCalls", label: copy.seriesMcp, color: CHART.violet },
+] as const;
+
+/** Same round axis maximum as Charts.tsx niceMax. */
+function niceMax(v: number): number {
+  if (v <= 0) return 4;
+  const raw = (v * 1.1) / 4;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / p;
+  const step = Math.max(1, (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p);
+  return Math.ceil(step) * 4;
+}
+
+const dayLabel = (d: string) => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${Number(d.slice(8, 10))} ${months[Number(d.slice(5, 7)) - 1]}`;
+};
+
+/** A line chart drawn as SVG (satori renders inline SVG): grid, y ticks, x labels, one line per series. */
+function lineChart(days: string[], series: { label: string; color: string; values: number[] }[], width: number, height: number) {
+  const pad = { l: 44, r: 12, t: 10, b: 28 };
+  const iw = width - pad.l - pad.r;
+  const ih = height - pad.t - pad.b;
+  const max = niceMax(Math.max(0, ...series.flatMap((s) => s.values)));
+  const x = (i: number) => pad.l + (days.length <= 1 ? iw / 2 : (i / (days.length - 1)) * iw);
+  const y = (v: number) => pad.t + ih - (v / max) * ih;
+  const kids: ReactNode[] = [];
+  for (const tick of [0, 1, 2, 3, 4].map((i) => (max / 4) * i)) {
+    kids.push(h("line", { key: `g${tick}`, x1: pad.l, x2: width - pad.r, y1: y(tick), y2: y(tick), stroke: CHART.grid, strokeDasharray: tick ? "3 5" : undefined }));
+    kids.push(h("text", { key: `t${tick}`, x: pad.l - 8, y: y(tick) + 5, textAnchor: "end", fontSize: 13, fill: CHART.label }, String(Math.round(tick))));
+  }
+  const step = Math.max(1, Math.ceil(days.length / 7));
+  days.forEach((d, i) => {
+    if (i % step === 0 || i === days.length - 1) kids.push(h("text", { key: `x${i}`, x: x(i), y: height - 6, textAnchor: i === days.length - 1 ? "end" : "middle", fontSize: 13, fill: CHART.label }, dayLabel(d)));
+  });
+  for (const s of series) {
+    const d = s.values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    kids.push(h("path", { key: s.label, d, fill: "none", stroke: s.color, strokeWidth: 3, strokeLinejoin: "round", strokeLinecap: "round" }));
+  }
+  return h("svg", { width, height, viewBox: `0 0 ${width} ${height}` }, ...kids);
+}
+
+function activityCard(d: Dashboard, width: number, height: number) {
+  const s = d.series;
+  if (!s) return card(copy.activityTitle, [t("No chart data.", { fontSize: 16, color: C.subtle })]);
+  const series = SERIES.map((x) => ({ label: x.label, color: x.color, values: s[x.key] }));
+  return card(copy.activityTitle, [
+    box({ gap: 18, marginBottom: 10 }, ...series.map((x) => box({ alignItems: "center", gap: 6 },
+      box({ width: 10, height: 10, borderRadius: 10, background: x.color }),
+      t(`${x.label} ${x.values.reduce((a, b) => a + b, 0)}`, { fontSize: 15, color: C.copy }),
+    ))),
+    lineChart(s.days, series, width, height),
+  ]);
+}
 type PostRow = { platform: string; status: string; delivery: string; atSingapore: string; text: string; createdBy: string; hasImage: boolean };
 type FeedRow = { title: string; status: string; unreadCount: number; folder: string | null };
 
@@ -113,6 +177,7 @@ function dashboard(d: Dashboard) {
       stat(copy.statPosted, d.posts.posted30d, copy.statPostedHint),
       stat(copy.statScheduled, d.posts.scheduled, d.posts.due ? copy.statDue(d.posts.due) : undefined, d.posts.due ? "warn" : undefined),
     ),
+    box({ marginBottom: 18 }, activityCard(d, W - 88 - 46, 220)),
     box({ gap: 18, flex: 1 },
       col({ flex: 1, gap: 18 },
         card(copy.readNextTitle, d.readNext.length
@@ -190,10 +255,21 @@ function feeds(rows: FeedRow[], asOf: string) {
   );
 }
 
+function analytics(d: Dashboard) {
+  return col({ width: "100%", height: "100%", background: C.bg, padding: 44, fontFamily: "sans-serif" },
+    header(copy.activityTitle, "The Home charts: last 14 days, per day", d.asOf.label),
+    activityCard(d, W - 88 - 46, 520),
+  );
+}
+
 /** Renders one section as a PNG, base64-encoded for an MCP image block. */
 export async function renderPage(page: Page, data: unknown, asOf: string): Promise<{ data: string; mimeType: "image/png"; width: number; height: number }> {
-  const el = page === "dashboard" ? dashboard(data as Dashboard) : page === "posts" ? posts(data as PostRow[], asOf) : feeds(data as FeedRow[], asOf);
-  const height = page === "dashboard" ? 980 : 900;
+  const el =
+    page === "dashboard" ? dashboard(data as Dashboard)
+      : page === "analytics" ? analytics(data as Dashboard)
+        : page === "posts" ? posts(data as PostRow[], asOf)
+          : feeds(data as FeedRow[], asOf);
+  const height = page === "dashboard" ? 1290 : page === "analytics" ? 800 : 900;
   const png = new ImageResponse(el as never, { width: W, height });
   return { data: Buffer.from(await png.arrayBuffer()).toString("base64"), mimeType: "image/png", width: W, height };
 }

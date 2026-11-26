@@ -29,7 +29,11 @@ export function Crypt() {
   const graveId = (params.get("grave") || undefined) as Id<"graves"> | undefined;
   const itemId = (params.get("item") || undefined) as Id<"items"> | undefined;
 
-  const [filter, setFilter] = useState<Filter>("all");
+  // ?filter=unread|starred opens that list directly (links, and MCP screenshots of one list).
+  const [filter, setFilter] = useState<Filter>(() => {
+    const f = params.get("filter");
+    return f === "unread" || f === "starred" ? f : "all";
+  });
   const [sort, setSort] = useState<"newest" | "relevance">("newest");
   const [topic, setTopic] = useState<Topic | "">("");
   const [term, setTerm] = useState("");

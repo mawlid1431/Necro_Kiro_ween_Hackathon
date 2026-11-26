@@ -388,7 +388,7 @@ export function Overview() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div id="activity" className="grid scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <ActivityPanel activity={activity} labels={labels} />
         <KeysCard keys={keys} activity={activity} now={minute} />
       </div>

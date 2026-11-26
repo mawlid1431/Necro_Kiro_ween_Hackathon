@@ -3,7 +3,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { api } from "@backend/convex/_generated/api";
 import { convexServer, serverSecret } from "@/lib/server/convex";
 import { CORS, originOf, preflight, resourceFor, resourceMetadataUrl } from "@/lib/server/mcpOAuth";
-import { buildServer } from "./tools";
+import { buildServer, READ_ONLY_MESSAGE, readOnlyCall } from "./tools";
 
 // MCP server "Talk to the Dead": Streamable HTTP in stateless mode (one server per request,
 // no sessions to store). Two ways in, both resolving to the same { userId, keyId, scope }:
@@ -60,6 +60,24 @@ export async function POST(req: Request): Promise<Response> {
     return who.status === 429
       ? jsonRpcError(429, "Rate limit: 60 requests a minute per key.", { "retry-after": "60" })
       : jsonRpcError(401, key ? "Invalid, expired or revoked API key." : "This connection expired or was disconnected. Sign in again.", challenge(origin, "invalid_token"));
+  }
+
+  // A read-only key never sees the write tools; if a client calls one anyway (an old tool list, a guess), it gets a
+  // clear "This key is read only" answer (and an audit row) instead of "tool not found".
+  if (who.scope !== "write") {
+    const blocked = await readOnlyCall(req.clone());
+    if (blocked) {
+      await convex.mutation(api.mcpWrite.auditRefusal, { secret, userId: who.userId, keyId: who.keyId, tool: blocked.name.slice(0, 40), message: "read-only key" }).catch(() => undefined);
+      const body = (m: { id: unknown }) => ({
+        jsonrpc: "2.0",
+        id: m.id,
+        result: { isError: true, content: [{ type: "text", text: JSON.stringify({ error: "FORBIDDEN", message: READ_ONLY_MESSAGE }) }] },
+      });
+      return new Response(JSON.stringify(blocked.batch ? blocked.messages.map(body) : body(blocked.messages[0])), {
+        status: 200,
+        headers: { "content-type": "application/json", ...CORS },
+      });
+    }
   }
 
   const server = buildServer({ convex, secret, userId: who.userId, keyPrefix: who.prefix, keyId: who.keyId, scope: who.scope, origin });
