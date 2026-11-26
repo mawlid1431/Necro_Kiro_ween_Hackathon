@@ -182,7 +182,7 @@ export function ApiKeys() {
               />
             ) : null}
             <span className="font-semibold text-ink">{k.name}</span>
-            <code className="text-meta text-subtle">{k.prefix}…</code>
+            <code data-secret className="text-meta text-subtle">{k.prefix}…</code>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[0.6875rem] font-bold uppercase",

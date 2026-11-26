@@ -246,8 +246,8 @@ describe("MCP OAuth: grants are checked like API keys", () => {
     if (!read.ok) throw new Error("auth");
     const k = { secret: SECRET, userId: aliceId, keyId: read.keyId };
     expect((await t.query(api.mcpWrite.connections, k)).length).toBe(4);
-    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Hello", platforms: ["linkedin"] })).rejects.toThrow(/read-only/);
-    await expect(t.query(api.mcpWrite.assertWriteKey, k)).rejects.toThrow(/read-only/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Hello", platforms: ["linkedin"] })).rejects.toThrow(/read only/);
+    await expect(t.query(api.mcpWrite.assertWriteKey, k)).rejects.toThrow(/read only/);
 
     const write = await auth((await connect("write")).accessToken);
     if (!write.ok) throw new Error("auth");

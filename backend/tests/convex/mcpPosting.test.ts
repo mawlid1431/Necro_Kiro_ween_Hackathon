@@ -86,12 +86,12 @@ describe("scopes: posts:write", () => {
     const r = await key(aliceId, "b", "read");
     const created = await t.mutation(api.mcpWrite.compose, { ...w, text: "Hello", platforms: ["linkedin"], atIso: sgt(2 * HOUR), idempotencyKey: "k1" });
     expect((await t.query(api.mcpWrite.post, { ...r, postId: created.postId })).status).toBe("scheduled");
-    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Hi", platforms: ["linkedin"], idempotencyKey: "k2" })).rejects.toThrow(/read-only/);
-    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Hello", platforms: ["linkedin"], idempotencyKey: "k1" })).rejects.toThrow(/read-only/);
-    await expect(t.mutation(api.mcpWrite.update, { ...r, postId: created.postId, text: "Edit" })).rejects.toThrow(/read-only/);
-    await expect(t.mutation(api.mcpWrite.cancel, { ...r, postId: created.postId })).rejects.toThrow(/read-only/);
-    await expect(t.mutation(api.mcpWrite.publishNow, { ...r, postId: created.postId })).rejects.toThrow(/read-only/);
-    await expect(t.action(api.mcpWriteNode.storeImage, { ...r, imageBase64: PNG, mimeType: "image/png" })).rejects.toThrow(/read-only/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Hi", platforms: ["linkedin"], idempotencyKey: "k2" })).rejects.toThrow(/read only/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Hello", platforms: ["linkedin"], idempotencyKey: "k1" })).rejects.toThrow(/read only/);
+    await expect(t.mutation(api.mcpWrite.update, { ...r, postId: created.postId, text: "Edit" })).rejects.toThrow(/read only/);
+    await expect(t.mutation(api.mcpWrite.cancel, { ...r, postId: created.postId })).rejects.toThrow(/read only/);
+    await expect(t.mutation(api.mcpWrite.publishNow, { ...r, postId: created.postId })).rejects.toThrow(/read only/);
+    await expect(t.action(api.mcpWriteNode.storeImage, { ...r, imageBase64: PNG, mimeType: "image/png" })).rejects.toThrow(/read only/);
   });
 
   it("the owner turns posting on for an existing key (with an expiry) and off again; nobody else can", async () => {
@@ -104,7 +104,7 @@ describe("scopes: posts:write", () => {
     expect(row?.expiresAt).toBeGreaterThan(Date.now() + 89 * 86_400_000);
     await t.mutation(api.mcpWrite.compose, { ...r, text: "Now I can post", platforms: ["x"], atIso: sgt(HOUR), idempotencyKey: "c1" });
     await alice.mutation(api.apiKeys.setScope, { keyId: r.keyId as Id<"apiKeys">, scope: "read" });
-    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Not any more", platforms: ["x"], idempotencyKey: "c2" })).rejects.toThrow(/read-only/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...r, text: "Not any more", platforms: ["x"], idempotencyKey: "c2" })).rejects.toThrow(/read only/);
   });
 });
 
@@ -148,7 +148,7 @@ describe("raw image upload (upload link → bytes → upload_post_image with sto
     const k = await key(aliceId, "a");
     const r = await key(aliceId, "b", "read");
     expect((await t.mutation(api.mcpWrite.uploadUrl, k)).uploadUrl).toMatch(/^https?:\/\//);
-    await expect(t.mutation(api.mcpWrite.uploadUrl, r)).rejects.toThrow(/read-only/);
+    await expect(t.mutation(api.mcpWrite.uploadUrl, r)).rejects.toThrow(/read only/);
 
     // What the assistant's POST to the URL does: the bytes land in storage (here with no Content-Type header).
     const sid = await t.run((ctx) => ctx.storage.store(new Blob([pngBytes()])));
@@ -208,7 +208,7 @@ describe("rate limits (configurable)", () => {
     const k = await key(aliceId, "3");
     const p = await t.mutation(api.mcpWrite.compose, { ...k, text: "One", platforms: ["linkedin"], atIso: sgt(HOUR), idempotencyKey: "1" });
     await t.mutation(api.mcpWrite.update, { ...k, postId: p.postId, text: "One, edited" });
-    await expect(t.mutation(api.mcpWrite.cancel, { ...k, postId: p.postId })).rejects.toThrow(/2 posting calls an hour/);
+    await expect(t.mutation(api.mcpWrite.cancel, { ...k, postId: p.postId })).rejects.toThrow(/2 write calls an hour/);
   });
 });
 

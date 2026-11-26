@@ -141,11 +141,12 @@ async function settle(page: PuppeteerPage, timeoutMs = 15_000) {
 async function maskKeys(page: PuppeteerPage) {
   await page.evaluate(() => {
     const re = /necro_(sk|at|rt)_[A-Za-z0-9_-]{4,}…?/g;
+    const has = (s: string) => /necro_(sk|at|rt)_[A-Za-z0-9_-]{4,}/.test(s); // no /g: .test must not keep state
     const mask = (s: string) => s.replace(re, (_m, kind: string) => `necro_${kind}_••••••••`);
     const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue && re.test(n.nodeValue)) n.nodeValue = mask(n.nodeValue);
-    for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")) if (re.test(el.value)) el.value = mask(el.value);
-    for (const el of document.querySelectorAll<HTMLElement>("[data-secret]")) el.style.filter = "blur(6px)";
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue && has(n.nodeValue)) n.nodeValue = mask(n.nodeValue);
+    for (const el of Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea"))) if (has(el.value)) el.value = mask(el.value);
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>("[data-secret]"))) el.style.filter = "blur(6px)";
   });
 }
 
@@ -219,7 +220,7 @@ export async function screenshotPages(opts: {
         await page.addStyleTag({ content: "nextjs-portal, [data-nextjs-toast], #__next-build-watcher { display: none !important; }" }).catch(() => undefined);
         await settle(page);
         // Charts draw once their card has a width (Charts.tsx, ResizeObserver): give them up to 3 s more.
-        await page.waitForFunction(() => [...document.querySelectorAll("[style*='height']")].every((d) => !d.closest("section") || d.querySelector("svg") || !d.parentElement?.querySelector("h2")), { timeout: 3000 }).catch(() => undefined);
+        await page.waitForFunction(() => Array.from(document.querySelectorAll("[style*='height']")).every((d) => !d.closest("section") || d.querySelector("svg") || !d.parentElement?.querySelector("h2")), { timeout: 3000 }).catch(() => undefined);
         let clipTop = 0;
         if (built.section && /^[a-z0-9-]{1,40}$/.test(built.section)) {
           clipTop = await page.evaluate((id: string) => {

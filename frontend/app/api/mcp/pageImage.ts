@@ -59,7 +59,7 @@ const dayLabel = (d: string) => {
   return `${Number(d.slice(8, 10))} ${months[Number(d.slice(5, 7)) - 1]}`;
 };
 
-/** A line chart drawn as SVG (satori renders inline SVG): grid, y ticks, x labels, one line per series. */
+/** A line chart: grid and lines as SVG (satori renders inline SVG, but not <text>), labels as positioned boxes. */
 function lineChart(days: string[], series: { label: string; color: string; values: number[] }[], width: number, height: number) {
   const pad = { l: 44, r: 12, t: 10, b: 28 };
   const iw = width - pad.l - pad.r;
@@ -67,20 +67,23 @@ function lineChart(days: string[], series: { label: string; color: string; value
   const max = niceMax(Math.max(0, ...series.flatMap((s) => s.values)));
   const x = (i: number) => pad.l + (days.length <= 1 ? iw / 2 : (i / (days.length - 1)) * iw);
   const y = (v: number) => pad.t + ih - (v / max) * ih;
-  const kids: ReactNode[] = [];
+  const lines: ReactNode[] = [];
+  const labels: ReactNode[] = [];
+  const label = (text: string, left: number, top: number, align: "left" | "center" | "right") =>
+    box({ position: "absolute", left: align === "left" ? left : align === "center" ? left - 40 : left - 80, top, width: align === "left" ? 80 : 80, justifyContent: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start", fontSize: 13, color: CHART.label }, text);
   for (const tick of [0, 1, 2, 3, 4].map((i) => (max / 4) * i)) {
-    kids.push(h("line", { key: `g${tick}`, x1: pad.l, x2: width - pad.r, y1: y(tick), y2: y(tick), stroke: CHART.grid, strokeDasharray: tick ? "3 5" : undefined }));
-    kids.push(h("text", { key: `t${tick}`, x: pad.l - 8, y: y(tick) + 5, textAnchor: "end", fontSize: 13, fill: CHART.label }, String(Math.round(tick))));
+    lines.push(h("line", { key: `g${tick}`, x1: pad.l, x2: width - pad.r, y1: y(tick), y2: y(tick), stroke: CHART.grid, strokeWidth: 1, ...(tick ? { strokeDasharray: "3 5" } : {}) }));
+    labels.push(label(String(Math.round(tick)), pad.l - 8, y(tick) - 9, "right"));
   }
   const step = Math.max(1, Math.ceil(days.length / 7));
   days.forEach((d, i) => {
-    if (i % step === 0 || i === days.length - 1) kids.push(h("text", { key: `x${i}`, x: x(i), y: height - 6, textAnchor: i === days.length - 1 ? "end" : "middle", fontSize: 13, fill: CHART.label }, dayLabel(d)));
+    if (i % step === 0 || i === days.length - 1) labels.push(label(dayLabel(d), x(i), height - 20, i === days.length - 1 ? "right" : "center"));
   });
   for (const s of series) {
     const d = s.values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    kids.push(h("path", { key: s.label, d, fill: "none", stroke: s.color, strokeWidth: 3, strokeLinejoin: "round", strokeLinecap: "round" }));
+    lines.push(h("path", { key: s.label, d, fill: "none", stroke: s.color, strokeWidth: 3, strokeLinejoin: "round", strokeLinecap: "round" }));
   }
-  return h("svg", { width, height, viewBox: `0 0 ${width} ${height}` }, ...kids);
+  return box({ position: "relative", width, height }, h("svg", { width, height, viewBox: `0 0 ${width} ${height}` }, ...lines), ...labels);
 }
 
 function activityCard(d: Dashboard, width: number, height: number) {

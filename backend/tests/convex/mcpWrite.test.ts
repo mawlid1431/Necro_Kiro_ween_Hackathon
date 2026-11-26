@@ -48,8 +48,8 @@ describe("MCP keys: scopes", () => {
     expect(conns.map((c) => c.platform)).toEqual(["linkedin", "x", "instagram", "tiktok"]);
     expect(conns.every((c) => !c.connected && c.delivery === "reminder")).toBe(true);
     expect(await t.query(api.mcpWrite.posts, k)).toEqual([]);
-    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Hello", platforms: ["linkedin"] })).rejects.toThrow(/read-only/);
-    await expect(t.query(api.mcpWrite.assertWriteKey, k)).rejects.toThrow(/read-only/);
+    await expect(t.mutation(api.mcpWrite.compose, { ...k, text: "Hello", platforms: ["linkedin"] })).rejects.toThrow(/read only/);
+    await expect(t.query(api.mcpWrite.assertWriteKey, k)).rejects.toThrow(/read only/);
   });
 
   it("refuses a wrong secret, another user's key, a revoked key and an expired key on the server", async () => {
