@@ -71,7 +71,7 @@ function Checklist({ c, onHide }: { c: OverviewData["checklist"]; onHide: () => 
   const done = steps.filter((s) => s.done).length;
   if (done === steps.length) return null;
   return (
-    <section aria-labelledby="checklist-title" className="rounded-2xl border border-ecto-dim/40 bg-ecto/10 p-5">
+    <section id="setup" aria-labelledby="checklist-title" className="scroll-mt-24 rounded-2xl border border-ecto-dim/40 bg-ecto/10 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="checklist-title" className="font-display text-h3 font-bold">{copy.checklistTitle}</h2>

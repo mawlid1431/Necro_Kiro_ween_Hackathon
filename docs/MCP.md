@@ -20,7 +20,7 @@ designed with it.
 | Read feeds, articles, summaries, stats, your posts and connected accounts | yes | yes |
 | See your Home overview (`get_dashboard`) and live pictures of it (`get_page_image`) | yes | yes |
 | Add a feed (`add_grave`) | no | yes |
-| Post and schedule (`upload_post_image`, `create_post`, `get_post`, `update_post`, `cancel_post`, `publish_post_now`) | no | yes |
+| Draft, schedule, publish, edit, cancel, retry posts (`draft_post`, `schedule_post`, `publish_post`, …); change feeds, articles, interests, voice, settings | no | yes |
 | Expires | never (revoke any time) | after 90 days (revoke any time) |
 
 "Read and write" is the **`posts:write`** scope (stored as `"write"`). Keys made before key types existed are
@@ -49,7 +49,7 @@ refused), shown under **Posting activity** in Settings → MCP keys. It never st
   made in the app, so it appears live in Witching Hour and on Home without a refresh.
 - **Times:** `scheduleAt` must be ISO 8601 with a time zone (e.g. `2026-11-26T09:00:00+08:00`), to the minute, at
   least a minute ahead and at most 90 days. Times are stored in UTC and returned in UTC and Singapore time.
-- **Idempotency:** `create_post` needs an `idempotencyKey`; calling again with the same key returns the first post
+- **One post, once:** a draft is queued once: calling `schedule_post` or `publish_post` again for the same draft returns the same post, and the same text and image can never go to the same account twice.
   (`duplicate: true`) and never creates a second one.
 - **Edits:** `update_post` only while the post is scheduled; `cancel_post` also cancels a reminder that is due but not
   shared yet. Nothing that went out can be edited or cancelled.
@@ -145,50 +145,80 @@ Try:
 
 ## Tools
 
-| Tool | Key | Input | Returns |
-|---|---|---|---|
-| `list_graves` | any | none | id, title, feedUrl, status, unreadCount, folder per feed |
-| `get_grave` | any | `graveId` | One feed's details and its last error with a plain-language diagnosis |
-| `list_items` | any | `graveId?`, `filter` all/unread/starred, `limit` 1–50 (20), `cursor?` | id, title, feed, publishedAt, score, isRead; `nextCursor` |
-| `get_item` | any | `itemId` | title, link, author, date and plain text (max 8,000 chars) |
-| `search_items` | any | `query` 1–200 chars, `limit` 1–50 (10) | Matching items, same shape as `list_items` |
-| `get_seance` | any | `itemId` | 3 bullets, a 0–100 score and a reason. Holds one if missing (daily limit) |
-| `get_stats` | any | none | feeds, unread, starred, Séances today, broken and sleeping feeds |
-| `get_briefing` | any | none | The latest Morning Séance with its picked items, or null |
-| `ask_crypt` | any | `question` 2–500 chars | An answer from your own items with cited item ids (20 a day) |
-| `list_kindred` | any | `limit` 1–20 (10) | Stories reported by more than one feed |
-| `get_omens` | any | `limit` 1–30 (10) | Watched topics (Omens) and recent matches, each with a reason and "ai" or "keyword" |
-| `list_connections` | any | none | Per platform: connected, account name, and delivery `auto` (posts on its own) or `reminder` |
-| `screenshot_page` | any | `page`: `dashboard`, `crypt`, `graveyard`, `calendar`, `omens`, `circle`, `discover`, `settings`, `profile`, `public_profile`, `docs`; `section?` (an anchor, e.g. `connections`); `fullPage?` | A real screenshot (PNG 1280×900, or JPEG up to 4000 px tall) of the user's signed-in page |
-| `get_page_image` | any | `page`: `dashboard` (default), `posts`, `feeds` | An MCP image block (PNG, 1200 px wide) drawn from live data, plus a short text summary |
-| `get_dashboard` | any | none | Home overview, live: feeds, new today, post counts, next scheduled and recently posted (with links), read next, connections, setup |
-| `list_posts` | any | `limit` 1–50 (20) | Posts from the last 30 days and next 90: status, time, text, image, live link, created by app or assistant |
-| `add_grave` | write | `url`, `folder?` | Same Summon as the app: safe fetch, discovery, dedupe, 300-feed cap |
-| `upload_post_image` | write | nothing (→ `{ uploadUrl }` to POST raw bytes to), then `storageId`; or `imageUrl`; or `imageBase64` + `mimeType` (`image/png`, `image/jpeg`) | `{ imageId, previewUrl, contentType, bytes }` |
-| `create_post` | write | `text`, `platforms[]` (`linkedin`, `x`, `instagram`, `tiktok`), `imageId?`, `scheduleAt?` (omit = now), `sourceItemId?`, `idempotencyKey` | `{ postId, status, scheduledFor: { utc, singapore, label }, perPlatform: [{ platform, publishId, delivery, status }], duplicate }` |
-| `get_post` | write | `postId` | text, image, status overall and per platform, `liveUrl`, `error`, times in UTC and Singapore |
-| `update_post` | write | `postId`, any of `text`, `imageId`, `platforms`, `scheduleAt` | The updated post (same shape as `get_post`) |
-| `cancel_post` | write | `postId` (`post_id` still accepted) | `{ postId, status: "canceled", perPlatform }` |
-| `publish_post_now` | write | `postId` | The post; call `get_post` a few seconds later for `posted` and the live link |
+Read tools are listed for every key and connected app. Write tools are listed only for **Read and write** ones; a
+read-only key that calls one anyway gets `"This key is read only"` (code `FORBIDDEN`) from the route, and every Convex
+write function re-checks the scope itself. Every tool carries MCP annotations (`readOnlyHint`, `destructiveHint`,
+`idempotentHint`), and `publish_post`, `cancel_post`, `remove_grave` and `mark_all_read` refuse to run without
+`confirm: true` (code `CONFIRM_REQUIRED`). Every write call and screenshot writes an `mcpAudit` row (Settings → MCP keys).
 
-`list_posts` rows also carry `postId`, the id the posting tools take. A post to several platforms is one `postId` with
-one `publishId` per platform.
+### Read (any key)
 
-### Real screenshots (`screenshot_page`)
+| Tool | Input | Returns |
+|---|---|---|
+| `get_dashboard` | none | Home overview, live, plus `series`: the Home charts' per-day data (14 UTC days: new articles, posts sent, AI uses, MCP calls) |
+| `get_analytics` | `range` 7d / 30d / 90d (30d) | Per-day arrays in the user's time zone: newArticles, articlesRead, seancesHeld, averageRelevance, postsPosted / Scheduled / Failed; totals; perFeed; perPlatform |
+| `get_profile` | none | Name, email, avatar, plan, today's limits and usage, time zone, created date, setup checklist with next steps, this connection's scope |
+| `get_settings` | none | Profile, language, time zone, Morning Séance hour, privacy, interests, voice, Omens, connected accounts |
+| `get_voice` / `get_interests` | none | The voice profile / the interests |
+| `list_mcp_access` | none | Keys and connected apps: name, label, scope, status, created, last used. Never a key value or hash |
+| `list_pages` | none | Every page: id, title, path, what it shows, inputs it needs |
+| `get_page_image` | `page` (from `list_pages`), `graveId?` `itemId?` `postId?`, `section?`, `theme` light/dark, `width` 360–1920 (1280), `fullPage` (true) | A real screenshot (image block) + text with `renderer: "browser"` or `"fallback"` |
+| `get_all_page_images` | `pages?` (default: every page that needs no id), `offset`, `theme`, `width`, `fullPage` | Up to 3 screenshots per call and `nextOffset` |
+| `screenshot_page` | `page`, `section?`, `fullPage?` | Older name for `get_page_image` |
+| `list_graves` / `get_grave` / `list_folders` | — / `graveId` / — | Feeds; one feed with its last error; folders with their feeds |
+| `list_items` | `graveId?`, `folder?`, `filter`, `since?`, `until?`, `minScore?`, `limit`, `cursor?` | Articles (paged when no folder, date or score filter is used) |
+| `get_item` / `search_items` | `itemId` / `query` | One article's text; title search |
+| `get_seance` / `hold_seance` | `itemId` | 3 bullets, a 0–100 score and a reason (holds one if missing) |
+| `get_stats` / `get_briefing` / `ask_crypt` / `list_kindred` / `get_omens` | as before | Counts, the Morning Séance, answers from your articles, shared stories, topic alerts |
+| `list_connections` | none | Per platform: connected, account, delivery `auto` or `reminder` |
+| `list_posts` | `status?` (draft too), `platform?`, `since?`, `until?`, `limit` | Posts newest first with times in UTC, Singapore and the user's zone |
+| `get_post` | `postId` (a draft or a queued post) | Text, image, per-platform status and delivery, live link, error |
 
-`frontend/lib/server/screenshot.ts`. The route first calls `mcpWrite.screenshotGrant` (live key, 20 an hour per key, audit
-row). Then Necro's server mints a Clerk sign-in token (single use, 60 seconds), opens a fresh headless Chromium
-(`puppeteer-core` + `@sparticuz/chromium` on Vercel; a local Chrome in development), signs it in with that ticket,
-loads the page on Necro's own origin (main-frame navigation is limited to Necro and Clerk's sign-in handshake),
-waits for the live data to settle, and takes the screenshot. It never clicks or types. The session is then revoked
-through Clerk's API and the browser is closed; only the image is returned. MCP has no tool that creates, revokes or
-deletes keys: that stays in Settings.
+### Write (Read and write keys only)
 
-### How a picture of your Necro gets to your assistant
+| Tool | Input | Does |
+|---|---|---|
+| `add_grave` | `url`, `folder?` | Summon: safe fetch, feed discovery, dedupe, cap |
+| `update_grave` / `move_grave` | `graveId`, `title?`, `folder?` (null = none) | Rename / change folder (`graves.renameFor`, `moveFor`) |
+| `create_folder` | `name`, `graveIds[]` | Puts feeds in a new folder (a folder exists while it holds a feed) |
+| `refresh_grave` | `graveId` | The Feed Doctor's retry: fetch now |
+| `remove_grave` | `graveId`, `confirm` | Unsubscribe and delete its articles (`graves.layToRestFor`) |
+| `mark_read` / `mark_unread` / `star` / `unstar` | `itemId` | Reading state (`items.setReadFor`, `setStarredFor`) |
+| `mark_all_read` | `graveId?`, `confirm` | Every unread article, one feed or all |
+| `set_interests` / `set_voice` / `set_omens` | interests[] / voice fields / `add[]`, `remove[]` | The setup steps and watched topics (same helpers as Settings) |
+| `update_settings` / `set_briefing_time` | language, time zone, hour, display name, private mode / `hour` | Settings (`users.setPreferencesFor`) |
+| `upload_post_image` | nothing → `uploadUrl`, then `storageId`; or `imageUrl`; or `imageBase64` + `mimeType` | `{ imageId, imageUrl, previewUrl }` |
+| `draft_post` | `text`, `platforms[]`, `imageId?` or `imageUrl?`, `sourceItemId?` | A **draft** (`postDrafts`): postId, status `draft`, per-platform characters and delivery. Nothing is sent |
+| `generate_post_from_item` | `itemId`, `platform` | Resurrect in the user's voice, saved as a draft |
+| `schedule_post` / `reschedule_post` | `postId`, `scheduleAt` (ISO 8601; no zone = Singapore) | Queues the draft through `social.composeFor` at that minute, or moves a queued post |
+| `publish_post` | `postId`, `confirm` | Queues a draft now, or sends a scheduled post now |
+| `update_post` | `postId`, `text?`, `imageId?`, `platforms?`, `scheduleAt?` | Edits a draft, or a post still scheduled |
+| `cancel_post` | `postId`, `confirm` | Discards a draft or cancels a scheduled post |
+| `retry_post` | `postId` | Sends the failed platforms again |
 
-`get_page_image` reads the same live data as the app (`mcp.getDashboard`, `mcpWrite.posts`, `mcp.listGraves`), draws it on
-Necro's server with `next/og` (no browser, no cookies), and returns it as an MCP `image` content block (base64 PNG).
-The chat app shows it like any image. It works with read-only access and is fresh on every call.
+**Delivery, said plainly:** LinkedIn posts on its own when connected. X, Instagram and TikTok are `reminder` deliveries
+while they are "coming soon" (no app credentials on the server): the user is reminded to share them, and every draft
+says so in `deliveryNote`. Nothing is ever reported as posted unless the platform answered.
+
+**Not available, and why:** there is no `generate_briefing` (the app has no briefing generator yet: `briefings` is only
+read), and theme, notifications and default post platforms are not stored on the server (theme lives in the browser;
+the other two do not exist in Necro), so `update_settings` cannot change them.
+
+### Real screenshots (`get_page_image`)
+
+`frontend/lib/server/screenshot.ts`. The route first calls `mcpWrite.screenshotGrant` once per page (live key, 60 an
+hour per key, audit row). Then Necro's server mints a Clerk sign-in token (single use, 60 seconds; never the user's own
+session cookie), opens a fresh headless Chromium (`puppeteer-core` + `@sparticuz/chromium` on Vercel; a local Chrome in
+development), signs it in with that ticket, and for each page: loads it on Necro's own origin (main-frame navigation is
+limited to Necro and Clerk's sign-in handshake), waits until loading skeletons are gone, the text has settled and the
+charts are drawn (reduced motion, so they draw at once), masks every API key (`necro_sk_…`, `necro_at_…` and the key
+prefixes in Settings), and takes the screenshot. It never clicks or types. The session is then revoked through Clerk's
+API and the browser closed; only the images are returned. If the browser fails, `dashboard`, `analytics`, `setup`,
+`feeds` and `calendar` fall back to a server drawing of the same live data (`pageImage.ts`, with the Activity chart),
+marked `renderer: "fallback"`; other pages return the error. MCP has no tool that creates, revokes or deletes keys.
+
+`bun --conditions=react-server scripts/shots.ts <origin> <clerkUserId> <outDir>` (in `frontend/`) photographs every page
+in `list_pages` as one user and fails if any page is not a browser screenshot.
 
 ### How a poster made in your assistant gets into Necro
 
@@ -212,19 +242,19 @@ accounts", the assistant uses the connected ones from `list_connections` and ask
 
 ```json
 { "name": "upload_post_image", "arguments": { "imageUrl": "https://example.com/necro-v1.png" } }
-{ "name": "create_post", "arguments": {
+{ "name": "draft_post", "arguments": {
     "text": "Necro v1 is live: RSS, resurrected with AI.",
     "platforms": ["linkedin", "x"],
-    "imageId": "<imageId from upload_post_image>",
-    "scheduleAt": "2026-11-26T09:00:00+08:00",
-    "idempotencyKey": "necro-v1-launch" } }
-{ "name": "update_post", "arguments": { "postId": "<postId>", "scheduleAt": "2026-11-26T09:30:00+08:00" } }
+    "imageId": "<imageId from upload_post_image>" } }
+{ "name": "get_page_image", "arguments": { "page": "post-preview", "postId": "<postId>" } }
+{ "name": "schedule_post", "arguments": { "postId": "<postId>", "scheduleAt": "2026-11-26T09:00:00+08:00" } }
+{ "name": "publish_post", "arguments": { "postId": "<postId>", "confirm": true } }
 { "name": "get_post", "arguments": { "postId": "<postId>" } }
 ```
 
 Text that came from websites carries `"source": "untrusted web content"` so the calling model treats it as data, not
 instructions. Errors return `isError: true` with a short code (`NOT_FOUND`, `LIMIT`, `DUPLICATE`, `NOT_A_FEED`,
-`BLOCKED`, `INVALID_INPUT`, `FORBIDDEN`), never a stack trace.
+`BLOCKED`, `INVALID_INPUT`, `FORBIDDEN`, `CONFIRM_REQUIRED`), never a stack trace.
 
 ## Key lifecycle
 

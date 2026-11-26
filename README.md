@@ -351,7 +351,7 @@ sequenceDiagram
   end
 ```
 
-Tools: 16 read (`screenshot_page`: a real screenshot of any signed-in Necro page, taken by a headless Chromium signed in with a one-time Clerk ticket and revoked straight after · `get_dashboard`: the live Home overview · `get_page_image`: a live PNG of the dashboard, posts or feeds, drawn on the server with `next/og` and returned as an MCP image block · `list_graves` · `get_grave` · `list_items` · `get_item` · `search_items` · `get_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts`) and 7 write for keys and connected apps with **`posts:write`** (`add_grave` · `upload_post_image` · `create_post` · `get_post` · `update_post` · `cancel_post` · `publish_post_now`). Posting tools run the app's own composer and scheduler (`social.composeFor`, `socialNode.runScheduled`), so an assistant's post is the same queue, delivery rules (auto or reminder) and history as **New post**, and appears live in the dashboard. `scheduleAt` is ISO 8601 with a time zone, to the minute; times come back in UTC and Singapore time; `idempotencyKey` stops duplicates. Turn posting on per key or app in Settings → MCP keys (**Allow posting**); every posting call is audited there. The full table and example calls are in [`docs/MCP.md`](docs/MCP.md); the design is in [`docs/specs/mcp-posting.md`](docs/specs/mcp-posting.md).
+Tools: 27 read, for every key and connected app (`get_dashboard` with the Home chart series · `get_analytics` per-day data for 7/30/90 days in your time zone · `get_profile` · `get_settings` · `get_voice` · `get_interests` · `list_mcp_access` · `list_pages` · `get_page_image`: a REAL screenshot of any page, taken by a headless Chromium signed in with a one-time Clerk ticket that is revoked straight after, API keys masked, `renderer` browser or fallback · `get_all_page_images` · `screenshot_page` (older name) · `list_graves` · `get_grave` · `list_folders` · `list_items` (folder, date and score filters) · `get_item` · `search_items` · `get_seance` · `hold_seance` · `get_stats` · `get_briefing` · `ask_crypt` · `list_kindred` · `get_omens` · `list_connections` · `list_posts` · `get_post`) and 25 write, only for keys and apps with **Read and write** (`posts:write`): feeds (`add_grave` · `update_grave` · `move_grave` · `create_folder` · `refresh_grave` · `remove_grave`), articles (`mark_read` · `mark_unread` · `star` · `unstar` · `mark_all_read`), setup and settings (`set_interests` · `set_voice` · `set_omens` · `update_settings` · `set_briefing_time`) and posts (`upload_post_image` · `draft_post` · `generate_post_from_item` · `schedule_post` · `reschedule_post` · `update_post` · `publish_post` · `cancel_post` · `retry_post`). Posts go draft → you see it → `schedule_post` or `publish_post` (confirm: true), through the app's own composer and scheduler (`social.composeFor`, `socialNode.runScheduled`). A read-only key calling a write tool gets "This key is read only"; every write is audited in Settings → MCP keys. The full table is in [`docs/MCP.md`](docs/MCP.md).
 
 Example (Claude, with posting on): *"Create a LinkedIn post announcing Necro v1 with this image, and schedule it for tomorrow at 9:00 AM Singapore time."* Claude calls `upload_post_image`, then `create_post` with `scheduleAt: "<tomorrow>T09:00:00+08:00"`, and later `get_post` returns `posted` and the LinkedIn link.
 
@@ -513,7 +513,7 @@ Check the chains with `bunx convex run aiNode:healthCheck`, and the breakers, Gh
 
 ## 6. Database
 
-Convex, 31 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour, and `follows`, `sharedPosts` for the Circle). Every table except `users`, `follows`, `mcpClients` (apps, shared by everyone who connects them), `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it; `follows` is indexed from both sides (`followerId`, `followeeId`). The learning memory lives on the user row (`users.learned`, `learningOff`, `learnedResetAt`).
+Convex, 33 tables (including `connections`, `oauthStates`, `publishes`, `uploads` for Connectors and Witching Hour, and `follows`, `sharedPosts` for the Circle). Every table except `users`, `follows`, `mcpClients` (apps, shared by everyone who connects them), `providerHealth`, `rateLimits` and `demoCache` carries `userId`, with an index that starts with it; `follows` is indexed from both sides (`followerId`, `followeeId`). The learning memory lives on the user row (`users.learned`, `learningOff`, `learnedResetAt`).
 
 ```mermaid
 erDiagram
@@ -642,7 +642,9 @@ erDiagram
 | `uploads` | Images uploaded in the composer or by an assistant through MCP (owner-checked, SHA-256 for "one post, once") | by_user, by_storage |
 | `apiKeys` | MCP keys (hashed), scope (`read`, or `write` = posts:write, switchable in Settings), expiry, last use | by_user, by_hash, by_user_revoked |
 | `mcpUsage` | MCP calls per key per UTC day (Home chart) | by_user_day, by_key_day |
-| `mcpAudit` | Every MCP posting call: key label, tool, post id, ok/refused, reason, time (Settings → MCP keys) | by_user_at, by_key_at |
+| `mcpAudit` | Every MCP write call and screenshot: key label, tool, post id, ok/refused, reason, time (Settings → MCP keys) | by_user_at, by_key_at |
+| `postDrafts` | Posts an AI assistant drafted (`draft_post`), not yet queued: text, platforms, image, article; `postId` once scheduled or published | by_user |
+| `readDays` | Articles read per day in the user's time zone (for `get_analytics`) | by_user_day |
 | `mcpClients` | OAuth apps that connect over MCP (ChatGPT, Claude): metadata-document or self-registered clients | by_client_id, by_fingerprint, by_kind_created |
 | `mcpCodes` | Single-use OAuth authorization codes (hashed, PKCE, short-lived) | by_hash, by_user, by_expires |
 | `mcpGrants` | "Sign in with Necro" connections: scope, expiry, hashed access and rotating refresh tokens | by_user, by_user_client, by_client, by_expires, by_revoked, by_access, by_refresh, by_prev_refresh |
@@ -857,6 +859,14 @@ Frontend: `cd frontend && bun run check` (ESLint + TypeScript) and `bun run buil
 Specs, steering, hooks and custom agents live in [`.kiro/`](.kiro) and are committed on purpose, as the hackathon requires. Steering files keep the agent on the project rules (Bun only, `safeFetch` only, user isolation, the AI ladder). Hooks run related tests on save, sync the data-model table on schema changes, review accessibility on component saves, and run a manual pre-submit check.
 
 ## Changelog
+
+### 2026-11-26: MCP full access
+
+- Every page can be photographed for real (`list_pages`, `get_page_image`, `get_all_page_images`), with charts, theme, width and full page; API keys are masked; a server-drawn fallback with the Activity chart says `renderer: "fallback"`.
+- New read tools: `get_analytics`, `get_profile`, `get_settings`, `get_voice`, `get_interests`, `list_mcp_access`, `list_folders`; `get_dashboard` gains `series`; `list_items` and `list_posts` gain filters.
+- New write tools for feeds, articles, interests, voice, Omens and settings, each calling the same helper as the app.
+- Posting is now draft → confirm → schedule/publish (`draft_post`, `schedule_post`, `publish_post`, `retry_post`, …); `create_post` and `publish_post_now` are gone. New page `/calendar/preview?post=` shows how a draft will look.
+- Read-only keys get "This key is read only"; risky tools need `confirm: true`; writes are rate limited per key and per user and audited.
 
 ### 2026-11-25: MCP posting and scheduling
 

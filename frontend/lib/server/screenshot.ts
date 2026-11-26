@@ -20,7 +20,7 @@ export type PageDef = { title: string; path: string; inputs?: PageInput[]; secti
 export const PAGES = {
   dashboard: { title: "Home overview", path: "/dashboard", about: "Stats, Activity chart, MCP calls chart, up next, recently posted, read next, accounts, setup" },
   analytics: { title: "Charts (Home activity)", path: "/dashboard", section: "activity", about: "The Activity line chart (new articles, posts, AI uses, MCP calls) and the MCP calls bar chart" },
-  setup: { title: "Setup checklist", path: "/dashboard", section: "checklist-title", about: "The setup steps on Home (only shown until they are all done)" },
+  setup: { title: "Setup checklist", path: "/dashboard", section: "setup", about: "The setup steps on Home (only shown until they are all done)" },
   feeds: { title: "Graveyard (all feeds)", path: "/graveyard", about: "Every feed with status, unread count and folders" },
   "feed-doctor": { title: "Feed Doctor", path: "/graveyard", query: { tab: "doctor" }, about: "Broken and sleeping feeds with fixes" },
   feed: { title: "One feed's articles", path: "/crypt", inputs: ["graveId"], about: "The Crypt filtered to one feed" },
@@ -222,19 +222,26 @@ export async function screenshotPages(opts: {
         // Charts draw once their card has a width (Charts.tsx, ResizeObserver): give them up to 3 s more.
         await page.waitForFunction(() => Array.from(document.querySelectorAll("[style*='height']")).every((d) => !d.closest("section") || d.querySelector("svg") || !d.parentElement?.querySelector("h2")), { timeout: 3000 }).catch(() => undefined);
         let clipTop = 0;
+        let sectionHeight: number | null = null; // a section is photographed on its own, top to bottom
         if (built.section && /^[a-z0-9-]{1,40}$/.test(built.section)) {
-          clipTop = await page.evaluate((id: string) => {
+          const box = await page.evaluate((id: string) => {
             const el = document.getElementById(id);
-            return el ? Math.max(0, el.getBoundingClientRect().top + window.scrollY - 90) : 0; // keep the sticky header clear
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return { top: Math.max(0, Math.floor(r.top + window.scrollY - 24)), height: Math.ceil(r.height + 48) };
           }, built.section);
-          await page.evaluate((y: number) => window.scrollTo(0, y), clipTop);
+          if (box) {
+            clipTop = box.top;
+            sectionHeight = box.height;
+          }
+          await page.evaluate((y: number) => window.scrollTo(0, Math.max(0, y - 66)), clipTop); // below the sticky header
           await settle(page, 3000);
         }
         await maskKeys(page);
         const path = built.url.pathname + built.url.search;
         if (options.fullPage) {
           const total = await page.evaluate(() => document.documentElement.scrollHeight);
-          const height = Math.min(Math.max(total - clipTop, HEIGHT), MAX_FULL_HEIGHT);
+          const height = Math.round(Math.min(sectionHeight ?? Math.max(total - clipTop, HEIGHT), MAX_FULL_HEIGHT));
           await page.evaluate(() => window.scrollTo(0, 0));
           const bytes = await page.screenshot({ type: "jpeg", quality: 80, clip: { x: 0, y: clipTop, width, height }, captureBeyondViewport: true });
           out.push({ page: r.page, data: Buffer.from(bytes).toString("base64"), mimeType: "image/jpeg", width, height, path });
