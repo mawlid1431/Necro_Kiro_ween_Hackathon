@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMemo, useState, type FormEvent } from "react";
+import { useAction, useMutation, useQueries, useQuery } from "convex/react";
 import { Copy, Eye, KeyRound, PenLine, Trash2 } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Notice } from "@/components/ui/field";
@@ -223,12 +224,19 @@ export function ApiKeys() {
 
 /** The MCP posting audit log (live): every write call, refused ones included, plus the limits in force. */
 function PostingAudit() {
-  const rows = useQuery(api.mcpWrite.auditLog, { limit: 30 });
-  const limits = useQuery(api.mcpWrite.limits);
+  // useQueries hands back an Error instead of throwing: if the log cannot load (for example a backend that is not
+  // deployed yet), only this panel says so, and the rest of Settings keeps working.
+  const queries = useMemo(() => ({ rows: { query: api.mcpWrite.auditLog, args: { limit: 30 } }, limits: { query: api.mcpWrite.limits, args: {} } }), []);
+  const r = useQueries(queries);
+  const failed = r.rows instanceof Error || r.limits instanceof Error;
+  if (failed) console.error("Posting activity failed to load", r.rows instanceof Error ? r.rows : r.limits);
+  const rows = failed ? undefined : (r.rows as FunctionReturnType<typeof api.mcpWrite.auditLog> | undefined);
+  const limits = failed ? undefined : (r.limits as FunctionReturnType<typeof api.mcpWrite.limits> | undefined);
   return (
     <section aria-labelledby="audit-h" className="mt-6 border-t border-line pt-4">
       <h3 id="audit-h" className="font-semibold text-ink">{copy.audit}</h3>
       <p className="mt-1 text-meta text-subtle">{copy.auditHint}</p>
+      {failed ? <p className="mt-3 text-meta text-subtle">{copy.auditUnavailable}</p> : null}
       {limits ? <p className="mt-1 text-meta text-subtle">{copy.limitsLine(limits)}</p> : null}
       {rows && rows.length === 0 ? <p className="mt-3 text-meta text-subtle">{copy.auditEmpty}</p> : null}
       <ul className="mt-2 divide-y divide-line">

@@ -700,6 +700,7 @@ export const settings = {
   audit: "Posting activity",
   auditHint: "Every posting call an AI assistant made: which key, which tool, which post and when. Refused calls are shown too.",
   auditEmpty: "No posting calls yet.",
+  auditUnavailable: "Posting activity could not load right now. Your keys still work; try again in a minute.",
   auditRefused: "Refused",
   auditOk: "OK",
   limitsLine: (l: { postsPerDay: number; postsPerHour: number; writeCallsPerHour: number }) =>
